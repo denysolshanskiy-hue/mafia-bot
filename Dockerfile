@@ -14,4 +14,5 @@ RUN pip install --no-cache-dir aiogram aiohttp
 # Запуск бота (вказуємо шлях до bot.py)
 # Якщо ваш bot.py лежить всередині папки mafia_bot, замініть на: 
 # CMD ["python", "mafia_bot/bot.py"]
-CMD ["python", "bot.py"]
+CMD ["python", "mafia_bot/bot.py"]
+
