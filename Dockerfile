@@ -1,10 +1,14 @@
 FROM python:3.11-slim
 
+# Встановлюємо робочу директорію
 WORKDIR /app
 
-COPY mafia_bot/requirements.txt requirements.txt
+# Копіюємо всі файли проекту
+COPY . .
+
+# Оновлюємо сертифікати та встановлюємо залежності
+RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY mafia_bot/ .
-
+# Запуск бота
 CMD ["python", "bot.py"]
