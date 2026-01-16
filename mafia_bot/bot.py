@@ -601,20 +601,32 @@ async def handle(request):
 
 def run_web_server():
     from aiohttp import web
+    import os
+    
     app = web.Application()
     app.router.add_get('/', handle)
     port = int(os.environ.get("PORT", 8000))
-    web.run_app(app, host='0.0.0.0', port=port)
+    
+    # Створюємо Runner замість run_app, щоб уникнути конфліктів із потоками
+    runner = web.AppRunner(app)
+    return runner, port
+
+async def start_all():
+    # 1. Запускаємо веб-сервер для Koyeb (без сигналів, щоб не було помилки)
+    runner, port = run_web_server()
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    print(f"Web server started on port {port}")
+
+    # 2. Запускаємо бота
+    print("Starting bot polling...")
+    await main()
 
 if __name__ == "__main__":
-    import threading
-    from aiohttp import web
-    
-    # 1. Спершу запускаємо "заглушку" для Koyeb
-    print("Starting web server for health checks...")
-    threading.Thread(target=run_web_server, daemon=True).start()
-    
-    # 2. Потім запускаємо самого бота
-    print("Starting bot polling...")
-    asyncio.run(main())
-
+    import os
+    # Запускаємо все в одному циклі подій (event loop)
+    try:
+        asyncio.run(start_all())
+    except (KeyboardInterrupt, SystemExit):
+        pass
