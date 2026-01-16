@@ -580,3 +580,23 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+import threading
+from aiohttp import web
+
+# Функція для запуску фейкового веб-сервера
+async def handle(request):
+    return web.Response(text="Bot is running!")
+
+def run_web_server():
+    app = web.Application()
+    app.router.add_get('/', handle)
+    # Koyeb автоматично передає порт у змінну оточення PORT
+    port = int(os.environ.get("PORT", 8000))
+    web.run_app(app, host='0.0.0.0', port=port)
+
+# Запускаємо сервер в окремому потоці, щоб він не заважав боту
+threading.Thread(target=run_web_server, daemon=True).start()
+
+# ПІСЛЯ ЦЬОГО йде ваш основний блок запуску:
+if __name__ == "__main__":
+    asyncio.run(main())
