@@ -573,30 +573,48 @@ async def cancel_event(message: types.Message):
 
 # ================== RUN ==================
 
+# Додайте цей імпорт В САМИЙ ВЕРХ файлу (біля asyncio)
+import os 
+
+# ... (весь ваш попередній код) ...
+
+# ================== RUN ==================
+
 async def main():
+    # Імпортуємо тут, щоб уникнути проблем з DNS, про які ми говорили раніше
+    from aiogram.client.session.aiohttp import AiohttpSession
+    
     init_db()
-    await dp.start_polling(bot)
+    
+    # Створюємо сесію для стабільного зв'язку
+    session = AiohttpSession()
+    
+    # ОНОВЛЮЄМО об'єкт бота з використанням сесії та токена з оточення
+    # Використовуємо os.getenv, щоб не "світити" токен у коді
+    final_bot = Bot(token=os.getenv("BOT_TOKEN"), session=session)
+    
+    await dp.start_polling(final_bot)
 
-
-if __name__ == "__main__":
-    asyncio.run(main())
-import threading
-from aiohttp import web
-
-# Функція для запуску фейкового веб-сервера
+# Функція для запуску веб-сервера (щоб Koyeb не вимикав сервіс)
 async def handle(request):
     return web.Response(text="Bot is running!")
 
 def run_web_server():
+    from aiohttp import web
     app = web.Application()
     app.router.add_get('/', handle)
-    # Koyeb автоматично передає порт у змінну оточення PORT
     port = int(os.environ.get("PORT", 8000))
     web.run_app(app, host='0.0.0.0', port=port)
 
-# Запускаємо сервер в окремому потоці, щоб він не заважав боту
-threading.Thread(target=run_web_server, daemon=True).start()
-
-# ПІСЛЯ ЦЬОГО йде ваш основний блок запуску:
 if __name__ == "__main__":
+    import threading
+    from aiohttp import web
+    
+    # 1. Спершу запускаємо "заглушку" для Koyeb
+    print("Starting web server for health checks...")
+    threading.Thread(target=run_web_server, daemon=True).start()
+    
+    # 2. Потім запускаємо самого бота
+    print("Starting bot polling...")
     asyncio.run(main())
+
