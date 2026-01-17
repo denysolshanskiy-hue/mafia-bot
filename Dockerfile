@@ -2,17 +2,20 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Копіюємо все, що є в репозиторії, у робочу папку /app
+# Встановлюємо системні залежності
+RUN apt-get update && apt-get install -y \
+    ca-certificates \
+    && update-ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Копіюємо файл залежностей
+COPY requirements.txt .
+
+# Встановлюємо всі залежності з файлу (включаючи asyncpg)
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Копіюємо решту коду
 COPY . .
 
-# Оновлюємо сертифікати
-RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
-
-# Встановлюємо залежності (використовуємо знайти файл, якщо він глибоко)
-RUN pip install --no-cache-dir aiogram aiohttp
-
-# Запуск бота (вказуємо шлях до bot.py)
-# Якщо ваш bot.py лежить всередині папки mafia_bot, замініть на: 
-# CMD ["python", "mafia_bot/bot.py"]
+# Запуск бота
 CMD ["python", "mafia_bot/bot.py"]
-
