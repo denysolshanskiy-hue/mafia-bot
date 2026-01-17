@@ -8,14 +8,14 @@ RUN apt-get update && apt-get install -y \
     && update-ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Копіюємо файл залежностей
-COPY requirements.txt .
+# Копіюємо файл залежностей з папки mafia_bot
+COPY mafia_bot/requirements.txt .
 
-# Встановлюємо всі залежності з файлу (включаючи asyncpg)
+# Встановлюємо залежності (тепер asyncpg точно встановиться)
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Копіюємо решту коду
+# Копіюємо все інше
 COPY . .
 
-# Запуск бота
+# Запуск
 CMD ["python", "mafia_bot/bot.py"]
