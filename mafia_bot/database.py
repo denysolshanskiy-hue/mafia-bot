@@ -1,49 +1,60 @@
-import sqlite3
+import asyncio
+import os
+import asyncpg
+from datetime import datetime
 
-DB_PATH = "mafia_bot.db"
+# Отримуємо URL з Environment Variables на Koyeb
+DATABASE_URL = os.environ.get("DATABASE_URL")
 
-def get_connection():
-    return sqlite3.connect(DB_PATH)
+async def get_connection():
+    """Створює підключення до бази даних Neon (PostgreSQL)"""
+    return await asyncpg.connect(DATABASE_URL)
 
-
-def init_db():
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
+async def init_db():
+    """Створює таблиці, якщо вони не існують"""
+    conn = await get_connection()
+    
+    # Таблиця користувачів
+    await conn.execute("""
     CREATE TABLE IF NOT EXISTS users (
-        user_id INTEGER PRIMARY KEY,
+        user_id BIGINT PRIMARY KEY,
         username TEXT,
         display_name TEXT,
         role TEXT NOT NULL CHECK(role IN ('admin','player')),
         is_active INTEGER NOT NULL DEFAULT 1,
-        created_at TEXT NOT NULL
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
     """)
 
-    cursor.execute("""
+    # Таблиця подій (ігор)
+    await conn.execute("""
     CREATE TABLE IF NOT EXISTS events (
-        event_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        event_id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
         event_date TEXT NOT NULL,
         event_time TEXT NOT NULL,
         status TEXT NOT NULL CHECK(status IN ('active','closed')),
-        created_by INTEGER NOT NULL,
-        created_at TEXT NOT NULL
+        created_by BIGINT NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
     """)
 
-    cursor.execute("""
+    # Таблиця реєстрацій
+    await conn.execute("""
     CREATE TABLE IF NOT EXISTS registrations (
-        registration_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        event_id INTEGER NOT NULL,
-        user_id INTEGER NOT NULL,
+        registration_id SERIAL PRIMARY KEY,
+        event_id INTEGER NOT NULL REFERENCES events(event_id) ON DELETE CASCADE,
+        user_id BIGINT NOT NULL REFERENCES users(user_id),
         comment TEXT,
         status TEXT NOT NULL CHECK(status IN ('active','cancelled')),
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
     """)
 
-    conn.commit()
-    conn.close()
+    await conn.close()
+    print("Database initialized successfully!")
+
+# Якщо потрібно запустити створення таблиць вручну
+if __name__ == "__main__":
+    asyncio.run(init_db())
