@@ -12,42 +12,35 @@ from aiogram.types import (
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters.callback_data import CallbackData
+from aiogram.client.session.aiohttp import AiohttpSession
 
-from config import BOT_TOKEN
+# Імпортуємо функції з вашого нового database.py
 from database import get_connection, init_db
 
-
 # ================== INIT ==================
-
+# Отримуємо токен з Environment Variables Koyeb
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-
 # ================== STATES ==================
-
 class CreateEventStates(StatesGroup):
     waiting_for_title = State()
     waiting_for_date = State()
     waiting_for_time = State()
 
-
 class NicknameState(StatesGroup):
     waiting_for_nickname = State()
-
 
 class CommentState(StatesGroup):
     waiting_for_comment = State()
 
-
 # ================== CALLBACK DATA ==================
-
 class InviteCallback(CallbackData, prefix="invite"):
     action: str   # join | ignore | cancel
     event_id: int
 
-
 # ================== KEYBOARDS ==================
-
 def invite_keyboard(event_id: int):
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -64,26 +57,23 @@ def invite_keyboard(event_id: int):
         ]
     )
 
-
 def cancel_keyboard(event_id: int):
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text="❌ Скасувати",
+                    text="❌ Скасувати запис",
                     callback_data=InviteCallback(action="cancel", event_id=event_id).pack(),
                 )
             ]
         ]
     )
 
-
 def player_menu_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[[KeyboardButton(text="📅 Активні події")]],
         resize_keyboard=True,
     )
-
 
 def admin_menu_keyboard():
     return ReplyKeyboardMarkup(
@@ -96,7 +86,6 @@ def admin_menu_keyboard():
         resize_keyboard=True,
     )
 
-
 # ================== START / NICKNAME ==================
 
 @dp.message(CommandStart())
@@ -104,147 +93,124 @@ async def start_handler(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     username = message.from_user.username
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "SELECT display_name, role FROM users WHERE user_id = ?",
-        (user_id,),
-    )
-    row = cursor.fetchone()
-
-    if not row:
-        cursor.execute(
-            """
-            INSERT INTO users (user_id, username, display_name, role, created_at)
-            VALUES (?, ?, NULL, 'player', datetime('now'))
-            """,
-            (user_id, username),
+    conn = await get_connection()
+    try:
+        # PostgreSQL використовує $1 замість ?
+        row = await conn.fetchrow(
+            "SELECT display_name, role FROM users WHERE user_id = $1",
+            user_id,
         )
-        conn.commit()
-        conn.close()
 
+        if not row:
+            await conn.execute(
+                """
+                INSERT INTO users (user_id, username, display_name, role)
+                VALUES ($1, $2, NULL, 'player')
+                """,
+                user_id, username,
+            )
+            await message.answer(
+                "👋 Вітаю!\n\nВведіть, будь ласка, ваш **нік** для ігор:",
+                parse_mode="Markdown",
+            )
+            await state.set_state(NicknameState.waiting_for_nickname)
+            return
+
+        display_name, role = row['display_name'], row['role']
+        
+        if not display_name:
+            await message.answer("Введіть, будь ласка, ваш **нік**:")
+            await state.set_state(NicknameState.waiting_for_nickname)
+            return
+
+        keyboard = admin_menu_keyboard() if role == "admin" else player_menu_keyboard()
         await message.answer(
-            "👋 Вітаю!\n\nВведіть, будь ласка, **нік**",
+            f"З поверненням, **{display_name}** 👋",
             parse_mode="Markdown",
+            reply_markup=keyboard,
         )
-        await state.set_state(NicknameState.waiting_for_nickname)
-        return
-
-    display_name, role = row
-    conn.close()
-
-    if not display_name:
-        await message.answer(
-            "👋 Вітаю!\n\nВведіть, будь ласка, **нік**",
-            parse_mode="Markdown",
-        )
-        await state.set_state(NicknameState.waiting_for_nickname)
-        return
-
-    keyboard = admin_menu_keyboard() if role == "admin" else player_menu_keyboard()
-
-    await message.answer(
-        f"З поверненням, **{display_name}** 👋",
-        parse_mode="Markdown",
-        reply_markup=keyboard,
-    )
-
+    finally:
+        await conn.close()
 
 @dp.message(NicknameState.waiting_for_nickname)
 async def save_nickname(message: types.Message, state: FSMContext):
     nickname = message.text.strip()
-
     if len(nickname) < 2 or len(nickname) > 20:
         await message.answer("❌ Нік має бути від 2 до 20 символів.")
         return
 
     user_id = message.from_user.id
-
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "UPDATE users SET display_name = ? WHERE user_id = ?",
-        (nickname, user_id),
-    )
-    conn.commit()
-    conn.close()
-
-    await state.clear()
-
-    await message.answer(
-        f"✅ Готово! Ваш нік: **{nickname}**",
-        parse_mode="Markdown",
-        reply_markup=player_menu_keyboard(),
-    )
-
+    conn = await get_connection()
+    try:
+        await conn.execute(
+            "UPDATE users SET display_name = $1 WHERE user_id = $2",
+            nickname, user_id,
+        )
+        await state.clear()
+        await message.answer(
+            f"✅ Готово! Ваш нік: **{nickname}**",
+            parse_mode="Markdown",
+            reply_markup=player_menu_keyboard(),
+        )
+    finally:
+        await conn.close()
 
 # ================== ACTIVE EVENTS ==================
 
 @dp.message(F.text == "📅 Активні події")
 async def show_active_events(message: types.Message):
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        """
-        SELECT event_id, title, event_date, event_time
-        FROM events
-        WHERE status = 'active'
-        ORDER BY created_at DESC
-        """
-    )
-    events = cursor.fetchall()
-    conn.close()
-
-    if not events:
-        await message.answer("ℹ️ Наразі немає активних івентів")
-        return
-
-    for event_id, title, event_date, event_time in events:
-        await message.answer(
-            f"🎭 *{title}*\n📅 {event_date}\n⏰ {event_time}",
-            parse_mode="Markdown",
-            reply_markup=invite_keyboard(event_id),
+    conn = await get_connection()
+    try:
+        events = await conn.fetch(
+            """
+            SELECT event_id, title, event_date, event_time
+            FROM events
+            WHERE status = 'active'
+            ORDER BY created_at DESC
+            """
         )
+        
+        if not events:
+            await message.answer("ℹ️ Наразі немає активних івентів")
+            return
 
+        for ev in events:
+            await message.answer(
+                f"🎭 *{ev['title']}*\n📅 {ev['event_date']}\n⏰ {ev['event_time']}",
+                parse_mode="Markdown",
+                reply_markup=invite_keyboard(ev['event_id']),
+            )
+    finally:
+        await conn.close()
 
 # ================== CREATE EVENT (ADMIN) ==================
 
 @dp.message(F.text == "➕ Створити івент")
 async def create_event_start(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
+    conn = await get_connection()
+    try:
+        row = await conn.fetchrow("SELECT role FROM users WHERE user_id = $1", user_id)
+        if not row or row['role'] != "admin":
+            await message.answer("❌ У вас немає прав адміністратора")
+            return
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT role FROM users WHERE user_id = ? AND is_active = 1",
-        (user_id,),
-    )
-    row = cursor.fetchone()
-    conn.close()
-
-    if not row or row[0] != "admin":
-        await message.answer("❌ У вас немає прав")
-        return
-
-    await message.answer("📝 Введіть назву івенту:")
-    await state.set_state(CreateEventStates.waiting_for_title)
-
+        await message.answer("📝 Введіть назву івенту (наприклад: Мафія Класика):")
+        await state.set_state(CreateEventStates.waiting_for_title)
+    finally:
+        await conn.close()
 
 @dp.message(CreateEventStates.waiting_for_title)
 async def create_event_title(message: types.Message, state: FSMContext):
     await state.update_data(title=message.text)
-    await message.answer("📅 Введіть дату (DD-MM-YYYY):")
+    await message.answer("📅 Введіть дату (наприклад: 20.01):")
     await state.set_state(CreateEventStates.waiting_for_date)
-
 
 @dp.message(CreateEventStates.waiting_for_date)
 async def create_event_date(message: types.Message, state: FSMContext):
     await state.update_data(event_date=message.text)
-    await message.answer("⏰ Введіть час (HH:MM):")
+    await message.answer("⏰ Введіть час (наприклад: 19:00):")
     await state.set_state(CreateEventStates.waiting_for_time)
-
 
 @dp.message(CreateEventStates.waiting_for_time)
 async def create_event_time(message: types.Message, state: FSMContext):
@@ -254,382 +220,210 @@ async def create_event_time(message: types.Message, state: FSMContext):
     event_time = message.text
     admin_id = message.from_user.id
 
-    conn = get_connection()
-    cursor = conn.cursor()
+    conn = await get_connection()
+    try:
+        # INSERT повертає ID в Postgres через RETURNING
+        event_id = await conn.fetchval(
+            """
+            INSERT INTO events (title, event_date, event_time, status, created_by)
+            VALUES ($1, $2, $3, 'active', $4)
+            RETURNING event_id
+            """,
+            title, event_date, event_time, admin_id,
+        )
 
-    cursor.execute(
-        """
-        INSERT INTO events (title, event_date, event_time, status, created_by, created_at)
-        VALUES (?, ?, ?, 'active', ?, datetime('now'))
-        """,
-        (title, event_date, event_time, admin_id),
-    )
-    conn.commit()
-    event_id = cursor.lastrowid
+        players = await conn.fetch("SELECT user_id FROM users WHERE is_active = 1")
+        
+        for p in players:
+            try:
+                await bot.send_message(
+                    p['user_id'],
+                    f"🔔 *Новий івент!*\n\n🎭 *{title}*\n📅 {event_date}\n⏰ {event_time}",
+                    parse_mode="Markdown",
+                    reply_markup=invite_keyboard(event_id),
+                )
+            except Exception:
+                continue
 
-    cursor.execute(
-        "SELECT user_id FROM users WHERE role = 'player' AND is_active = 1"
-    )
-    players = cursor.fetchall()
-    conn.close()
-
-    for (player_id,) in players:
-        try:
-            await bot.send_message(
-                player_id,
-                f"🎭 *{title}*\n📅 {event_date}\n⏰ {event_time}",
-                parse_mode="Markdown",
-                reply_markup=invite_keyboard(event_id),
-            )
-        except Exception:
-            pass
-
-    await state.clear()
-    await message.answer("✅ Івент створено")
-
+        await state.clear()
+        await message.answer("✅ Івент створено та розіслано гравцям!")
+    finally:
+        await conn.close()
 
 # ================== JOIN / COMMENT / CANCEL ==================
 
 @dp.callback_query(InviteCallback.filter(F.action == "join"))
-async def invite_join(
-    callback: types.CallbackQuery,
-    callback_data: InviteCallback,
-    state: FSMContext,
-):
+async def invite_join(callback: types.CallbackQuery, callback_data: InviteCallback, state: FSMContext):
     user_id = callback.from_user.id
     event_id = callback_data.event_id
 
-    conn = get_connection()
-    cursor = conn.cursor()
+    conn = await get_connection()
+    try:
+        existing = await conn.fetchval(
+            "SELECT 1 FROM registrations WHERE event_id = $1 AND user_id = $2 AND status = 'active'",
+            event_id, user_id
+        )
+        if existing:
+            await callback.answer("Ви вже записані на цей івент")
+            return
 
-    cursor.execute(
-        """
-        SELECT 1 FROM registrations
-        WHERE event_id = ? AND user_id = ? AND status = 'active'
-        """,
-        (event_id, user_id),
-    )
-    if cursor.fetchone():
-        conn.close()
-        await callback.answer("Ви вже записані")
-        return
+        await conn.execute(
+            """
+            INSERT INTO registrations (event_id, user_id, status)
+            VALUES ($1, $2, 'active')
+            """,
+            event_id, user_id
+        )
+        
+        await callback.message.edit_reply_markup(reply_markup=None)
+        await callback.answer("Ви записані!")
 
-    cursor.execute(
-        """
-        INSERT INTO registrations (event_id, user_id, status, created_at, updated_at)
-        VALUES (?, ?, 'active', datetime('now'), datetime('now'))
-        """,
-        (event_id, user_id),
-    )
-    conn.commit()
-    conn.close()
-
-    await callback.message.edit_reply_markup()
-    await callback.answer("Записано")
-
-    await state.set_state(CommentState.waiting_for_comment)
-    await state.update_data(event_id=event_id)
-
-    await bot.send_message(
-        user_id,
-        "💬 Залиште коментар або напишіть `-`",
-        parse_mode="Markdown",
-    )
-
+        await state.set_state(CommentState.waiting_for_comment)
+        await state.update_data(event_id=event_id)
+        await bot.send_message(user_id, "💬 Напишіть коментар (наприклад: +1) або надішліть `-` щоб пропустити")
+    finally:
+        await conn.close()
 
 @dp.message(CommentState.waiting_for_comment)
 async def save_comment(message: types.Message, state: FSMContext):
-    comment = message.text.strip()
-    if comment == "-":
-        comment = None
-
+    comment = None if message.text.strip() == "-" else message.text.strip()
     data = await state.get_data()
-    event_id = data["event_id"]
+    event_id = data.get("event_id")
     user_id = message.from_user.id
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        """
-        UPDATE registrations
-        SET comment = ?, updated_at = datetime('now')
-        WHERE event_id = ? AND user_id = ? AND status = 'active'
-        """,
-        (comment, event_id, user_id),
-    )
-    conn.commit()
-
-    cursor.execute(
-        """
-        SELECT e.title, e.event_date, e.event_time, u.display_name, e.created_by
-        FROM events e
-        JOIN users u ON u.user_id = ?
-        WHERE e.event_id = ?
-        """,
-        (user_id, event_id),
-    )
-    event = cursor.fetchone()
-    conn.close()
-
-    await state.clear()
-    await message.answer("✅ Ви записані!", reply_markup=cancel_keyboard(event_id))
-
-    if event:
-        title, date, time, name, admin_id = event
-        await bot.send_message(
-            admin_id,
-            f"🆕 Нова реєстрація\n🎭 {title}\n👤 {name}\n💬 {comment or '—'}",
+    conn = await get_connection()
+    try:
+        await conn.execute(
+            "UPDATE registrations SET comment = $1 WHERE event_id = $2 AND user_id = $3 AND status = 'active'",
+            comment, event_id, user_id
         )
+        
+        event_info = await conn.fetchrow(
+            "SELECT e.title, u.display_name, e.created_by FROM events e JOIN users u ON u.user_id = $1 WHERE e.event_id = $2",
+            user_id, event_id
+        )
+        
+        await state.clear()
+        await message.answer("✅ Запис підтверджено!", reply_markup=cancel_keyboard(event_id))
 
-@dp.callback_query(InviteCallback.filter(F.action == "ignore"))
-async def invite_ignore(callback: types.CallbackQuery):
-    # 1️⃣ Обовʼязково відповідаємо Telegram
-    await callback.answer("Запрошення проігноровано ❌")
-
-    # 2️⃣ Прибираємо кнопки під повідомленням
-    await callback.message.edit_reply_markup(reply_markup=None)
+        if event_info:
+            await bot.send_message(
+                event_info['created_by'],
+                f"🆕 *Реєстрація*\n🎭 {event_info['title']}\n👤 {event_info['display_name']}\n💬 {comment or '—'}",
+                parse_mode="Markdown"
+            )
+    finally:
+        await conn.close()
 
 @dp.callback_query(InviteCallback.filter(F.action == "cancel"))
 async def invite_cancel(callback: types.CallbackQuery, callback_data: InviteCallback):
     user_id = callback.from_user.id
     event_id = callback_data.event_id
 
-    conn = get_connection()
-    cursor = conn.cursor()
+    conn = await get_connection()
+    try:
+        await conn.execute(
+            "UPDATE registrations SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE event_id = $1 AND user_id = $2",
+            event_id, user_id
+        )
+        await callback.message.edit_reply_markup(reply_markup=None)
+        await callback.answer("Запис скасовано")
+        await bot.send_message(user_id, "❌ Ви скасували свій запис на івент")
+    finally:
+        await conn.close()
 
-    cursor.execute(
-        """
-        UPDATE registrations
-        SET status = 'cancelled', updated_at = datetime('now')
-        WHERE event_id = ? AND user_id = ? AND status = 'active'
-        """,
-        (event_id, user_id),
-    )
-    conn.commit()
-
-    cursor.execute(
-        """
-        SELECT title, event_date, event_time
-        FROM events
-        WHERE event_id = ?
-        """,
-        (event_id,),
-    )
-    event = cursor.fetchone()
-    conn.close()
-
-    await callback.message.edit_reply_markup(reply_markup=None)
-    await callback.answer("Запис скасовано ❌")
-
-    await bot.send_message(user_id, "❌ Ваш запис скасовано")
-
-    if event:
-        title, date, time = event
-        # за бажанням — можна повідомити адміна
-
+@dp.callback_query(InviteCallback.filter(F.action == "ignore"))
+async def invite_ignore(callback: types.CallbackQuery):
+    await callback.answer("Проігноровано")
+    await callback.message.delete()
 
 # ================== ADMIN ACTIONS ==================
 
 @dp.message(F.text == "👥 Список гравців")
 async def show_players(message: types.Message):
     user_id = message.from_user.id
+    conn = await get_connection()
+    try:
+        admin_check = await conn.fetchval("SELECT role FROM users WHERE user_id = $1", user_id)
+        if admin_check != "admin": return
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT role FROM users WHERE user_id = ? AND is_active = 1",
-        (user_id,),
-    )
-    if cursor.fetchone()[0] != "admin":
-        conn.close()
-        return
+        event = await conn.fetchrow("SELECT event_id, title FROM events WHERE status = 'active' ORDER BY created_at DESC LIMIT 1")
+        if not event:
+            await message.answer("Немає активних івентів")
+            return
 
-    cursor.execute(
-        """
-        SELECT event_id, title, event_date, event_time
-        FROM events
-        WHERE status = 'active'
-        ORDER BY created_at DESC LIMIT 1
-        """
-    )
-    event = cursor.fetchone()
+        players = await conn.fetch(
+            """
+            SELECT u.display_name, r.comment 
+            FROM registrations r 
+            JOIN users u ON u.user_id = r.user_id 
+            WHERE r.event_id = $1 AND r.status = 'active'
+            """, 
+            event['event_id']
+        )
 
-    if not event:
-        conn.close()
-        await message.answer("ℹ️ Немає активного івенту")
-        return
+        text = f"👥 Гравці на *{event['title']}*:\n\n"
+        if not players:
+            text += "Поки ніхто не записався 🤷‍♂️"
+        else:
+            for i, p in enumerate(players, 1):
+                comment_str = f" ({p['comment']})" if p['comment'] else ""
+                text += f"{i}. {p['display_name']}{comment_str}\n"
 
-    event_id, title, date, time = event
-
-    cursor.execute(
-        """
-        SELECT u.display_name, r.status, r.comment
-        FROM registrations r
-        JOIN users u ON u.user_id = r.user_id
-        WHERE r.event_id = ?
-        """,
-        (event_id,),
-    )
-    rows = cursor.fetchall()
-    conn.close()
-
-    text = f"🎭 *{title}*\n📅 {date}\n⏰ {time}\n\n"
-
-    text += "✅ Записані:\n"
-    for name, status, comment in rows:
-        if status == "active":
-            text += f"- {name}"
-            if comment:
-                text += f" ({comment})"
-            text += "\n"
-
-    await message.answer(text, parse_mode="Markdown")
-
+        await message.answer(text, parse_mode="Markdown")
+    finally:
+        await conn.close()
 
 @dp.message(F.text == "❌ Скасувати івент")
 async def cancel_event(message: types.Message):
     user_id = message.from_user.id
+    conn = await get_connection()
+    try:
+        admin_check = await conn.fetchval("SELECT role FROM users WHERE user_id = $1", user_id)
+        if admin_check != "admin": return
 
-    conn = get_connection()
-    cursor = conn.cursor()
+        event = await conn.fetchrow("SELECT event_id, title FROM events WHERE status = 'active' ORDER BY created_at DESC LIMIT 1")
+        if not event:
+            await message.answer("Немає активних івентів")
+            return
 
-    # 1️⃣ перевірка адміна
-    cursor.execute(
-        "SELECT role FROM users WHERE user_id = ? AND is_active = 1",
-        (user_id,)
-    )
-    row = cursor.fetchone()
-    if not row or row[0] != "admin":
-        conn.close()
-        return
+        # Скасовуємо
+        await conn.execute("UPDATE events SET status = 'closed' WHERE event_id = $1", event['event_id'])
+        
+        # Повідомляємо гравців
+        players = await conn.fetch("SELECT user_id FROM registrations WHERE event_id = $1 AND status = 'active'", event['event_id'])
+        for p in players:
+            try:
+                await bot.send_message(p['user_id'], f"❌ На жаль, івент *{event['title']}* скасовано адміністратором.", parse_mode="Markdown")
+            except: continue
 
-    # 2️⃣ беремо активний івент
-    cursor.execute(
-        """
-        SELECT event_id, title, event_date, event_time
-        FROM events
-        WHERE status = 'active'
-        ORDER BY created_at DESC
-        LIMIT 1
-        """
-    )
-    event = cursor.fetchone()
+        await message.answer(f"✅ Івент '{event['title']}' успішно скасовано.")
+    finally:
+        await conn.close()
 
-    if not event:
-        conn.close()
-        await message.answer("ℹ️ Немає активного івенту")
-        return
+# ================== RUNNER & WEB SERVER ==================
 
-    event_id, title, date, time = event
-
-    # 3️⃣ ВАЖЛИВО: спочатку беремо гравців
-    cursor.execute(
-        """
-        SELECT user_id
-        FROM registrations
-        WHERE event_id = ? AND status = 'active'
-        """,
-        (event_id,)
-    )
-    players = cursor.fetchall()
-
-    # 4️⃣ тепер скасовуємо івент
-    cursor.execute(
-        "UPDATE events SET status = 'closed' WHERE event_id = ?",
-        (event_id,)
-    )
-
-    cursor.execute(
-        """
-        UPDATE registrations
-        SET status = 'cancelled', updated_at = datetime('now')
-        WHERE event_id = ? AND status = 'active'
-        """,
-        (event_id,)
-    )
-
-    conn.commit()
-    conn.close()
-
-    # 5️⃣ РОЗСИЛКА ГРАВЦЯМ
-    for (player_id,) in players:
-        try:
-            await bot.send_message(
-                player_id,
-                "😔 *Ігровий вечір скасовано*\n\n"
-                f"🎭 {title}\n"
-                f"📅 {date}\n"
-                f"⏰ {time}",
-                parse_mode="Markdown"
-            )
-        except Exception:
-            pass
-
-    # 6️⃣ підтвердження адміну
-    await message.answer(
-        f"❌ Івент скасовано\n\n"
-        f"📣 Повідомлено гравців: {len(players)}"
-    )
-
-
-# ================== RUN ==================
-
-# Додайте цей імпорт В САМИЙ ВЕРХ файлу (біля asyncio)
-import os 
-
-# ... (весь ваш попередній код) ...
-
-# ================== RUN ==================
-
-async def main():
-    # Імпортуємо тут, щоб уникнути проблем з DNS, про які ми говорили раніше
-    from aiogram.client.session.aiohttp import AiohttpSession
-    
-    init_db()
-    
-    # Створюємо сесію для стабільного зв'язку
-    session = AiohttpSession()
-    
-    # ОНОВЛЮЄМО об'єкт бота з використанням сесії та токена з оточення
-    # Використовуємо os.getenv, щоб не "світити" токен у коді
-    final_bot = Bot(token=os.getenv("BOT_TOKEN"), session=session)
-    
-    await dp.start_polling(final_bot)
-
-# Функція для запуску веб-сервера (щоб Koyeb не вимикав сервіс)
 async def handle(request):
     return web.Response(text="Bot is running!")
 
-def run_web_server():
-    from aiohttp import web
-    import os
-    
+async def start_all():
+    # 1. Ініціалізація БД
+    await init_db()
+
+    # 2. Веб-сервер
     app = web.Application()
     app.router.add_get('/', handle)
-    port = int(os.environ.get("PORT", 8000))
-    
-    # Створюємо Runner замість run_app, щоб уникнути конфліктів із потоками
     runner = web.AppRunner(app)
-    return runner, port
-
-async def start_all():
-    # 1. Запускаємо веб-сервер для Koyeb (без сигналів, щоб не було помилки)
-    runner, port = run_web_server()
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', port)
+    site = web.TCPSite(runner, '0.0.0.0', int(os.environ.get("PORT", 8000)))
     await site.start()
-    print(f"Web server started on port {port}")
 
-    # 2. Запускаємо бота
-    print("Starting bot polling...")
-    await main()
+    # 3. Бот
+    print("Starting bot...")
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    import os
-    # Запускаємо все в одному циклі подій (event loop)
     try:
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
-
