@@ -470,34 +470,77 @@ async def show_players_admin(message: types.Message):
 
     finally:
         await conn.close()
-
-@dp.callback_query(F.data.startswith("cancel_event_"))
-async def admin_cancel_event(callback: types.CallbackQuery):
-    # Перевірка на адміна (для безпеки)
-    user_id = callback.from_user.id
+# ================== CANCEL EVENT ADMIN ==================
+@dp.message(F.text == "❌ Скасувати івент")
+async def request_cancel_event(message: types.Message):
+    user_id = message.from_user.id
     conn = await get_connection()
-    row = await conn.fetchrow("SELECT role FROM users WHERE user_id = $1", user_id)
-    await conn.close()
-    
-    if not row or row['role'] != "admin":
-        await callback.answer("❌ У вас немає прав для цієї дії", show_alert=True)
-        return
+    try:
+        row = await conn.fetchrow("SELECT role FROM users WHERE user_id = $1", user_id)
+        if not row or row['role'] != "admin":
+            await message.answer("❌ У вас немає прав адміністратора")
+            return
 
+        # Шукаємо останній активний івент
+        event = await conn.fetchrow(
+            "SELECT event_id, title, event_date FROM events WHERE status = 'active' ORDER BY created_at DESC LIMIT 1"
+        )
+
+        if not event:
+            await message.answer("ℹ️ Немає активних івентів для скасування.")
+            return
+
+        # Створюємо інлайн-кнопку для підтвердження
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text="🔥 ПІДТВЕРДИТИ СКАСУВАННЯ", 
+                callback_data=f"confirm_cancel_{event['event_id']}"
+            )]
+        ])
+
+        await message.answer(
+            f"❓ Ви впевнені, що хочете скасувати івент:\n🎭 *{event['title']}* ({event['event_date']})?",
+            parse_mode="Markdown",
+            reply_markup=kb
+        )
+    finally:
+        await conn.close()
+        
+@dp.callback_query(F.data.startswith("confirm_cancel_"))
+async def admin_confirm_cancel(callback: types.CallbackQuery):
     event_id = int(callback.data.split("_")[2])
     
-    # Викликаємо функцію скасування
-    player_ids = await cancel_event_in_db(event_id)
-    
-    # Сповіщаємо гравців, які були зареєстровані
-    for p_id in player_ids:
-        try:
-            await bot.send_message(p_id, "😔 Ігровий на який ви були записані -скасовано.")
-        except:
-            continue
+    conn = await get_connection()
+    try:
+        # Перевірка на адміна
+        row = await conn.fetchrow("SELECT role FROM users WHERE user_id = $1", callback.from_user.id)
+        if not row or row['role'] != "admin":
+            await callback.answer("❌ Немає прав", show_alert=True)
+            return
 
-    await callback.message.edit_text("❌ Івент повністю скасовано. Гравці отримали сповіщення.")
-    await callback.answer("Івент закрито")
+        # Отримуємо список гравців для сповіщення
+        players_to_notify = await conn.fetch(
+            "SELECT user_id FROM registrations WHERE event_id = $1 AND status = 'active'", 
+            event_id
+        )
 
+        # Скасовуємо в базі
+        await conn.execute("UPDATE events SET status = 'closed' WHERE event_id = $1", event_id)
+
+        # Розсилаємо сповіщення
+        for p in players_to_notify:
+            try:
+                await bot.send_message(
+                    p['user_id'], 
+                    "😔 На жаль, ігровий вечір скасовано. Слідкуйте за новими анонсами!"
+                )
+            except:
+                continue
+
+        await callback.message.edit_text(f"✅ Івент #{event_id} скасовано. Гравці ({len(players_to_notify)}) отримали повідомлення.")
+        await callback.answer("Івент закрито")
+    finally:
+        await conn.close()
 # ================== RUNNER & WEB SERVER ==================
 
 async def handle(request):
@@ -524,6 +567,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
