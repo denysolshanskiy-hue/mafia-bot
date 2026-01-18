@@ -10,6 +10,15 @@ async def get_connection():
     """Створює підключення до бази даних Neon (PostgreSQL)"""
     return await asyncpg.connect(DATABASE_URL)
 
+async def get_users_count():
+    conn = await get_connection()
+    try:
+        # Рахуємо лише активних користувачів
+        count = await conn.fetchval("SELECT COUNT(*) FROM users WHERE is_active = 1")
+        return count
+    finally:
+        await conn.close()
+
 async def init_db():
     """Створює таблиці, якщо вони не існують"""
     conn = await get_connection()
@@ -58,3 +67,4 @@ async def init_db():
 # Якщо потрібно запустити створення таблиць вручну
 if __name__ == "__main__":
     asyncio.run(init_db())
+
