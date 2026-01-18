@@ -234,7 +234,7 @@ async def create_event_time(message: types.Message, state: FSMContext):
 
     conn = await get_connection()
     try:
-        # INSERT повертає ID в Postgres через RETURNING
+        # 1. Зберігаємо івент у базу
         event_id = await conn.fetchval(
             """
             INSERT INTO events (title, event_date, event_time, status, created_by)
@@ -244,8 +244,11 @@ async def create_event_time(message: types.Message, state: FSMContext):
             title, event_date, event_time, admin_id,
         )
 
+        # 2. Отримуємо список усіх активних гравців
         players = await conn.fetch("SELECT user_id FROM users WHERE is_active = 1")
         
+        # 3. Розсилаємо повідомлення
+        sent_count = 0
         for p in players:
             try:
                 await bot.send_message(
@@ -254,11 +257,19 @@ async def create_event_time(message: types.Message, state: FSMContext):
                     parse_mode="Markdown",
                     reply_markup=invite_keyboard(event_id),
                 )
+                sent_count += 1
             except Exception:
+                # Пропускаємо, якщо бот заблокований користувачем
                 continue
 
+        # 4. Очищуємо стан та видаємо звіт як на скріншоті
         await state.clear()
-        await message.answer("✅ Івент створено та розіслано гравцям!")
+        await message.answer(
+            f"✅ Івент створено!\n"
+            f"📢 Запрошення розіслано гравцям: **{sent_count}**",
+            parse_mode="Markdown"
+        )
+        
     finally:
         await conn.close()
 
@@ -486,5 +497,6 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
