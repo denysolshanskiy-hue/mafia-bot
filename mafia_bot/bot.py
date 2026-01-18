@@ -75,16 +75,28 @@ def player_menu_keyboard():
         resize_keyboard=True,
     )
 
+def player_menu_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📅 Активні події")],
+            [KeyboardButton(text="👥 Список гравців")],
+        ],
+        resize_keyboard=True
+    )
+
+
 def admin_menu_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="➕ Створити івент")],
             [KeyboardButton(text="📅 Активні події")],
             [KeyboardButton(text="👥 Список гравців")],
+            [KeyboardButton(text="🛠 Адмін: список + скасовані")],
             [KeyboardButton(text="❌ Скасувати івент")],
         ],
-        resize_keyboard=True,
+        resize_keyboard=True
     )
+
 
 # ================== START / NICKNAME ==================
 
@@ -340,64 +352,111 @@ async def invite_ignore(callback: types.CallbackQuery):
 # ================== ADMIN ACTIONS ==================
 
 @dp.message(F.text == "👥 Список гравців")
-async def show_players(message: types.Message):
-    user_id = message.from_user.id
+async def show_players_public(message: types.Message):
     conn = await get_connection()
-    try:
-        admin_check = await conn.fetchval("SELECT role FROM users WHERE user_id = $1", user_id)
-        if admin_check != "admin": return
 
-        event = await conn.fetchrow("SELECT event_id, title FROM events WHERE status = 'active' ORDER BY created_at DESC LIMIT 1")
+    try:
+        event = await conn.fetchrow(
+            """
+            SELECT event_id, title
+            FROM events
+            WHERE status = 'active'
+            ORDER BY created_at DESC
+            LIMIT 1
+            """
+        )
+
         if not event:
-            await message.answer("Немає активних івентів")
+            await message.answer("ℹ️ Немає активних ігрових вечорів")
             return
 
         players = await conn.fetch(
             """
-            SELECT u.display_name, r.comment 
-            FROM registrations r 
-            JOIN users u ON u.user_id = r.user_id 
-            WHERE r.event_id = $1 AND r.status = 'active'
-            """, 
-            event['event_id']
+            SELECT u.display_name, r.comment
+            FROM registrations r
+            JOIN users u ON u.user_id = r.user_id
+            WHERE r.event_id = $1
+              AND r.status = 'active'
+            ORDER BY r.created_at
+            """,
+            event["event_id"]
         )
 
-        text = f"👥 Гравці на *{event['title']}*:\n\n"
+        text = f"👥 *Гравці на івенті:* _{event['title']}_\n\n"
+
         if not players:
-            text += "Поки ніхто не записався 🤷‍♂️"
+            text += "— Поки ніхто не записався"
         else:
             for i, p in enumerate(players, 1):
-                comment_str = f" ({p['comment']})" if p['comment'] else ""
-                text += f"{i}. {p['display_name']}{comment_str}\n"
+                comment = f" ({p['comment']})" if p["comment"] else ""
+                text += f"{i}. {p['display_name']}{comment}\n"
 
         await message.answer(text, parse_mode="Markdown")
+
     finally:
         await conn.close()
 
-@dp.message(F.text == "❌ Скасувати івент")
-async def cancel_event(message: types.Message):
+@dp.message(F.text == "🛠 Адмін: список + скасовані")
+async def show_players_admin(message: types.Message):
     user_id = message.from_user.id
     conn = await get_connection()
-    try:
-        admin_check = await conn.fetchval("SELECT role FROM users WHERE user_id = $1", user_id)
-        if admin_check != "admin": return
 
-        event = await conn.fetchrow("SELECT event_id, title FROM events WHERE status = 'active' ORDER BY created_at DESC LIMIT 1")
-        if not event:
-            await message.answer("Немає активних івентів")
+    try:
+        role = await conn.fetchval(
+            "SELECT role FROM users WHERE user_id = $1 AND is_active = TRUE",
+            user_id
+        )
+        if role != "admin":
+            await message.answer("❌ Команда доступна лише адміну")
             return
 
-        # Скасовуємо
-        await conn.execute("UPDATE events SET status = 'closed' WHERE event_id = $1", event['event_id'])
-        
-        # Повідомляємо гравців
-        players = await conn.fetch("SELECT user_id FROM registrations WHERE event_id = $1 AND status = 'active'", event['event_id'])
-        for p in players:
-            try:
-                await bot.send_message(p['user_id'], f"❌ На жаль, івент *{event['title']}* скасовано адміністратором.", parse_mode="Markdown")
-            except: continue
+        event = await conn.fetchrow(
+            """
+            SELECT event_id, title
+            FROM events
+            WHERE status = 'active'
+            ORDER BY created_at DESC
+            LIMIT 1
+            """
+        )
 
-        await message.answer(f"✅ Івент '{event['title']}' успішно скасовано.")
+        if not event:
+            await message.answer("ℹ️ Немає активних івентів")
+            return
+
+        rows = await conn.fetch(
+            """
+            SELECT u.display_name, r.status, r.comment
+            FROM registrations r
+            JOIN users u ON u.user_id = r.user_id
+            WHERE r.event_id = $1
+            ORDER BY r.created_at
+            """,
+            event["event_id"]
+        )
+
+        active_players = []
+        cancelled_players = []
+
+        for r in rows:
+            if r["status"] == "active":
+                line = r["display_name"]
+                if r["comment"]:
+                    line += f" ({r['comment']})"
+                active_players.append(line)
+            elif r["status"] == "cancelled":
+                cancelled_players.append(r["display_name"])
+
+        text = f"🛠 *Адмін-звіт по івенту:* _{event['title']}_\n\n"
+
+        text += "✅ *Активні:*\n"
+        text += "\n".join(f"- {p}" for p in active_players) if active_players else "—"
+
+        text += "\n\n❌ *Скасували:*\n"
+        text += "\n".join(f"- {p}" for p in cancelled_players) if cancelled_players else "—"
+
+        await message.answer(text, parse_mode="Markdown")
+
     finally:
         await conn.close()
 
@@ -427,3 +486,4 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
