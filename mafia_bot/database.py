@@ -10,6 +10,18 @@ async def get_connection():
     """Створює підключення до бази даних Neon (PostgreSQL)"""
     return await asyncpg.connect(DATABASE_URL)
 
+async def cancel_event_in_db(event_id):
+    conn = await get_connection()
+    try:
+        # Оновлюємо статус івенту
+        await conn.execute("UPDATE events SET status = 'closed' WHERE event_id = $1", event_id)
+        
+        # Отримуємо список гравців, які були записані, щоб знати кому писати
+        rows = await conn.fetch("SELECT user_id FROM registrations WHERE event_id = $1 AND status = 'active'", event_id)
+        return [r['user_id'] for r in rows]
+    finally:
+        await conn.close()
+
 async def get_total_players_count():
     conn = await get_connection()
     try:
@@ -67,5 +79,6 @@ async def init_db():
 # Якщо потрібно запустити створення таблиць вручну
 if __name__ == "__main__":
     asyncio.run(init_db())
+
 
 
