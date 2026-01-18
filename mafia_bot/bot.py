@@ -403,7 +403,7 @@ async def show_players_admin(message: types.Message):
 
     try:
         role = await conn.fetchval(
-            "SELECT role FROM users WHERE user_id = $1 AND is_active = TRUE",
+            "SELECT role FROM users WHERE user_id = $1 AND is_active = 1",
             user_id
         )
         if role != "admin":
@@ -486,4 +486,5 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
