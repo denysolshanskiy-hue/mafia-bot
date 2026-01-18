@@ -471,6 +471,33 @@ async def show_players_admin(message: types.Message):
     finally:
         await conn.close()
 
+@dp.callback_query(F.data.startswith("cancel_event_"))
+async def admin_cancel_event(callback: types.CallbackQuery):
+    # Перевірка на адміна (для безпеки)
+    user_id = callback.from_user.id
+    conn = await get_connection()
+    row = await conn.fetchrow("SELECT role FROM users WHERE user_id = $1", user_id)
+    await conn.close()
+    
+    if not row or row['role'] != "admin":
+        await callback.answer("❌ У вас немає прав для цієї дії", show_alert=True)
+        return
+
+    event_id = int(callback.data.split("_")[2])
+    
+    # Викликаємо функцію скасування
+    player_ids = await cancel_event_in_db(event_id)
+    
+    # Сповіщаємо гравців, які були зареєстровані
+    for p_id in player_ids:
+        try:
+            await bot.send_message(p_id, "😔 Ігровий на який ви були записані -скасовано.")
+        except:
+            continue
+
+    await callback.message.edit_text("❌ Івент повністю скасовано. Гравці отримали сповіщення.")
+    await callback.answer("Івент закрито")
+
 # ================== RUNNER & WEB SERVER ==================
 
 async def handle(request):
@@ -497,6 +524,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
