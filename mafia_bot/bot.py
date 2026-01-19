@@ -345,41 +345,57 @@ async def invite_cancel(callback: types.CallbackQuery, callback_data: InviteCall
     user_username = f"(@{callback.from_user.username})" if callback.from_user.username else ""
     event_id = callback_data.event_id
 
-    # Вкажіть тут ваш ID, який ми використовували в попередньому боті
-    MY_ADMIN_ID = 444726017  # <--- ЗАМІНІТЬ НА ВАШ ID
+    # Ваш ID для гарантованого сповіщення
+    MY_ADMIN_ID = 444726017  
 
     conn = await get_connection()
     try:
-        # Отримуємо назву івенту для гарного повідомлення
-        event_title = await conn.fetchval("SELECT title FROM events WHERE event_id = $1", event_id)
+        # 1. Отримуємо дані про івент ТА ID того, хто його створив
+        event_info = await conn.fetchrow(
+            "SELECT title, created_by FROM events WHERE event_id = $1", 
+            event_id
+        )
+        
+        event_title = event_info['title'] if event_info else "Невідомий івент"
+        # Творець івенту (якщо MY_ADMIN_ID раптом зміниться)
+        creator_id = event_info['created_by'] if event_info else MY_ADMIN_ID
 
-        # Оновлюємо статус у базі
+        # 2. Оновлюємо статус у базі (важливо: ставимо 'cancelled')
         await conn.execute(
             "UPDATE registrations SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE event_id = $1 AND user_id = $2",
             event_id, user_id
         )
         
+        # 3. Візуальне підтвердження в чаті гравця
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer("Запис скасовано")
         await bot.send_message(user_id, "❌ Ви скасували свій запис на івент")
 
-        # Сповіщення адміна (вас)
-        # Надсилаємо лише якщо скасовуєте НЕ ви самі, щоб не дублювати
-        if user_id != MY_ADMIN_ID:
+        # 4. СПОВІЩЕННЯ АДМІНА
+        # Тимчасово прибираємо умову "if user_id != MY_ADMIN_ID", щоб ви ПЕРЕВІРИЛИ, чи приходить воно вам
+        # Потім повернете, якщо не хочете отримувати дублі від себе
+        
+        admin_text = (
+            f"⚠️ **Скасування реєстрації!**\n\n"
+            f"🎭 Івент: **{event_title}**\n"
+            f"👤 Гравець: **{user_name}** {user_username}\n"
+            f"🆔 ID: `{user_id}`\n"
+            f"Статус: Скасовано ❌"
+        )
+
+        # Надсилаємо на ваш жорстко прописаний ID
+        try:
+            await bot.send_message(chat_id=MY_ADMIN_ID, text=admin_text, parse_mode="Markdown")
+            print(f"DEBUG: Сповіщення успішно надіслано адміну {MY_ADMIN_ID}")
+        except Exception as e:
+            print(f"DEBUG ERROR: Не вдалося надіслати сповіщення на MY_ADMIN_ID: {e}")
+
+        # Якщо івент створив хтось інший (інший адмін), надсилаємо і йому
+        if creator_id and creator_id != MY_ADMIN_ID:
             try:
-                await bot.send_message(
-                    chat_id=MY_ADMIN_ID,
-                    text=(
-                        f"⚠️ **Скасування реєстрації!**\n\n"
-                        f"🎭 Івент: **{event_title or 'Невідомий'}**\n"
-                        f"👤 Гравець: **{user_name}** {user_username}\n"
-                        f"🆔 ID: `{user_id}`\n"
-                        f"Статус: Скасовано ❌"
-                    ),
-                    parse_mode="Markdown"
-                )
-            except Exception as e:
-                print(f"Помилка сповіщення: {e}")
+                await bot.send_message(chat_id=creator_id, text=admin_text, parse_mode="Markdown")
+            except:
+                pass
 
     finally:
         await conn.close()
@@ -609,6 +625,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
