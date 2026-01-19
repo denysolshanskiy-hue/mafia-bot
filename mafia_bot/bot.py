@@ -345,43 +345,41 @@ async def invite_cancel(callback: types.CallbackQuery, callback_data: InviteCall
     user_username = f"(@{callback.from_user.username})" if callback.from_user.username else ""
     event_id = callback_data.event_id
 
+    # Вкажіть тут ваш ID, який ми використовували в попередньому боті
+    MY_ADMIN_ID = 444726017  # <--- ЗАМІНІТЬ НА ВАШ ID
+
     conn = await get_connection()
     try:
-        # 1. Отримуємо інформацію про івент та його творця ПЕРЕД оновленням
-        event_info = await conn.fetchrow(
-            "SELECT title, created_by FROM events WHERE event_id = $1", 
-            event_id
-        )
+        # Отримуємо назву івенту для гарного повідомлення
+        event_title = await conn.fetchval("SELECT title FROM events WHERE event_id = $1", event_id)
 
-        # 2. Оновлюємо статус реєстрації на 'cancelled'
+        # Оновлюємо статус у базі
         await conn.execute(
             "UPDATE registrations SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE event_id = $1 AND user_id = $2",
             event_id, user_id
         )
         
-        # 3. Прибираємо кнопки під повідомленням у гравця
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer("Запис скасовано")
-        
-        # 4. Повідомлення гравцю
         await bot.send_message(user_id, "❌ Ви скасували свій запис на івент")
 
-        # 5. Сповіщення адміна (творця івенту)
-        if event_info and event_info['created_by']:
+        # Сповіщення адміна (вас)
+        # Надсилаємо лише якщо скасовуєте НЕ ви самі, щоб не дублювати
+        if user_id != MY_ADMIN_ID:
             try:
                 await bot.send_message(
-                    chat_id=event_info['created_by'],
+                    chat_id=MY_ADMIN_ID,
                     text=(
                         f"⚠️ **Скасування реєстрації!**\n\n"
-                        f"🎭 Івент: **{event_info['title']}**\n"
+                        f"🎭 Івент: **{event_title or 'Невідомий'}**\n"
                         f"👤 Гравець: **{user_name}** {user_username}\n"
                         f"🆔 ID: `{user_id}`\n"
                         f"Статус: Скасовано ❌"
                     ),
                     parse_mode="Markdown"
                 )
-            except Exception as admin_err:
-                print(f"Помилка надсилання сповіщення адміну: {admin_err}")
+            except Exception as e:
+                print(f"Помилка сповіщення: {e}")
 
     finally:
         await conn.close()
@@ -611,6 +609,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
