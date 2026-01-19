@@ -341,48 +341,41 @@ async def save_comment(message: types.Message, state: FSMContext):
 @dp.callback_query(InviteCallback.filter(F.action == "cancel"))
 async def invite_cancel(callback: types.CallbackQuery, callback_data: InviteCallback):
     user_id = callback.from_user.id
-    user_name = callback.from_user.full_name
-    user_username = f"(@{callback.from_user.username})" if callback.from_user.username else ""
     event_id = callback_data.event_id
-
-    # Ваш перевірений ID
     MY_ADMIN_ID = 444726017  
+
+    # --- ТЕСТОВЕ СПОВІЩЕННЯ (до роботи з БД) ---
+    try:
+        await bot.send_message(MY_ADMIN_ID, f"🔍 Діагностика: Кнопка натиснута користувачем {user_id}")
+    except Exception as e:
+        print(f"Критична помилка бота: {e}")
 
     conn = await get_connection()
     try:
-        # 1. Спершу дізнаємося назву івенту
-        event_title = await conn.fetchval("SELECT title FROM events WHERE event_id = $1", event_id)
-        if not event_title:
-            event_title = "Івент не знайдено"
-
-        # 2. Оновлюємо статус
+        # Спрощений запит: спочатку оновлюємо, потім шукаємо назву
         await conn.execute(
-            "UPDATE registrations SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE event_id = $1 AND user_id = $2",
-            event_id, user_id
+            "UPDATE registrations SET status = 'cancelled' WHERE event_id = $1 AND user_id = $2",
+            int(event_id), int(user_id)
         )
         
-        # 3. Відповідь користувачу
+        # Отримуємо назву окремо
+        event_title = await conn.fetchval("SELECT title FROM events WHERE event_id = $1", int(event_id))
+
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer("Запис скасовано")
         await bot.send_message(user_id, "❌ Ви скасували свій запис на івент")
 
-        # 4. СПОВІЩЕННЯ АДМІНА (БЕЗ ЖОДНИХ УМОВ ДЛЯ ТЕСТУ)
-        # Ми прибрали "if user_id != MY_ADMIN_ID", щоб ви точно бачили результат
-        try:
-            await bot.send_message(
-                chat_id=MY_ADMIN_ID,
-                text=(
-                    f"⚠️ **СКАСУВАННЯ!**\n\n"
-                    f"🎭 Івент: **{event_title}**\n"
-                    f"👤 Гравець: **{user_name}** {user_username}\n"
-                    f"🆔 ID: `{user_id}`"
-                ),
-                parse_mode="Markdown"
-            )
-        except Exception as e:
-            # Якщо тут буде помилка, вона з'явиться в логах Koyeb
-            print(f"ПОМИЛКА ВІДПРАВКИ АДМІНУ: {e}")
+        # Основне сповіщення
+        await bot.send_message(
+            chat_id=MY_ADMIN_ID,
+            text=f"⚠️ **Скасування!**\n🎭 Івент: {event_title or 'ID ' + str(event_id)}\n👤 Гравець ID: {user_id}",
+            parse_mode="Markdown"
+        )
 
+    except Exception as e:
+        # Цей принт ВИ МАЄТЕ побачити в логах, якщо щось піде не так з БД
+        print(f"ПОМИЛКА ОБРОБКИ SQL: {e}")
+        await callback.answer("Сталася помилка при скасуванні", show_alert=True)
     finally:
         await conn.close()
 
@@ -611,6 +604,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
