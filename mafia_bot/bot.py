@@ -341,17 +341,44 @@ async def save_comment(message: types.Message, state: FSMContext):
 @dp.callback_query(InviteCallback.filter(F.action == "cancel"))
 async def invite_cancel(callback: types.CallbackQuery, callback_data: InviteCallback):
     user_id = callback.from_user.id
+    user_name = callback.from_user.full_name
+    user_username = f"(@{callback.from_user.username})" if callback.from_user.username else ""
     event_id = callback_data.event_id
 
     conn = await get_connection()
     try:
+        # Оновлюємо статус у базі даних
         await conn.execute(
             "UPDATE registrations SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE event_id = $1 AND user_id = $2",
             event_id, user_id
         )
+        
+        # Прибираємо кнопки під повідомленням
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer("Запис скасовано")
+        
+        # Повідомлення гравцю
         await bot.send_message(user_id, "❌ Ви скасували свій запис на івент")
+
+        # --- НОВИЙ БЛОК: Сповіщення адміна ---
+        admin_id = os.getenv("ADMIN_TELEGRAM_ID") # Переконайтеся, що ця змінна є в .env
+        if admin_id:
+            try:
+                await bot.send_message(
+                    chat_id=admin_id,
+                    text=(
+                        f"⚠️ **Скасування реєстрації!**\n\n"
+                        f"👤 Гравець: **{user_name}** {user_username}\n"
+                        f"🆔 ID: `{user_id}`\n"
+                        f"📅 Подія ID: {event_id}\n"
+                        f"Статус: Скасовано ❌"
+                    ),
+                    parse_mode="Markdown"
+                )
+            except Exception as admin_err:
+                print(f"Помилка надсилання адміну: {admin_err}")
+        # ---------------------------------------
+
     finally:
         await conn.close()
 
@@ -569,6 +596,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
