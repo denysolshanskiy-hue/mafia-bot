@@ -347,37 +347,41 @@ async def invite_cancel(callback: types.CallbackQuery, callback_data: InviteCall
 
     conn = await get_connection()
     try:
-        # Оновлюємо статус у базі даних
+        # 1. Отримуємо інформацію про івент та його творця ПЕРЕД оновленням
+        event_info = await conn.fetchrow(
+            "SELECT title, created_by FROM events WHERE event_id = $1", 
+            event_id
+        )
+
+        # 2. Оновлюємо статус реєстрації на 'cancelled'
         await conn.execute(
             "UPDATE registrations SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE event_id = $1 AND user_id = $2",
             event_id, user_id
         )
         
-        # Прибираємо кнопки під повідомленням
+        # 3. Прибираємо кнопки під повідомленням у гравця
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer("Запис скасовано")
         
-        # Повідомлення гравцю
+        # 4. Повідомлення гравцю
         await bot.send_message(user_id, "❌ Ви скасували свій запис на івент")
 
-        # --- НОВИЙ БЛОК: Сповіщення адміна ---
-        admin_id = os.getenv("ADMIN_TELEGRAM_ID") # Переконайтеся, що ця змінна є в .env
-        if admin_id:
+        # 5. Сповіщення адміна (творця івенту)
+        if event_info and event_info['created_by']:
             try:
                 await bot.send_message(
-                    chat_id=admin_id,
+                    chat_id=event_info['created_by'],
                     text=(
                         f"⚠️ **Скасування реєстрації!**\n\n"
+                        f"🎭 Івент: **{event_info['title']}**\n"
                         f"👤 Гравець: **{user_name}** {user_username}\n"
                         f"🆔 ID: `{user_id}`\n"
-                        f"📅 Подія ID: {event_id}\n"
                         f"Статус: Скасовано ❌"
                     ),
                     parse_mode="Markdown"
                 )
             except Exception as admin_err:
-                print(f"Помилка надсилання адміну: {admin_err}")
-        # ---------------------------------------
+                print(f"Помилка надсилання сповіщення адміну: {admin_err}")
 
     finally:
         await conn.close()
@@ -607,6 +611,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
