@@ -460,9 +460,11 @@ async def show_players_admin(message: types.Message):
 
         text = f"🛠 *Адмін-звіт по івенту:* _{event['title']}_\n\n"
 
-        text += "✅ *Активні:*\n"
-        text += "\n".join(f"- {p}" for p in active_players) if active_players else "—"
-
+        text = "✅ **Активні:**\n"
+        # start=1 означає, що нумерація почнеться з одиниці
+        for i, player in enumerate(active_players, start=1):
+        text += f"{i}. {player}\n"
+  
         text += "\n\n❌ *Скасували:*\n"
         text += "\n".join(f"- {p}" for p in cancelled_players) if cancelled_players else "—"
 
@@ -567,6 +569,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
