@@ -344,38 +344,42 @@ async def invite_cancel(callback: types.CallbackQuery, callback_data: InviteCall
     event_id = callback_data.event_id
     MY_ADMIN_ID = 444726017  
 
-    # --- ТЕСТОВЕ СПОВІЩЕННЯ (до роботи з БД) ---
-    try:
-        await bot.send_message(MY_ADMIN_ID, f"🔍 Діагностика: Кнопка натиснута користувачем {user_id}")
-    except Exception as e:
-        print(f"Критична помилка бота: {e}")
-
     conn = await get_connection()
     try:
-        # Спрощений запит: спочатку оновлюємо, потім шукаємо назву
+        # 1. Отримуємо дані одним запитом: назву івенту та нікнейм користувача
+        event_title = await conn.fetchval("SELECT title FROM events WHERE event_id = $1", int(event_id))
+        user_nick = await conn.fetchval("SELECT display_name FROM users WHERE user_id = $1", int(user_id))
+        
+        # Якщо нік раптом не знайдено (хоча він має бути), використовуємо повне ім'я з телеграму
+        display_name = user_nick or callback.from_user.full_name
+
+        # 2. Оновлюємо статус у базі
         await conn.execute(
-            "UPDATE registrations SET status = 'cancelled' WHERE event_id = $1 AND user_id = $2",
+            "UPDATE registrations SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE event_id = $1 AND user_id = $2",
             int(event_id), int(user_id)
         )
         
-        # Отримуємо назву окремо
-        event_title = await conn.fetchval("SELECT title FROM events WHERE event_id = $1", int(event_id))
-
+        # 3. Прибираємо кнопки та підтверджуємо гравцю
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer("Запис скасовано")
         await bot.send_message(user_id, "❌ Ви скасували свій запис на івент")
 
-        # Основне сповіщення
-        await bot.send_message(
-            chat_id=MY_ADMIN_ID,
-            text=f"⚠️ **Скасування!**\n🎭 Івент: {event_title or 'ID ' + str(event_id)}\n👤 Гравець ID: {user_id}",
-            parse_mode="Markdown"
-        )
+        # 4. СПОВІЩЕННЯ АДМІНА (тепер з ніком)
+        # Додаємо умову, щоб не спамити вам, коли ви самі скасовуєте (якщо хочете бачити завжди — просто видаліть if)
+        if user_id != MY_ADMIN_ID:
+            await bot.send_message(
+                chat_id=MY_ADMIN_ID,
+                text=(
+                    f"⚠️ **Скасування реєстрації!**\n\n"
+                    f"🎭 Івент: **{event_title or 'Невідомий'}**\n"
+                    f"👤 Гравець: **{display_name}**\n"
+                    f"🆔 ID: `{user_id}`"
+                ),
+                parse_mode="Markdown"
+            )
 
     except Exception as e:
-        # Цей принт ВИ МАЄТЕ побачити в логах, якщо щось піде не так з БД
         print(f"ПОМИЛКА ОБРОБКИ SQL: {e}")
-        await callback.answer("Сталася помилка при скасуванні", show_alert=True)
     finally:
         await conn.close()
 
@@ -604,6 +608,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
