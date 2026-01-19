@@ -485,15 +485,26 @@ async def show_players_admin(message: types.Message):
             elif r["status"] == "cancelled":
                 cancelled_players.append(r["display_name"])
 
+        # Формуємо заголовок звіту
         text = f"🛠 *Адмін-звіт по івенту:* _{event['title']}_\n\n"
 
-        text = "✅ **Активні:**\n"
-        # start=1 означає, що нумерація почнеться з одиниці
-        for i, player in enumerate(active_players, start=1):
-        text += f"{i}. {player}\n"
-  
-        text += "\n\n❌ *Скасували:*\n"
-        text += "\n".join(f"- {p}" for p in cancelled_players) if cancelled_players else "—"
+        # Списки активних гравців
+        text += "✅ **Активні:**\n"
+        if not active_players:
+            text += "— Поки ніхто не записався\n"
+        else:
+            # ТУТ БУЛА ПОМИЛКА: додаємо 4 пробіли перед text +=
+            for i, player in enumerate(active_players, start=1):
+                text += f"{i}. {player}\n"
+
+        # Список тих, хто скасував
+        text += "\n❌ **Скасували:**\n"
+        if not cancelled_players:
+            text += "—"
+        else:
+            # Нумеруємо також і список скасування для зручності
+            for i, p in enumerate(cancelled_players, start=1):
+                text += f"{i}. {p}\n"
 
         await message.answer(text, parse_mode="Markdown")
 
@@ -596,6 +607,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
