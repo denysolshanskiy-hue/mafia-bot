@@ -48,7 +48,7 @@ def admin_menu_keyboard():
             [KeyboardButton(text="📅 Активні події")],
             [KeyboardButton(text="👥 Список гравців")],
             [KeyboardButton(text="🛠 Адмін: список + скасовані")],
-            [KeyboardButton(text="✅ Підтвердити вечір")], # Нова кнопка
+            [KeyboardButton(text="✅ Підтвердити вечір")],
             [KeyboardButton(text="❌ Скасувати івент")],
         ],
         resize_keyboard=True
@@ -105,6 +105,7 @@ def admin_menu_keyboard():
             [KeyboardButton(text="📅 Активні події")],
             [KeyboardButton(text="👥 Список гравців")],
             [KeyboardButton(text="🛠 Адмін: список + скасовані")],
+            [KeyboardButton(text="✅ Підтвердити вечір")],
             [KeyboardButton(text="❌ Скасувати івент")],
         ],
         resize_keyboard=True
@@ -694,6 +695,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
