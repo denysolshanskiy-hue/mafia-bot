@@ -41,6 +41,19 @@ class InviteCallback(CallbackData, prefix="invite"):
     event_id: int
 
 # ================== KEYBOARDS ==================
+def admin_menu_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="➕ Створити івент")],
+            [KeyboardButton(text="📅 Активні події")],
+            [KeyboardButton(text="👥 Список гравців")],
+            [KeyboardButton(text="🛠 Адмін: список + скасовані")],
+            [KeyboardButton(text="✅ Підтвердити вечір")], # Нова кнопка
+            [KeyboardButton(text="❌ Скасувати івент")],
+        ],
+        resize_keyboard=True
+    )
+
 def invite_keyboard(event_id: int):
     return InlineKeyboardMarkup(
         inline_keyboard=[
@@ -270,6 +283,79 @@ async def create_event_time(message: types.Message, state: FSMContext):
             parse_mode="Markdown"
         )
         
+    finally:
+        await conn.close()
+#=================== COMMIT EVENT ====================
+@dp.message(F.text == "✅ Підтвердити вечір")
+async def confirm_event_start(message: types.Message):
+    user_id = message.from_user.id
+    conn = await get_connection()
+    try:
+        # Перевірка на адміна
+        row = await conn.fetchrow("SELECT role FROM users WHERE user_id = $1", user_id)
+        if not row or row['role'] != "admin":
+            return
+
+        # Шукаємо останній активний івент
+        event = await conn.fetchrow(
+            "SELECT event_id, title, event_date FROM events WHERE status = 'active' ORDER BY created_at DESC LIMIT 1"
+        )
+
+        if not event:
+            await message.answer("ℹ️ Немає активних івентів для підтвердження.")
+            return
+
+        # Кнопка для остаточного підтвердження
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(
+                text="🚀 ВІДПРАВИТИ ПІДТВЕРДЖЕННЯ", 
+                callback_data=f"send_confirm_{event['event_id']}"
+            )]
+        ])
+
+        await message.answer(
+            f"❓ Надіслати гравцям підтвердження, що вечір відбудеться?\n🎭 *{event['title']}* ({event['event_date']})",
+            parse_mode="Markdown",
+            reply_markup=kb
+        )
+    finally:
+        await conn.close()
+
+@dp.callback_query(F.data.startswith("send_confirm_"))
+async def process_send_confirmation(callback: types.CallbackQuery):
+    event_id = int(callback.data.split("_")[2])
+    
+    conn = await get_connection()
+    try:
+        # 1. Отримуємо список усіх активних гравців на цей івент
+        players = await conn.fetch(
+            "SELECT user_id FROM registrations WHERE event_id = $1 AND status = 'active'", 
+            event_id
+        )
+
+        if not players:
+            await callback.answer("На цей івент ще ніхто не записався", show_alert=True)
+            return
+
+        # 2. Розсилаємо повідомлення
+        success_count = 0
+        for p in players:
+            try:
+                await bot.send_message(
+                    p['user_id'], 
+                    "✅ Ігровий вечір в силі! Чекаємо на тебе🫶"
+                )
+                success_count += 1
+            except Exception:
+                continue
+
+        # 3. Змінюємо повідомлення у адміна
+        await callback.message.edit_text(
+            f"✅ Підтвердження надіслано!\n👥 Гравців сповіщено: **{success_count}**",
+            parse_mode="Markdown"
+        )
+        await callback.answer("Розсилку завершено")
+
     finally:
         await conn.close()
 
@@ -608,6 +694,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
