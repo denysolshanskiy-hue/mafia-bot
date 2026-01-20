@@ -101,15 +101,29 @@ def player_menu_keyboard():
 def admin_menu_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="➕ Створити івент")],
-            [KeyboardButton(text="📅 Активні події")],
-            [KeyboardButton(text="👥 Список гравців")],
-            [KeyboardButton(text="🛠 Адмін: список + скасовані")],
-            [KeyboardButton(text="✅ Підтвердити вечір")],
-            [KeyboardButton(text="❌ Скасувати івент")],
+            # Перший ряд: Основні дії з івентом
+            [
+                KeyboardButton(text="➕ Створити івент"),
+                KeyboardButton(text="📅 Активні події")
+            ],
+            # Другий ряд: Робота з гравцями та списками
+            [
+                KeyboardButton(text="👥 Список гравців"),
+                KeyboardButton(text="🛠 Адмін: список + скасовані")
+            ],
+            # Третій ряд: Управління поточним вечором
+            [
+                KeyboardButton(text="✅ Підтвердити вечір"),
+                KeyboardButton(text="🏁 Завершити вечір")
+            ],
+            # Четвертий ряд: "Небезпечна" кнопка (окремо, щоб не натиснути випадково)
+            [
+                KeyboardButton(text="❌ Скасувати івент")
+            ]
         ],
         resize_keyboard=True
     )
+
 
 
 # ================== START / NICKNAME ==================
@@ -180,6 +194,39 @@ async def save_nickname(message: types.Message, state: FSMContext):
         )
     finally:
         await conn.close()
+
+# ================== Colse Event ==================
+
+@dp.message(F.text == "🏁 Завершити вечір")
+async def archive_event(message: types.Message):
+    user_id = message.from_user.id
+    conn = await get_connection()
+    try:
+        # Перевірка на адміна
+        row = await conn.fetchrow("SELECT role FROM users WHERE user_id = $1", user_id)
+        if not row or row['role'] != "admin":
+            return
+
+        # Знаходимо останній активний івент
+        event = await conn.fetchrow(
+            "SELECT event_id, title FROM events WHERE status = 'active' ORDER BY created_at DESC LIMIT 1"
+        )
+
+        if not event:
+            await message.answer("ℹ️ Немає активних івентів для завершення.")
+            return
+
+        # Змінюємо статус на 'closed'
+        await conn.execute(
+            "UPDATE events SET status = 'closed' WHERE event_id = $1", 
+            event['event_id']
+        )
+
+        await message.answer(f"✅ Івент **{event['title']}** успішно завершено та перенесено в архів.", parse_mode="Markdown")
+
+    finally:
+        await conn.close()
+
 
 # ================== ACTIVE EVENTS ==================
 
@@ -695,6 +742,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
