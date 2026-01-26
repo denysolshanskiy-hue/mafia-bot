@@ -409,79 +409,64 @@ async def process_send_confirmation(callback: types.CallbackQuery):
 
 # ================== JOIN / COMMENT / CANCEL ==================
 
-# ================== JOIN EVENT (POLLING VERSION) ==================
-
 @dp.callback_query(InviteCallback.filter(F.action == "join"))
-async def join_event(callback: types.CallbackQuery, callback_data: InviteCallback, state: FSMContext):
-    # Відразу відповідаємо на колбек, щоб прибрати "годинник" на кнопці
-    # Але для помилок ми використаємо show_alert=True пізніше
-    
+async def invite_join(callback: types.CallbackQuery, callback_data: InviteCallback, state: FSMContext):
+    user_id = callback.from_user.id
+    event_id = callback_data.event_id
+
     conn = await get_connection()
     try:
-        # 1. Отримуємо дані про івент та юзера (ВИПРАВЛЕНО: callback.from_user.id)
+        # 1. Перевірка статусу івенту (захист від старих повідомлень)
         event = await conn.fetchrow(
             "SELECT status, title FROM events WHERE event_id = $1", 
-            callback_data.event_id
+            event_id
         )
-        user = await conn.fetchrow(
-            "SELECT display_name FROM users WHERE user_id = $1", 
-            callback.from_user.id
-        )
+        
+        if not event or event["status"] != 'active':
+            status_text = "вже завершений" if event and event["status"] == 'closed' else "скасований"
+            await callback.answer(f"🚫 Цей івент {status_text}. Запис неможливий.", show_alert=True)
+            # Прибираємо кнопки, щоб не плутати людей
+            await callback.message.edit_reply_markup(reply_markup=None)
+            return
 
-        # 2. Перевірка ніка
+        # 2. Перевірка наявності ніка (захист від None в списках)
+        user = await conn.fetchrow("SELECT display_name FROM users WHERE user_id = $1", user_id)
         if not user or not user["display_name"]:
             await callback.answer("❌ Спочатку вкажіть ваш нік у головному меню (/start)", show_alert=True)
             return
 
-        # 3. Перевірка статусу івенту (захист від старих повідомлень)
-        if not event or event["status"] != 'active':
-            status_text = "вже завершений" if event and event["status"] == 'closed' else "скасований"
-            await callback.answer(f"🚫 Цей івент {status_text}. Запис неможливий.", show_alert=True)
-            
-            # Прибираємо кнопки зі старого повідомлення, щоб більше ніхто не тиснув
-            try:
-                await callback.message.edit_reply_markup(reply_markup=None)
-            except:
-                pass
-            return
-
-        # 4. Перевірка дубліката запису
-        exists = await conn.fetchval(
+        # 3. Перевірка, чи вже записаний
+        existing = await conn.fetchval(
             "SELECT 1 FROM registrations WHERE event_id = $1 AND user_id = $2 AND status = 'active'",
-            callback_data.event_id,
-            callback.from_user.id
+            event_id, user_id
         )
-
-        if exists:
-            await callback.answer("Ви вже записані на цей івент", show_alert=True)
+        if existing:
+            await callback.answer("Ви вже записані на цей івент")
             return
 
-        # 5. Запис у базу
+        # 4. Реєстрація в базі
         await conn.execute(
-            "INSERT INTO registrations (event_id, user_id, status) VALUES ($1, $2, 'active')",
-            callback_data.event_id,
-            callback.from_user.id
+            """
+            INSERT INTO registrations (event_id, user_id, status)
+            VALUES ($1, $2, 'active')
+            """,
+            event_id, user_id
         )
 
-        # 6. Фінальна відповідь та перехід до коментаря
-        await callback.answer("✅ Ви записались!")
-        
-        await state.update_data(event_id=callback_data.event_id)
-        # Встановлюємо стан очікування коментаря (переконайся, що назва стану збігається з твоїм класом StatesGroup)
-        await state.set_state(CommentState.comment) 
-        
-        await callback.message.answer(
-            f"🎭 Ви записані на івент: **{event['title']}**\n\n"
-            f"💬 Напишіть коментар (+1, буду пізніше тощо) або надішліть `-`, щоб пропустити:",
-            parse_mode="Markdown"
-        )
+        # 5. Візуальна відповідь
+        await callback.message.edit_reply_markup(reply_markup=None)
+        await callback.answer("Ви записані!")
 
-    except Exception as e:
-        print(f"Помилка в join_event: {e}")
-        await callback.answer("⚠️ Сталася помилка при записі. Спробуйте пізніше.", show_alert=True)
+        # 6. Перехід до коментаря
+        await state.set_state(CommentState.waiting_for_comment)
+        await state.update_data(event_id=event_id)
+        await bot.send_message(
+            user_id, 
+            f"🎭 **{event['title']}**\n\n💬 Напишіть коментар (наприклад: +1) або надішліть `-` щоб пропустити"
+        )
     finally:
         await conn.close()
-        
+
 @dp.message(CommentState.waiting_for_comment)
 async def save_comment(message: types.Message, state: FSMContext):
     comment = None if message.text.strip() == "-" else message.text.strip()
@@ -491,16 +476,18 @@ async def save_comment(message: types.Message, state: FSMContext):
 
     conn = await get_connection()
     try:
+        # Оновлюємо коментар
         await conn.execute(
             "UPDATE registrations SET comment = $1 WHERE event_id = $2 AND user_id = $3 AND status = 'active'",
             comment, event_id, user_id
         )
-        
+
+        # Отримуємо дані для підтвердження та сповіщення адміна
         event_info = await conn.fetchrow(
             "SELECT e.title, u.display_name, e.created_by FROM events e JOIN users u ON u.user_id = $1 WHERE e.event_id = $2",
             user_id, event_id
         )
-        
+
         await state.clear()
         await message.answer("✅ Запис підтверджено!", reply_markup=cancel_keyboard(event_id))
 
@@ -521,26 +508,23 @@ async def invite_cancel(callback: types.CallbackQuery, callback_data: InviteCall
 
     conn = await get_connection()
     try:
-        # 1. Отримуємо дані одним запитом: назву івенту та нікнейм користувача
+        # Отримуємо назву івенту та нікнейм користувача
         event_title = await conn.fetchval("SELECT title FROM events WHERE event_id = $1", int(event_id))
         user_nick = await conn.fetchval("SELECT display_name FROM users WHERE user_id = $1", int(user_id))
-        
-        # Якщо нік раптом не знайдено (хоча він має бути), використовуємо повне ім'я з телеграму
         display_name = user_nick or callback.from_user.full_name
 
-        # 2. Оновлюємо статус у базі
+        # Оновлюємо статус на скасований
         await conn.execute(
             "UPDATE registrations SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE event_id = $1 AND user_id = $2",
             int(event_id), int(user_id)
         )
-        
-        # 3. Прибираємо кнопки та підтверджуємо гравцю
+
+        # Зворотній зв'язок
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer("Запис скасовано")
         await bot.send_message(user_id, "❌ Ви скасували свій запис на івент")
 
-        # 4. СПОВІЩЕННЯ АДМІНА (тепер з ніком)
-        # Додаємо умову, щоб не спамити вам, коли ви самі скасовуєте (якщо хочете бачити завжди — просто видаліть if)
+        # Сповіщення адміна
         if user_id != MY_ADMIN_ID:
             await bot.send_message(
                 chat_id=MY_ADMIN_ID,
@@ -562,6 +546,7 @@ async def invite_cancel(callback: types.CallbackQuery, callback_data: InviteCall
 async def invite_ignore(callback: types.CallbackQuery):
     await callback.answer("Проігноровано")
     await callback.message.delete()
+
 
 # ================== ADMIN ACTIONS ==================
 
