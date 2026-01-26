@@ -66,16 +66,11 @@ def invite_keyboard(event_id: int):
                     text="❌ Ігнорувати",
                     callback_data=InviteCallback(action="ignore", event_id=event_id).pack(),
                 ),
-            ]
-        ]
-    )
-
-def cancel_keyboard(event_id: int):
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
+            ],
+            # Додаємо кнопку скасування окремим рядком під основними кнопками
             [
                 InlineKeyboardButton(
-                    text="❌ Скасувати запис",
+                    text="❌ Скасувати мій запис",
                     callback_data=InviteCallback(action="cancel", event_id=event_id).pack(),
                 )
             ]
