@@ -45,21 +45,10 @@ class InviteCallback(CallbackData, prefix="invite"):
 def admin_menu_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [
-                KeyboardButton(text="➕ Створити івент"),
-                KeyboardButton(text="📅 Активні події")
-            ],
-            [
-                KeyboardButton(text="👥 Список гравців"),
-                KeyboardButton(text="🛠 Адмін: список + скасовані")
-            ],
-            [
-                KeyboardButton(text="✅ Підтвердити вечір"),
-                KeyboardButton(text="🏁 Завершити вечір")
-            ],
-            [
-                KeyboardButton(text="❌ Скасувати івент")
-            ]
+            [KeyboardButton(text="➕ Створити івент"), KeyboardButton(text="📅 Активні події")],
+            [KeyboardButton(text="💳 Оплатити ігри"), KeyboardButton(text="🛠 Адмін: список + скасовані")],
+            [KeyboardButton(text="✅ Підтвердити вечір"), KeyboardButton(text="🏁 Завершити вечір")],
+            [KeyboardButton(text="❌ Скасувати івент")]
         ],
         resize_keyboard=True
     )
@@ -68,7 +57,7 @@ def player_menu_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="📅 Активні події")],
-            [KeyboardButton(text="👥 Список гравців")],
+            [KeyboardButton(text="💳 Оплатити ігри")], # Замінили список гравців на оплату
         ],
         resize_keyboard=True
     )
@@ -81,17 +70,25 @@ def invite_keyboard(event_id: int):
                     text="✅ Записатись",
                     callback_data=InviteCallback(action="join", event_id=event_id).pack(),
                 ),
+                # НОВА КНОПКА ЗАМІСТЬ ІГНОРУВАТИ:
                 InlineKeyboardButton(
-                    text="❌ Ігнорувати",
-                    callback_data=InviteCallback(action="ignore", event_id=event_id).pack(),
+                    text="👥 Список гравців",
+                    callback_data=InviteCallback(action="list", event_id=event_id).pack(),
                 ),
             ],
             [
                 InlineKeyboardButton(
-                    text="❌ Скасувати мій запис",
+                    text="❌ Скасувати запис",
                     callback_data=InviteCallback(action="cancel", event_id=event_id).pack(),
                 )
             ]
+        ]
+    )
+
+def payment_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="✅ Я оплатив(ла)", callback_data="confirm_payment")]
         ]
     )
 
@@ -528,7 +525,82 @@ async def invite_ignore(callback: types.CallbackQuery):
     await callback.answer("Проігноровано")
     await callback.message.delete()
 
+@dp.callback_query(InviteCallback.filter(F.action == "list"))
+async def show_event_players(callback: types.CallbackQuery, callback_data: InviteCallback):
+    conn = await get_connection()
+    try:
+        # Отримуємо назву івенту та список активних гравців
+        event_title = await conn.fetchval("SELECT title FROM events WHERE event_id = $1", callback_data.event_id)
+        players = await conn.fetch(
+            """
+            SELECT u.display_name, r.comment 
+            FROM registrations r 
+            JOIN users u ON r.user_id = u.user_id 
+            WHERE r.event_id = $1 AND r.status = 'active'
+            ORDER BY r.created_at ASC
+            """, 
+            callback_data.event_id
+        )
 
+        if not players:
+            await callback.answer("На цей івент поки ніхто не записався", show_alert=True)
+            return
+
+        text = f"👥 **Гравці на {event_title}:**\n\n"
+        for i, p in enumerate(players, 1):
+            comment = f" ({p['comment']})" if p['comment'] else ""
+            text += f"{i}. {p['display_name']}{comment}\n"
+        
+        await callback.message.answer(text, parse_mode="Markdown")
+        await callback.answer()
+    finally:
+        await conn.close()
+
+
+# ================== PAY FOR GAMES ==================
+# Обробка натискання кнопки в меню
+@dp.message(F.text == "💳 Оплатити ігри")
+async def send_payment_info(message: types.Message):
+    payment_text = (
+        "💳 **Оплата ігрових вечорів**\n\n"
+        "Kremenchuk Mafia Club\n\n"
+        "🎭 **Олімпійські Ігри Мафії:**\n"
+        "1 гра — 60 грн\n"
+        "2 гри — 150 грн\n"
+        "3 гри — 250 грн\n"
+        "4-5 ігор — 300 грн\n\n"
+        "🎲 **Звичайний вечір:**\n"
+        "50 грн/гра або 250 грн/вечір\n\n"
+        "💳 **Номер картки:**\n"
+        "`4441111070738616`\n\n"
+        "Після оплати натисніть кнопку 👇"
+    )
+    await message.answer(payment_text, parse_mode="Markdown", reply_markup=payment_keyboard())
+
+# Обробка натискання інлайн-кнопки "Я оплатив"
+@dp.callback_query(F.data == "confirm_payment")
+async def process_payment_confirmation(callback: types.CallbackQuery):
+    user_id = callback.from_user.id
+    MY_ADMIN_ID = 444726017 # Твій ID
+    
+    conn = await get_connection()
+    user_nick = await conn.fetchval("SELECT display_name FROM users WHERE user_id = $1", user_id)
+    await conn.close()
+    
+    name = user_nick or callback.from_user.full_name
+    
+    # Сповіщення адміну
+    await bot.send_message(
+        MY_ADMIN_ID,
+        f"💰 **Нове повідомлення про оплату!**\n"
+        f"👤 Гравець: {name}\n"
+        f"🆔 ID: `{user_id}`",
+        parse_mode="Markdown"
+    )
+    
+    # Відповідь гравцю
+    await callback.answer("✅ Повідомлення надіслано адміністратору!", show_alert=True)
+    await callback.message.edit_reply_markup(reply_markup=None) # Прибираємо кнопку після натискання
 # ================== ADMIN ACTIONS ==================
 
 @dp.message(F.text == "👥 Список гравців")
@@ -809,6 +881,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
