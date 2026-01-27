@@ -41,15 +41,34 @@ class InviteCallback(CallbackData, prefix="invite"):
     event_id: int
 
 # ================== KEYBOARDS ==================
+
 def admin_menu_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="➕ Створити івент")],
+            [
+                KeyboardButton(text="➕ Створити івент"),
+                KeyboardButton(text="📅 Активні події")
+            ],
+            [
+                KeyboardButton(text="👥 Список гравців"),
+                KeyboardButton(text="🛠 Адмін: список + скасовані")
+            ],
+            [
+                KeyboardButton(text="✅ Підтвердити вечір"),
+                KeyboardButton(text="🏁 Завершити вечір")
+            ],
+            [
+                KeyboardButton(text="❌ Скасувати івент")
+            ]
+        ],
+        resize_keyboard=True
+    )
+
+def player_menu_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
             [KeyboardButton(text="📅 Активні події")],
             [KeyboardButton(text="👥 Список гравців")],
-            [KeyboardButton(text="🛠 Адмін: список + скасовані")],
-            [KeyboardButton(text="✅ Підтвердити вечір")],
-            [KeyboardButton(text="❌ Скасувати івент")],
         ],
         resize_keyboard=True
     )
@@ -67,7 +86,6 @@ def invite_keyboard(event_id: int):
                     callback_data=InviteCallback(action="ignore", event_id=event_id).pack(),
                 ),
             ],
-            # Додаємо кнопку скасування окремим рядком під основними кнопками
             [
                 InlineKeyboardButton(
                     text="❌ Скасувати мій запис",
@@ -77,50 +95,18 @@ def invite_keyboard(event_id: int):
         ]
     )
 
-def player_menu_keyboard():
-    return ReplyKeyboardMarkup(
-        keyboard=[[KeyboardButton(text="📅 Активні події")]],
-        resize_keyboard=True,
-    )
-
-def player_menu_keyboard():
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="📅 Активні події")],
-            [KeyboardButton(text="👥 Список гравців")],
-        ],
-        resize_keyboard=True
-    )
-
-
-def admin_menu_keyboard():
-    return ReplyKeyboardMarkup(
-        keyboard=[
-            # Перший ряд: Основні дії з івентом
+# ОСЬ ЦІЄЇ ФУНКЦІЇ НЕ ВИСТАЧАЛО:
+def cancel_keyboard(event_id: int):
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
             [
-                KeyboardButton(text="➕ Створити івент"),
-                KeyboardButton(text="📅 Активні події")
-            ],
-            # Другий ряд: Робота з гравцями та списками
-            [
-                KeyboardButton(text="👥 Список гравців"),
-                KeyboardButton(text="🛠 Адмін: список + скасовані")
-            ],
-            # Третій ряд: Управління поточним вечором
-            [
-                KeyboardButton(text="✅ Підтвердити вечір"),
-                KeyboardButton(text="🏁 Завершити вечір")
-            ],
-            # Четвертий ряд: "Небезпечна" кнопка (окремо, щоб не натиснути випадково)
-            [
-                KeyboardButton(text="❌ Скасувати івент")
+                InlineKeyboardButton(
+                    text="❌ Скасувати запис",
+                    callback_data=InviteCallback(action="cancel", event_id=event_id).pack()
+                )
             ]
-        ],
-        resize_keyboard=True
+        ]
     )
-
-
-
 # ================== START / NICKNAME ==================
 
 @dp.message(CommandStart())
@@ -823,6 +809,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
