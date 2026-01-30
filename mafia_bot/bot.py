@@ -467,41 +467,72 @@ async def show_players_admin(message: types.Message):
     conn = await get_connection()
     try:
         role = await conn.fetchval(
-            "SELECT role FROM users WHERE user_id = $1", user_id
+            "SELECT role FROM users WHERE user_id = $1",
+            user_id
         )
         if role != "admin":
             return
 
-        event = await conn.fetchrow("SELECT event_id, title, event_date, event_time FROM events WHERE is_current = true LIMIT 1")
+        event = await conn.fetchrow(
+            """
+            SELECT event_id, title, event_date, event_time
+            FROM events
+            WHERE is_current = true
+            LIMIT 1
+            """
+        )
         if not event:
             await message.answer("ℹ️ Немає активного івенту")
             return
 
-        rows = await conn.fetch("""
-            SELECT u.display_name, r.comment
+        rows = await conn.fetch(
+            """
+            SELECT
+                u.display_name,
+                r.status,
+                r.comment
             FROM registrations r
             JOIN users u ON u.user_id = r.user_id
             JOIN events e ON e.event_id = r.event_id
             WHERE r.event_id = $1
-            AND r.status = 'active'
-            AND r.created_at >= e.created_at
-            ORDER BY r.created_at;
-            """, event["event_id"])
+              AND r.created_at >= e.created_at
+            ORDER BY r.created_at
+            """,
+            event["event_id"]
+        )
 
-        active, cancelled = [], []
+        active = []
+        cancelled = []
+
         for r in rows:
             if r["status"] == "active":
-                active.append(f"{r['display_name']}(f" ({r['comment']})" if r['comment'] else "")
+                name = r["display_name"]
+                if r["comment"]:
+                    name += f" ({r['comment']})"
+                active.append(name)
+
             elif r["status"] == "cancelled":
                 cancelled.append(r["display_name"])
 
         text = f"🛠 *Адмін-звіт: {event['title']}*\n\n"
-        text += "✅ **Активні:**\n" + ("\n".join(f"{i+1}. {p}" for i, p in enumerate(active)) or "—") + "\n\n"
-        text += "❌ **Скасували:**\n" + ("\n".join(f"{i+1}. {p}" for i, p in enumerate(cancelled)) or "—")
+
+        text += "✅ **Активні:**\n"
+        if active:
+            text += "\n".join(f"{i+1}. {p}" for i, p in enumerate(active))
+        else:
+            text += "—"
+
+        text += "\n\n❌ **Скасували:**\n"
+        if cancelled:
+            text += "\n".join(f"{i+1}. {p}" for i, p in enumerate(cancelled))
+        else:
+            text += "—"
 
         await message.answer(text, parse_mode="Markdown")
+
     finally:
         await conn.close()
+
 
 
 @dp.message(F.text == "❌ Скасувати івент")
@@ -560,6 +591,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
