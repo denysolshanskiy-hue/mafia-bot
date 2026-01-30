@@ -410,7 +410,7 @@ async def show_event_players(callback: types.CallbackQuery, callback_data: Invit
     conn = await get_connection()
     try:
         event_title = await conn.fetchval("SELECT title FROM events WHERE event_id = $1", callback_data.event_id)
-        players = await conn.fetch("SELECT u.display_name, r.comment FROM registrations r JOIN users u ON u.user_id = u.user_id WHERE r.event_id = $1 AND r.status = 'active' ORDER BY r.created_at ASC", callback_data.event_id)
+        players = await conn.fetch("SELECT u.display_name, r.comment FROM registrations r JOIN users u ON u.user_id = r.user_id JOIN events e ON e.event_id = r.event_id WHERE r.event_id = $1 AND r.status = 'active' AND r.created_at >= e.created_at ORDER BY r.created_at;", callback_data.event_id)
         if not players:
             await callback.answer("На цей івент поки ніхто не записався", show_alert=True)
             return
@@ -478,12 +478,15 @@ async def show_players_admin(message: types.Message):
             return
 
         rows = await conn.fetch("""
-            SELECT u.display_name, r.status, r.comment
+            SELECT u.display_name, r.comment
             FROM registrations r
             JOIN users u ON u.user_id = r.user_id
+            JOIN events e ON e.event_id = r.event_id
             WHERE r.event_id = $1
-            ORDER BY r.created_at
-        """, event["event_id"])
+            AND r.status = 'active'
+            AND r.created_at >= e.created_at
+            ORDER BY r.created_at;
+            """, event["event_id"])
 
         active, cancelled = [], []
         for r in rows:
@@ -557,4 +560,5 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
