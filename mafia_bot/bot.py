@@ -491,7 +491,7 @@ async def show_players_admin(message: types.Message):
         active, cancelled = [], []
         for r in rows:
             if r["status"] == "active":
-                active.append(f"{r['display_name']}{f' ({r['comment']})' if r['comment'] else ''}")
+                active.append(f"{r['display_name']}(f" ({r['comment']})" if r['comment'] else "")
             elif r["status"] == "cancelled":
                 cancelled.append(r["display_name"])
 
@@ -560,5 +560,6 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
