@@ -391,11 +391,9 @@ async def process_send_confirmation(callback: types.CallbackQuery):
 async def invite_join(callback: types.CallbackQuery, callback_data: InviteCallback, state: FSMContext):
     user_id = callback.from_user.id
     event_id = callback_data.event_id
-
     conn = await get_connection()
     try:
         event = await conn.fetchrow("SELECT status, title FROM events WHERE event_id = $1", event_id)
-        
         if not event or event["status"] != 'active':
             status_text = "вже завершений" if event and event["status"] == 'closed' else "скасований"
             await callback.answer(f"🚫 Цей івент {status_text}.", show_alert=True)
@@ -409,7 +407,7 @@ async def invite_join(callback: types.CallbackQuery, callback_data: InviteCallba
 
         existing = await conn.fetchval("SELECT 1 FROM registrations WHERE event_id = $1 AND user_id = $2 AND status = 'active'", event_id, user_id)
         if existing:
-            await callback.answer("Ви вже записані")
+            await callback.answer("Ви вже записані на цей івент", show_alert=True)
             return
 
         await conn.execute("INSERT INTO registrations (event_id, user_id, status) VALUES ($1, $2, 'active')", event_id, user_id)
@@ -428,7 +426,6 @@ async def save_comment(message: types.Message, state: FSMContext):
     data = await state.get_data()
     event_id = data.get("event_id")
     user_id = message.from_user.id
-
     conn = await get_connection()
     try:
         await conn.execute("UPDATE registrations SET comment = $1 WHERE event_id = $2 AND user_id = $3 AND status = 'active'", comment, event_id, user_id)
@@ -446,17 +443,14 @@ async def invite_cancel(callback: types.CallbackQuery, callback_data: InviteCall
     user_id = callback.from_user.id
     event_id = callback_data.event_id
     MY_ADMIN_ID = 444726017
-
     conn = await get_connection()
     try:
         event_title = await conn.fetchval("SELECT title FROM events WHERE event_id = $1", int(event_id))
         user_nick = await conn.fetchval("SELECT display_name FROM users WHERE user_id = $1", int(user_id))
         await conn.execute("UPDATE registrations SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE event_id = $1 AND user_id = $2", int(event_id), int(user_id))
-        
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer("Запис скасовано")
-        await bot.send_message(user_id, "❌ Ви скасували запис")
-
+        await bot.send_message(user_id, "❌ Ви скасували свій запис на івент")
         if user_id != MY_ADMIN_ID:
             await bot.send_message(MY_ADMIN_ID, f"⚠️ **Скасування!**\n🎭 {event_title}\n👤 {user_nick or callback.from_user.full_name}", parse_mode="Markdown")
     finally:
@@ -467,8 +461,8 @@ async def show_event_players(callback: types.CallbackQuery, callback_data: Invit
     conn = await get_connection()
     try:
         event_title = await conn.fetchval("SELECT title FROM events WHERE event_id = $1", callback_data.event_id)
-        players = await conn.fetch("SELECT u.display_name, r.comment FROM registrations r JOIN users u ON r.user_id = u.user_id WHERE r.event_id = $1 AND r.status = 'active' ORDER BY r.created_at ASC", callback_data.event_id)
-
+        players = await conn.fetch("SELECT u.display_name, r.comment FROM registrations r JOIN users u ON u.user_id = r.user_id WHERE r.event_id = $1 AND r.status = 'active' ORDER BY r.created_at ASC", callback_data.event_id)
+        
         if not players:
             await callback.answer("На цей івент поки ніхто не записався", show_alert=True)
             return
@@ -479,72 +473,15 @@ async def show_event_players(callback: types.CallbackQuery, callback_data: Invit
             text += f"{i}. {p['display_name']}{comment}\n"
         
         await callback.message.answer(text, parse_mode="Markdown")
-        await callback.answer()
+        await callback.answer() # Це прибере анімацію завантаження на кнопці
     finally:
         await conn.close()
 
-
-# ================== PAY FOR GAMES ==================
-# Обробка натискання кнопки в меню
-@dp.message(F.text == "💳 Оплатити ігри")
-async def send_payment_info(message: types.Message):
-    payment_text = (
-        "💳 **Оплата ігрових вечорів**\n\n"
-        "Kremenchuk Mafia Club\n\n"
-        "🎭 **Олімпійські Ігри Мафії:**\n"
-        "1 гра — 60 грн\n"
-        "2 гри — 150 грн\n"
-        "3 гри — 250 грн\n"
-        "4-5 ігор — 300 грн\n\n"
-        "🎲 **Звичайний вечір:**\n"
-        "50 грн/гра або 250 грн/вечір\n\n"
-        "💳 **Номер картки:**\n"
-        "`4441111070738616`\n\n"
-        "Після оплати натисніть кнопку 👇"
-    )
-    await message.answer(payment_text, parse_mode="Markdown", reply_markup=payment_keyboard())
-
-# Обробка натискання інлайн-кнопки "Я оплатив"
-@dp.callback_query(F.data == "confirm_payment")
-async def process_payment_confirmation(callback: types.CallbackQuery):
-    user_id = callback.from_user.id
-    MY_ADMIN_ID = 444726017 # Твій ID
-    
-    conn = await get_connection()
-    user_nick = await conn.fetchval("SELECT display_name FROM users WHERE user_id = $1", user_id)
-    await conn.close()
-    
-    name = user_nick or callback.from_user.full_name
-    
-    # Сповіщення адміну
-    await bot.send_message(
-        MY_ADMIN_ID,
-        f"💰 **Нове повідомлення про оплату!**\n"
-        f"👤 Гравець: {name}\n"
-        f"🆔 ID: `{user_id}`",
-        parse_mode="Markdown"
-    )
-    
-    # Відповідь гравцю
-    await callback.answer("✅ Повідомлення надіслано адміністратору!", show_alert=True)
-    await callback.message.edit_reply_markup(reply_markup=None) # Прибираємо кнопку після натискання
+@dp.callback_query(InviteCallback.filter(F.action == "ignore"))
+async def invite_ignore(callback: types.CallbackQuery):
+    await callback.answer("Проігноровано")
+    await callback.message.delete()
 # ================== ADMIN ACTIONS ==================
-
-@dp.message(F.text == "👥 Список гравців")
-async def show_players_public(message: types.Message):
-    conn = await get_connection()
-
-    try:
-        event = await conn.fetchrow(
-            """
-            SELECT event_id, title
-            FROM events
-            WHERE status = 'active'
-            ORDER BY created_at DESC
-            LIMIT 1
-            """
-        )
-
         if not event:
             await message.answer("ℹ️ Немає активних ігрових вечорів")
             return
@@ -761,6 +698,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
