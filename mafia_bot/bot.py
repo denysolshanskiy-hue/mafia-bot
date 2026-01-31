@@ -726,7 +726,7 @@ async def reminder_loop():
 
     while True:
         now = datetime.now(tz)
-        print("🕒 KYIV TIME:", now.strftime("%Y-%m-%d %H:%M:%S"))
+        print("🕒 reminder loop alive:", now.strftime("%Y-%m-%d %H:%M:%S"))
         # працюємо лише рівно о 12:00
         if now.hour == 12 and now.minute == 0:
             conn = await get_connection()
@@ -822,6 +822,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
