@@ -341,33 +341,101 @@ async def process_send_confirmation(callback: types.CallbackQuery):
 # ================== JOIN / COMMENT / CANCEL / LIST ==================
 
 @dp.callback_query(InviteCallback.filter(F.action == "join"))
-async def invite_join(callback: types.CallbackQuery, callback_data: InviteCallback, state: FSMContext):
+async def invite_join(
+    callback: types.CallbackQuery,
+    callback_data: InviteCallback,
+    state: FSMContext
+):
     user_id = callback.from_user.id
     event_id = callback_data.event_id
+
     conn = await get_connection()
     try:
-        event = await conn.fetchrow("SELECT event_id, title, event_date, event_time FROM events WHERE status = 'active' LIMIT 1")
-        if not event or event["status"] != 'active':
-            status_text = "вже завершений" if event and event["status"] == 'closed' else "скасований"
-            await callback.answer(f"🚫 Цей івент {status_text}.", show_alert=True)
+        # 1️⃣ Беремо САМЕ ТОЙ івент, по якому клікнули
+        event = await conn.fetchrow(
+            """
+            SELECT event_id, title, status
+            FROM events
+            WHERE event_id = $1
+            """,
+            event_id
+        )
+
+        if not event:
+            await callback.answer("🚫 Івент не знайдено", show_alert=True)
             await callback.message.edit_reply_markup(reply_markup=None)
             return
-        user = await conn.fetchrow("SELECT display_name FROM users WHERE user_id = $1", user_id)
+
+        if event["status"] != "active":
+            status_text = (
+                "вже завершений" if event["status"] == "closed" else "скасований"
+            )
+            await callback.answer(
+                f"🚫 Цей івент {status_text}.",
+                show_alert=True
+            )
+            await callback.message.edit_reply_markup(reply_markup=None)
+            return
+
+        # 2️⃣ Перевіряємо нік
+        user = await conn.fetchrow(
+            "SELECT display_name FROM users WHERE user_id = $1",
+            user_id
+        )
         if not user or not user["display_name"]:
-            await callback.answer("❌ Спочатку вкажіть ваш нік у /start", show_alert=True)
+            await callback.answer(
+                "❌ Спочатку вкажіть ваш нік у /start",
+                show_alert=True
+            )
             return
-        existing = await conn.fetchval("SELECT 1 FROM registrations WHERE event_id = $1 AND user_id = $2 AND status = 'active'", event_id, user_id)
+
+        # 3️⃣ Перевіряємо чи вже записаний
+        existing = await conn.fetchval(
+            """
+            SELECT 1
+            FROM registrations
+            WHERE event_id = $1
+              AND user_id = $2
+              AND status = 'active'
+            """,
+            event_id,
+            user_id
+        )
+
         if existing:
-            await callback.answer("Ви вже записані на цей івент", show_alert=True)
+            await callback.answer(
+                "Ви вже записані на цей івент",
+                show_alert=True
+            )
             return
-        await conn.execute("INSERT INTO registrations (event_id, user_id, status) VALUES ($1, $2, 'active')", event_id, user_id)
+
+        # 4️⃣ Записуємо
+        await conn.execute(
+            """
+            INSERT INTO registrations (event_id, user_id, status)
+            VALUES ($1, $2, 'active')
+            """,
+            event_id,
+            user_id
+        )
+
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer("Ви записані!")
+
+        # 5️⃣ Коментар
         await state.set_state(CommentState.waiting_for_comment)
         await state.update_data(event_id=event_id)
-        await bot.send_message(user_id, f"🎭 **{event['title']}**\n\n💬 Напишіть коментар або `-` щоб пропустити")
+
+        await bot.send_message(
+            user_id,
+            f"🎭 **{event['title']}**\n\n"
+            f"💬 Напишіть коментар або `-` щоб пропустити",
+            parse_mode="Markdown"
+        )
+
     finally:
         await conn.close()
+
 
 @dp.message(CommentState.waiting_for_comment)
 async def save_comment(message: types.Message, state: FSMContext):
@@ -622,6 +690,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
