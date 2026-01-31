@@ -492,7 +492,9 @@ async def process_payment_confirmation(callback: types.CallbackQuery):
 async def show_players_admin(message: types.Message):
     user_id = message.from_user.id
     conn = await get_connection()
+
     try:
+        # 1️⃣ Перевірка адміна
         role = await conn.fetchval(
             "SELECT role FROM users WHERE user_id = $1",
             user_id
@@ -500,67 +502,69 @@ async def show_players_admin(message: types.Message):
         if role != "admin":
             return
 
-        event = await conn.fetchrow(
+        # 2️⃣ Беремо ВСІ активні івенти
+        events = await conn.fetch(
             """
-            SELECT event_id, title, event_date, event_time
+            SELECT event_id, title, created_at
             FROM events
             WHERE status = 'active'
-            LIMIT 1
+            ORDER BY created_at
             """
         )
-        if not event:
-            await message.answer("ℹ️ Немає активного івенту")
+
+        if not events:
+            await message.answer("ℹ️ Немає активних івентів")
             return
 
-        rows = await conn.fetch(
-            """
-            SELECT
-                u.display_name,
-                r.status,
-                r.comment
-            FROM registrations r
-            JOIN users u ON u.user_id = r.user_id
-            JOIN events e ON e.event_id = r.event_id
-            WHERE r.event_id = $1
-              AND r.created_at >= e.created_at
-            ORDER BY r.created_at
-            """,
-            event["event_id"]
-        )
+        # 3️⃣ Для КОЖНОГО івенту формуємо окремий звіт
+        for event in events:
+            rows = await conn.fetch(
+                """
+                SELECT
+                    u.display_name,
+                    r.status,
+                    r.comment
+                FROM registrations r
+                JOIN users u ON u.user_id = r.user_id
+                WHERE r.event_id = $1
+                  AND r.created_at >= $2
+                ORDER BY r.created_at
+                """,
+                event["event_id"],
+                event["created_at"]
+            )
 
-        active = []
-        cancelled = []
+            active = []
+            cancelled = []
 
-        for r in rows:
-            if r["status"] == "active":
-                name = r["display_name"]
-                if r["comment"]:
-                    name += f" ({r['comment']})"
-                active.append(name)
+            for r in rows:
+                if r["status"] == "active":
+                    name = r["display_name"]
+                    if r["comment"]:
+                        name += f" ({r['comment']})"
+                    active.append(name)
+                elif r["status"] == "cancelled":
+                    cancelled.append(r["display_name"])
 
-            elif r["status"] == "cancelled":
-                cancelled.append(r["display_name"])
+            # 4️⃣ Формуємо текст
+            text = f"🛠 *Адмін-звіт: {event['title']}*\n\n"
 
-        text = f"🛠 *Адмін-звіт: {event['title']}*\n\n"
+            text += "✅ **Активні:**\n"
+            text += (
+                "\n".join(f"{i+1}. {p}" for i, p in enumerate(active))
+                if active else "—"
+            )
 
-        text += "✅ **Активні:**\n"
-        if active:
-            text += "\n".join(f"{i+1}. {p}" for i, p in enumerate(active))
-        else:
-            text += "—"
+            text += "\n\n❌ **Скасували:**\n"
+            text += (
+                "\n".join(f"{i+1}. {p}" for i, p in enumerate(cancelled))
+                if cancelled else "—"
+            )
 
-        text += "\n\n❌ **Скасували:**\n"
-        if cancelled:
-            text += "\n".join(f"{i+1}. {p}" for i, p in enumerate(cancelled))
-        else:
-            text += "—"
-
-        await message.answer(text, parse_mode="Markdown")
+            await message.answer(text, parse_mode="Markdown")
 
     finally:
         await conn.close()
-
-
 
 @dp.message(F.text == "❌ Скасувати івент")
 async def request_cancel_event(message: types.Message):
@@ -618,6 +622,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
