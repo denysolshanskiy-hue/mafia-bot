@@ -722,50 +722,42 @@ async def admin_confirm_cancel(callback: types.CallbackQuery):
 
 # ================== REMINDER ==================
 async def reminder_loop():
-    await asyncio.sleep(10)  # даємо боту нормально стартанути
+    tz = pytz.timezone("Europe/Kyiv")
 
     while True:
-        try:
-            now_utc = datetime.utcnow()
-            current_time = now_utc.time()
-
-            # нас цікавить 10:00–10:05 UTC (12:00 Кременчук)
-            if not (time(10, 0) <= current_time <= time(10, 5)):
-                await asyncio.sleep(60)
-                continue
-
-            tomorrow = (now_utc + timedelta(days=1)).date()
-
+        now = datetime.now(tz)
+        print("🕒 KYIV TIME:", now.strftime("%Y-%m-%d %H:%M:%S"))
+        # працюємо лише рівно о 12:00
+        if now.hour == 12 and now.minute == 0:
             conn = await get_connection()
             try:
                 events = await conn.fetch(
                     """
-                    SELECT event_id, title, event_date, event_time
+                    SELECT event_id, title, event_date_real
                     FROM events
                     WHERE status = 'active'
                       AND reminder_sent = false
-                      AND event_date = $1
-                    """,
-                    tomorrow
+                      AND event_date_real = CURRENT_DATE + INTERVAL '1 day'
+                    """
                 )
 
                 for event in events:
                     event_id = event["event_id"]
+                    title = event["title"]
 
-                    # користувачі, які ще НЕ записані
                     users = await conn.fetch(
                         """
                         SELECT u.user_id
                         FROM users u
-                        WHERE NOT EXISTS (
-                            SELECT 1
-                            FROM registrations r
-                            WHERE r.user_id = u.user_id
-                              AND r.event_id = $1
-                              AND r.status = 'active'
-                        )
-                        """
-                        ,
+                        WHERE u.is_active = true
+                          AND NOT EXISTS (
+                              SELECT 1
+                              FROM registrations r
+                              WHERE r.user_id = u.user_id
+                                AND r.event_id = $1
+                                AND r.status = 'active'
+                          )
+                        """,
                         event_id
                     )
 
@@ -774,14 +766,10 @@ async def reminder_loop():
                         try:
                             await bot.send_message(
                                 u["user_id"],
-                                (
-                                    f"⏰ **Нагадування!**\n\n"
-                                    f"Завтра відбудеться:\n"
-                                    f"🎭 *{event['title']}*\n"
-                                    f"📅 {event['event_date']}\n"
-                                    f"⏰ {event['event_time']}\n\n"
-                                    f"Ще є час записатись 👇"
-                                ),
+                                f"⏰ *Нагадування!*\n\n"
+                                f"Завтра відбудеться івент:\n"
+                                f"🎭 *{title}*\n\n"
+                                f"Ще є час записатись 👇",
                                 parse_mode="Markdown",
                                 reply_markup=invite_keyboard(event_id)
                             )
@@ -789,38 +777,28 @@ async def reminder_loop():
                         except:
                             continue
 
-                    # помічаємо, що нагадування відправлено
+                    # позначаємо, що нагадування відправлено
                     await conn.execute(
                         "UPDATE events SET reminder_sent = true WHERE event_id = $1",
                         event_id
                     )
 
                     # звіт адміну
-                    admin_ids = await conn.fetch(
-                        "SELECT user_id FROM users WHERE role = 'admin'"
+                    ADMIN_ID = 444726017
+                    await bot.send_message(
+                        ADMIN_ID,
+                        f"📣 *Нагадування надіслано*\n"
+                        f"🎭 {title}\n"
+                        f"👥 Отримали: **{sent}**",
+                        parse_mode="Markdown"
                     )
-                    for a in admin_ids:
-                        try:
-                            await bot.send_message(
-                                a["user_id"],
-                                (
-                                    f"📢 **Звіт по нагадуванню**\n\n"
-                                    f"🎭 {event['title']}\n"
-                                    f"👥 Отримали: **{sent}**"
-                                ),
-                                parse_mode="Markdown"
-                            )
-                        except:
-                            continue
 
             finally:
                 await conn.close()
 
-        except Exception as e:
-            print("Reminder error:", e)
+        # перевіряємо раз на хвилину
+        await asyncio.sleep(60)
 
-        # перевіряємо раз на 5 хвилин
-        await asyncio.sleep(300)
 
 # ================== RUNNER & WEB SERVER ==================
 
@@ -844,6 +822,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
