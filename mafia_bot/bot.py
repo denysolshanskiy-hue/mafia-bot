@@ -13,9 +13,13 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters.callback_data import CallbackData
 from aiogram.client.session.aiohttp import AiohttpSession
+from datetime import datetime, timedelta, time
+import asyncio
 
 # Імпортуємо функції з вашого нового database.py
 from database import get_connection, init_db
+from datetime import datetime, timedelta, time
+import pytz
 
 # ================== INIT ==================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -716,6 +720,108 @@ async def admin_confirm_cancel(callback: types.CallbackQuery):
     finally:
         await conn.close()
 
+# ================== REMINDER ==================
+async def reminder_loop():
+    await asyncio.sleep(10)  # даємо боту нормально стартанути
+
+    while True:
+        try:
+            now_utc = datetime.utcnow()
+            current_time = now_utc.time()
+
+            # нас цікавить 10:00–10:05 UTC (12:00 Кременчук)
+            if not (time(10, 0) <= current_time <= time(10, 5)):
+                await asyncio.sleep(60)
+                continue
+
+            tomorrow = (now_utc + timedelta(days=1)).date()
+
+            conn = await get_connection()
+            try:
+                events = await conn.fetch(
+                    """
+                    SELECT event_id, title, event_date, event_time
+                    FROM events
+                    WHERE status = 'active'
+                      AND reminder_sent = false
+                      AND event_date = $1
+                    """,
+                    tomorrow
+                )
+
+                for event in events:
+                    event_id = event["event_id"]
+
+                    # користувачі, які ще НЕ записані
+                    users = await conn.fetch(
+                        """
+                        SELECT u.user_id
+                        FROM users u
+                        WHERE NOT EXISTS (
+                            SELECT 1
+                            FROM registrations r
+                            WHERE r.user_id = u.user_id
+                              AND r.event_id = $1
+                              AND r.status = 'active'
+                        )
+                        """
+                        ,
+                        event_id
+                    )
+
+                    sent = 0
+                    for u in users:
+                        try:
+                            await bot.send_message(
+                                u["user_id"],
+                                (
+                                    f"⏰ **Нагадування!**\n\n"
+                                    f"Завтра відбудеться:\n"
+                                    f"🎭 *{event['title']}*\n"
+                                    f"📅 {event['event_date']}\n"
+                                    f"⏰ {event['event_time']}\n\n"
+                                    f"Ще є час записатись 👇"
+                                ),
+                                parse_mode="Markdown",
+                                reply_markup=invite_keyboard(event_id)
+                            )
+                            sent += 1
+                        except:
+                            continue
+
+                    # помічаємо, що нагадування відправлено
+                    await conn.execute(
+                        "UPDATE events SET reminder_sent = true WHERE event_id = $1",
+                        event_id
+                    )
+
+                    # звіт адміну
+                    admin_ids = await conn.fetch(
+                        "SELECT user_id FROM users WHERE role = 'admin'"
+                    )
+                    for a in admin_ids:
+                        try:
+                            await bot.send_message(
+                                a["user_id"],
+                                (
+                                    f"📢 **Звіт по нагадуванню**\n\n"
+                                    f"🎭 {event['title']}\n"
+                                    f"👥 Отримали: **{sent}**"
+                                ),
+                                parse_mode="Markdown"
+                            )
+                        except:
+                            continue
+
+            finally:
+                await conn.close()
+
+        except Exception as e:
+            print("Reminder error:", e)
+
+        # перевіряємо раз на 5 хвилин
+        await asyncio.sleep(300)
+
 # ================== RUNNER & WEB SERVER ==================
 
 async def handle(request):
@@ -730,6 +836,7 @@ async def start_all():
     site = web.TCPSite(runner, '0.0.0.0', int(os.environ.get("PORT", 8000)))
     await site.start()
     print("Starting bot...")
+    asyncio.create_task(reminder_loop())
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
@@ -737,6 +844,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
