@@ -409,19 +409,46 @@ async def invite_cancel(callback: types.CallbackQuery, callback_data: InviteCall
 async def show_event_players(callback: types.CallbackQuery, callback_data: InviteCallback):
     conn = await get_connection()
     try:
-        event_title = await conn.fetchval("SELECT title FROM events WHERE event_id = $1", callback_data.event_id)
-        players = await conn.fetch("SELECT u.display_name, r.comment FROM registrations r JOIN users u ON r.user_id = r.user_id JOIN events e ON e.event_id = r.event_id WHERE r.event_id = $1 AND r.status = 'active' AND r.created_at >= e.created_at ORDER BY r.created_at;", callback_data.event_id)
-        if not players:
-            await callback.answer("На цей івент поки ніхто не записався", show_alert=True)
+        event = await conn.fetchrow(
+            "SELECT title, created_at FROM events WHERE event_id = $1",
+            callback_data.event_id
+        )
+        if not event:
+            await callback.answer("Івент не знайдено", show_alert=True)
             return
-        text = f"👥 **Гравці на {event_title}:**\n\n"
+
+        players = await conn.fetch(
+            """
+            SELECT u.display_name, r.comment
+            FROM registrations r
+            JOIN users u ON u.user_id = r.user_id
+            WHERE r.event_id = $1
+              AND r.status = 'active'
+              AND r.created_at >= $2
+            ORDER BY r.created_at
+            """,
+            callback_data.event_id,
+            event["created_at"]
+        )
+
+        if not players:
+            await callback.answer("На цей івент ще ніхто не записався", show_alert=True)
+            return
+
+        text = f"👥 Гравці на {event['title']}:\n\n"
         for i, p in enumerate(players, 1):
-            comment = f" ({p['comment']})" if p['comment'] else ""
+            comment = f" ({p['comment']})" if p["comment"] else ""
             text += f"{i}. {p['display_name']}{comment}\n"
+
+        if len(text) > 3500:
+            text = text[:3500] + "\n\n… список скорочено"
+
         await callback.message.answer(text)
         await callback.answer()
+
     finally:
         await conn.close()
+
 
 @dp.callback_query(InviteCallback.filter(F.action == "ignore"))
 async def invite_ignore(callback: types.CallbackQuery):
@@ -591,6 +618,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
