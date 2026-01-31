@@ -177,7 +177,7 @@ async def archive_event(message: types.Message):
         row = await conn.fetchrow("SELECT role FROM users WHERE user_id = $1", user_id)
         if not row or row['role'] != "admin":
             return
-        event = await conn.fetchrow("SELECT event_id, title, event_date, event_time FROM events WHERE is_current = true LIMIT 1")
+        event = await conn.fetchrow("SELECT event_id, title, event_date, event_time FROM events WHERE status = 'active' LIMIT 1")
         if not event:
             await message.answer("ℹ️ Немає активних івентів для завершення.")
             return
@@ -199,7 +199,7 @@ async def show_active_events(message: types.Message):
             """
             SELECT event_id, title, event_date, event_time
             FROM events
-            WHERE status = 'true'
+            WHERE status = 'active'
             ORDER BY created_at DESC
             """
         )
@@ -255,7 +255,7 @@ async def create_event_time(message: types.Message, state: FSMContext):
         event_id = await conn.fetchval(
             """
             INSERT INTO events (title, event_date, event_time, status, created_by)
-            VALUES ($1, $2, $3, 'active', $4)
+            VALUES ($1, $2, $3, 'true', $4)
             RETURNING event_id
             """,
             title, event_date, event_time, admin_id,
@@ -290,7 +290,7 @@ async def confirm_event_start(message: types.Message):
         row = await conn.fetchrow("SELECT role FROM users WHERE user_id = $1", user_id)
         if not row or row['role'] != "admin":
             return
-        event = await conn.fetchrow("SELECT event_id, title, event_date, event_time FROM events WHERE is_current = true LIMIT 1")
+        event = await conn.fetchrow("SELECT event_id, title, event_date, event_time FROM events WHERE status = 'active' LIMIT 1")
         if not event:
             await message.answer("ℹ️ Немає активних івентів для підтвердження.")
             return
@@ -346,7 +346,7 @@ async def invite_join(callback: types.CallbackQuery, callback_data: InviteCallba
     event_id = callback_data.event_id
     conn = await get_connection()
     try:
-        event = await conn.fetchrow("SELECT event_id, title, event_date, event_time FROM events WHERE is_current = true LIMIT 1")
+        event = await conn.fetchrow("SELECT event_id, title, event_date, event_time FROM events WHERE status = 'active' LIMIT 1")
         if not event or event["status"] != 'active':
             status_text = "вже завершений" if event and event["status"] == 'closed' else "скасований"
             await callback.answer(f"🚫 Цей івент {status_text}.", show_alert=True)
@@ -378,7 +378,7 @@ async def save_comment(message: types.Message, state: FSMContext):
     conn = await get_connection()
     try:
         await conn.execute("UPDATE registrations SET comment = $1 WHERE event_id = $2 AND user_id = $3 AND status = 'active'", comment, event_id, user_id)
-        event_info = await conn.fetchrow("SELECT e.title, u.display_name, e.created_by FROM events e JOIN users u ON u.user_id = $1 WHERE e.event_id = $2", user_id, event_id)
+        event_info = await conn.fetchrow("SELECT e.title, u.display_name, e.created_by FROM events e JOIN users u ON r.user_id = $1 WHERE e.event_id = $2", user_id, event_id)
         await state.clear()
         await message.answer("✅ Запис підтверджено!", reply_markup=cancel_keyboard(event_id))
         if event_info:
@@ -410,7 +410,7 @@ async def show_event_players(callback: types.CallbackQuery, callback_data: Invit
     conn = await get_connection()
     try:
         event_title = await conn.fetchval("SELECT title FROM events WHERE event_id = $1", callback_data.event_id)
-        players = await conn.fetch("SELECT u.display_name, r.comment FROM registrations r JOIN users u ON u.user_id = r.user_id JOIN events e ON e.event_id = r.event_id WHERE r.event_id = $1 AND r.status = 'active' AND r.created_at >= e.created_at ORDER BY r.created_at;", callback_data.event_id)
+        players = await conn.fetch("SELECT u.display_name, r.comment FROM registrations r JOIN users u ON r.user_id = r.user_id JOIN events e ON e.event_id = r.event_id WHERE r.event_id = $1 AND r.status = 'active' AND r.created_at >= e.created_at ORDER BY r.created_at;", callback_data.event_id)
         if not players:
             await callback.answer("На цей івент поки ніхто не записався", show_alert=True)
             return
@@ -418,7 +418,7 @@ async def show_event_players(callback: types.CallbackQuery, callback_data: Invit
         for i, p in enumerate(players, 1):
             comment = f" ({p['comment']})" if p['comment'] else ""
             text += f"{i}. {p['display_name']}{comment}\n"
-        await callback.message.answer(text, parse_mode="Markdown")
+        await callback.message.answer(text)
         await callback.answer()
     finally:
         await conn.close()
@@ -477,7 +477,7 @@ async def show_players_admin(message: types.Message):
             """
             SELECT event_id, title, event_date, event_time
             FROM events
-            WHERE is_current = true
+            WHERE status = 'active'
             LIMIT 1
             """
         )
@@ -542,7 +542,7 @@ async def request_cancel_event(message: types.Message):
     try:
         row = await conn.fetchrow("SELECT role FROM users WHERE user_id = $1", user_id)
         if not row or row['role'] != "admin": return
-        event = await conn.fetchrow("SELECT event_id, title, event_date, event_time FROM events WHERE is_current = true LIMIT 1")
+        event = await conn.fetchrow("SELECT event_id, title, event_date, event_time FROM events WHERE status = 'active' LIMIT 1")
         if not event:
             await message.answer("ℹ️ Немає активних івентів для скасування.")
             return
@@ -591,6 +591,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
