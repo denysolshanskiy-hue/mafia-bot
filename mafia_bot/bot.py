@@ -561,7 +561,7 @@ async def show_players_admin(message: types.Message):
                 if cancelled else "—"
             )
 
-            await message.answer(text, parse_mode="Markdown")
+            await message.answer(text)
 
     finally:
         await conn.close()
@@ -622,6 +622,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
