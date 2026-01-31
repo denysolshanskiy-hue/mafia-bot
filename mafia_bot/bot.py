@@ -440,17 +440,64 @@ async def invite_join(
 @dp.message(CommentState.waiting_for_comment)
 async def save_comment(message: types.Message, state: FSMContext):
     comment = None if message.text.strip() == "-" else message.text.strip()
+
     data = await state.get_data()
     event_id = data.get("event_id")
     user_id = message.from_user.id
+
     conn = await get_connection()
     try:
-        await conn.execute("UPDATE registrations SET comment = $1 WHERE event_id = $2 AND user_id = $3 AND status = 'active'", comment, event_id, user_id)
-        event_info = await conn.fetchrow("SELECT e.title, u.display_name, e.created_by FROM events e JOIN users u ON r.user_id = $1 WHERE e.event_id = $2", user_id, event_id)
+        # 1️⃣ Оновлюємо коментар
+        await conn.execute(
+            """
+            UPDATE registrations
+            SET comment = $1
+            WHERE event_id = $2
+              AND user_id = $3
+              AND status = 'active'
+            """,
+            comment,
+            event_id,
+            user_id
+        )
+
+        # 2️⃣ Беремо дані івенту
+        event = await conn.fetchrow(
+            """
+            SELECT title, created_by
+            FROM events
+            WHERE event_id = $1
+            """,
+            event_id
+        )
+
+        # 3️⃣ Беремо нік користувача
+        display_name = await conn.fetchval(
+            "SELECT display_name FROM users WHERE user_id = $1",
+            user_id
+        )
+
         await state.clear()
-        await message.answer("✅ Запис підтверджено!", reply_markup=cancel_keyboard(event_id))
-        if event_info:
-            await bot.send_message(event_info['created_by'], f"🆕 *Реєстрація*\n🎭 {event_info['title']}\n👤 {event_info['display_name']}\n💬 {comment or '—'}", parse_mode="Markdown")
+
+        # 4️⃣ Повідомлення гравцю
+        await message.answer(
+            "✅ Запис підтверджено!",
+            reply_markup=cancel_keyboard(event_id)
+        )
+
+        # 5️⃣ Повідомлення адміну
+        if event:
+            await bot.send_message(
+                event["created_by"],
+                (
+                    "🆕 *Нова реєстрація*\n"
+                    f"🎭 {event['title']}\n"
+                    f"👤 {display_name}\n"
+                    f"💬 {comment or '—'}"
+                ),
+                parse_mode="Markdown"
+            )
+
     finally:
         await conn.close()
 
@@ -690,6 +737,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
