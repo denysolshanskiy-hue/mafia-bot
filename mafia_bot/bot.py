@@ -742,8 +742,9 @@ async def reminder_loop():
     while True:
         now = datetime.now(tz)
         print("🕒 reminder loop alive:", now.strftime("%Y-%m-%d %H:%M:%S"))
-        # працюємо лише рівно о 12:00
-        if now.hour == 13 and now.minute == 0:
+
+        # рівно о 12:00 за Києвом
+        if now.hour == 14 and now.minute == 0 and now.second < 5:
             conn = await get_connection()
             try:
                 events = await conn.fetch(
@@ -789,16 +790,14 @@ async def reminder_loop():
                                 reply_markup=invite_keyboard(event_id)
                             )
                             sent += 1
-                        except:
+                        except Exception:
                             continue
 
-                    # позначаємо, що нагадування відправлено
                     await conn.execute(
                         "UPDATE events SET reminder_sent = true WHERE event_id = $1",
                         event_id
                     )
 
-                    # звіт адміну
                     ADMIN_ID = 444726017
                     await bot.send_message(
                         ADMIN_ID,
@@ -811,7 +810,6 @@ async def reminder_loop():
             finally:
                 await conn.close()
 
-        # перевіряємо раз на хвилину
         await asyncio.sleep(60)
 
 
@@ -837,6 +835,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
