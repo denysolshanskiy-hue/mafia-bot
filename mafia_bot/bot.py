@@ -744,7 +744,7 @@ async def reminder_loop():
         print("🕒 reminder loop alive:", now.strftime("%Y-%m-%d %H:%M:%S"))
 
         # рівно о 12:00 за Києвом
-        if now.hour == 15 and now.minute == 15 and now.second < 5:
+       # if now.hour == 15 and now.minute == 15 and now.second < 5:
             conn = await get_connection()
             try:
                 events = await conn.fetch(
@@ -756,11 +756,12 @@ async def reminder_loop():
                       AND event_date = CURRENT_DATE + 1
                     """
                 )
-
+print("📅 reminder check date:", now.date())
+print("📅 events found:", len(events))
                 for event in events:
                     event_id = event["event_id"]
                     title = event["title"]
-
+print(f"➡️ processing event {event_id} | {title}")
                     users = await conn.fetch(
                         """
                         SELECT u.user_id
@@ -776,7 +777,7 @@ async def reminder_loop():
                         """,
                         event_id
                     )
-
+ print("👥 users to notify:", len(users))
                     sent = 0
                     for u in users:
                         try:
@@ -835,6 +836,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
