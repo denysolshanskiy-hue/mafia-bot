@@ -768,7 +768,7 @@ async def reminder_loop():
                     """
                     SELECT u.user_id
                     FROM users u
-                    WHERE u.is_active = true
+                    WHERE u.is_active = 1
                       AND NOT EXISTS (
                           SELECT 1
                           FROM registrations r
@@ -837,6 +837,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
