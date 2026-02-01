@@ -25,7 +25,7 @@ import pytz
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
-
+EVENT_LOCATION = "📍 *Театр МО*\nвул. ст. лейтенанта Кагала, 38\n(головний вхід)"
 # ================== STATES ==================
 class CreateEventStates(StatesGroup):
     waiting_for_title = State()
@@ -212,10 +212,14 @@ async def show_active_events(message: types.Message):
             return
         for ev in events:
             await message.answer(
-                f"🎭 *{ev['title']}*\n📅 {ev['event_date']}\n⏰ {ev['event_time']}",
+                f"🎭 *{ev['title']}*\n"
+                f"📅 {ev['event_date']}\n"
+                f"⏰ {ev['event_time']}\n\n"
+                f"{EVENT_LOCATION}",
                 parse_mode="Markdown",
                 reply_markup=invite_keyboard(ev['event_id']),
             )
+
     finally:
         await conn.close()
 
@@ -448,9 +452,11 @@ async def invite_join(
         await bot.send_message(
             user_id,
             f"🎭 **{event['title']}**\n\n"
+            f"{EVENT_LOCATION}\n\n"
             f"💬 Напишіть коментар або `-` щоб пропустити",
             parse_mode="Markdown"
         )
+
 
     finally:
         await conn.close()
@@ -789,6 +795,7 @@ async def reminder_loop():
                                 f"⏰ *Нагадування!*\n\n"
                                 f"Завтра відбудеться івент:\n"
                                 f"🎭 *{title}*\n\n"
+                                f"{EVENT_LOCATION}\n\n"
                                 f"Ще є час записатись 👇",
                                 parse_mode="Markdown",
                                 reply_markup=invite_keyboard(event_id)
@@ -838,6 +845,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
