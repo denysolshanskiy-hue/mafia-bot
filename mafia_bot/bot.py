@@ -291,24 +291,39 @@ async def confirm_event_start(message: types.Message):
     user_id = message.from_user.id
     conn = await get_connection()
     try:
-        row = await conn.fetchrow("SELECT role FROM users WHERE user_id = $1", user_id)
-        if not row or row['role'] != "admin":
+        role = await conn.fetchval(
+            "SELECT role FROM users WHERE user_id = $1",
+            user_id
+        )
+        if role != "admin":
             return
-        event = await conn.fetchrow("SELECT event_id, title, event_date, event_time FROM events WHERE status = 'active' LIMIT 1")
-        if not event:
+
+        events = await conn.fetch("""
+            SELECT event_id, title, event_date
+            FROM events
+            WHERE status = 'active'
+            ORDER BY event_date
+        """)
+
+        if not events:
             await message.answer("ℹ️ Немає активних івентів для підтвердження.")
             return
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(
-                text="🚀 ВІДПРАВИТИ ПІДТВЕРДЖЕННЯ", 
-                callback_data=f"send_confirm_{event['event_id']}"
-            )]
-        ])
+
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(
+                    text=f"🚀 {e['title']} ({e['event_date']})",
+                    callback_data=f"send_confirm_{e['event_id']}"
+                )]
+                for e in events
+            ]
+        )
+
         await message.answer(
-            f"❓ Надіслати гравцям підтвердження, що вечір відбудеться?\n🎭 *{event['title']}* ({event['event_date']})",
-            parse_mode="Markdown",
+            "❓ Оберіть івент для надсилання підтвердження:",
             reply_markup=kb
         )
+
     finally:
         await conn.close()
 
@@ -822,6 +837,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
