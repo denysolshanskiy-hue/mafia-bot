@@ -743,75 +743,76 @@ async def reminder_loop():
         now = datetime.now(tz)
         print("🕒 reminder loop alive:", now.strftime("%Y-%m-%d %H:%M:%S"))
 
-        conn = await get_connection()
-        try:
-            events = await conn.fetch(
-                """
-                SELECT event_id, title, event_date
-                FROM events
-                WHERE status = 'active'
-                  AND reminder_sent = false
-                  AND event_date = CURRENT_DATE + 1
-                """
-            )
-
-            print("📅 reminder check date:", now.date())
-            print("📦 events found:", len(events))
-
-            for event in events:
-                event_id = event["event_id"]
-                title = event["title"]
-
-                print(f"➡️ processing event {event_id} | {title}")
-
-                users = await conn.fetch(
+        # рівно о 12:00 за Києвом
+        if now.hour == 12 and now.minute == 0 and now.second < 5:
+            conn = await get_connection()
+            try:
+                events = await conn.fetch(
                     """
-                    SELECT u.user_id
-                    FROM users u
-                    WHERE u.is_active = 1
-                      AND NOT EXISTS (
-                          SELECT 1
-                          FROM registrations r
-                          WHERE r.user_id = u.user_id
-                            AND r.event_id = $1
-                            AND r.status = 'active'
-                      )
-                    """,
-                    event_id
+                    SELECT event_id, title, event_date
+                    FROM events
+                    WHERE status = 'active'
+                      AND reminder_sent = false
+                      AND event_date = CURRENT_DATE + 1
+                    """
                 )
 
-                sent = 0
-                for u in users:
-                    try:
-                        await bot.send_message(
-                            u["user_id"],
-                            f"⏰ *Нагадування!*\n\n"
-                            f"Завтра відбудеться івент:\n"
-                            f"🎭 *{title}*\n\n"
-                            f"Ще є час записатись 👇",
-                            parse_mode="Markdown",
-                            reply_markup=invite_keyboard(event_id)
-                        )
-                        sent += 1
-                    except Exception as e:
-                        print("❌ send error:", e)
+                print(f"📦 events found: {len(events)}")
 
-                await conn.execute(
-                    "UPDATE events SET reminder_sent = true WHERE event_id = $1",
-                    event_id
-                )
+                for event in events:
+                    event_id = event["event_id"]
+                    title = event["title"]
 
-                ADMIN_ID = 444726017
-                await bot.send_message(
-                    ADMIN_ID,
-                    f"📣 *Нагадування надіслано*\n"
-                    f"🎭 {title}\n"
-                    f"👥 Отримали: **{sent}**",
-                    parse_mode="Markdown"
-                )
+                    print(f"➡️ processing event {event_id} | {title}")
 
-        finally:
-            await conn.close()
+                    users = await conn.fetch(
+                        """
+                        SELECT u.user_id
+                        FROM users u
+                        WHERE u.is_active = 1
+                          AND NOT EXISTS (
+                              SELECT 1
+                              FROM registrations r
+                              WHERE r.user_id = u.user_id
+                                AND r.event_id = $1
+                                AND r.status = 'active'
+                          )
+                        """,
+                        event_id
+                    )
+
+                    sent = 0
+                    for u in users:
+                        try:
+                            await bot.send_message(
+                                u["user_id"],
+                                f"⏰ *Нагадування!*\n\n"
+                                f"Завтра відбудеться івент:\n"
+                                f"🎭 *{title}*\n\n"
+                                f"Ще є час записатись 👇",
+                                parse_mode="Markdown",
+                                reply_markup=invite_keyboard(event_id)
+                            )
+                            sent += 1
+                        except Exception:
+                            continue
+
+                    await conn.execute(
+                        "UPDATE events SET reminder_sent = true WHERE event_id = $1",
+                        event_id
+                    )
+
+                    ADMIN_ID = 444726017
+                    await bot.send_message(
+                        ADMIN_ID,
+                        f"📣 *Нагадування надіслано*\n"
+                        f"🎭 {title}\n"
+                        f"👥 Отримали: **{sent}**",
+                        parse_mode="Markdown"
+                    )
+
+            finally:
+                await conn.close()
 
         await asyncio.sleep(60)
 
@@ -837,6 +838,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
