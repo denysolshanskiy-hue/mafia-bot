@@ -728,16 +728,16 @@ async def reminder_loop():
         now = datetime.now(tz)
         print("🕒 reminder loop alive:", now.strftime("%Y-%m-%d %H:%M:%S"))
         # працюємо лише рівно о 12:00
-        if now.hour == 12 and now.minute == 0:
+        if now.hour == 13 and now.minute == 0:
             conn = await get_connection()
             try:
                 events = await conn.fetch(
                     """
-                    SELECT event_id, title, event_date_real
+                    SELECT event_id, title, event_date
                     FROM events
                     WHERE status = 'active'
                       AND reminder_sent = false
-                      AND event_date_real = CURRENT_DATE + INTERVAL '1 day'
+                      AND event_date = CURRENT_DATE + INTERVAL '1 day'
                     """
                 )
 
@@ -822,6 +822,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
