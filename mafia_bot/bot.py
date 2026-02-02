@@ -172,27 +172,80 @@ async def save_nickname(message: types.Message, state: FSMContext):
         await conn.close()
 
 # ================== Colse Event ==================
-
 @dp.message(F.text == "🏁 Завершити вечір")
-async def archive_event(message: types.Message):
+async def choose_event_to_close(message: types.Message):
     user_id = message.from_user.id
     conn = await get_connection()
     try:
-        row = await conn.fetchrow("SELECT role FROM users WHERE user_id = $1", user_id)
-        if not row or row['role'] != "admin":
-            return
-        event = await conn.fetchrow("SELECT event_id, title, event_date, event_time FROM events WHERE status = 'active' LIMIT 1")
-        if not event:
-            await message.answer("ℹ️ Немає активних івентів для завершення.")
-            return
-        await conn.execute(
-            "UPDATE events SET status = 'closed' WHERE event_id = $1", 
-            event['event_id']
+        role = await conn.fetchval(
+            "SELECT role FROM users WHERE user_id = $1",
+            user_id
         )
-        await message.answer(f"✅ Івент **{event['title']}** успішно завершено та перенесено в архів.", parse_mode="Markdown")
+        if role != "admin":
+            return
+
+        events = await conn.fetch(
+            """
+            SELECT event_id, title, event_date
+            FROM events
+            WHERE status = 'active'
+            ORDER BY event_date
+            """
+        )
+
+        if not events:
+            await message.answer("ℹ️ Немає активних івентів.")
+            return
+
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=f"🏁 {e['title']} ({e['event_date']})",
+                        callback_data=f"close_event_{e['event_id']}"
+                    )
+                ]
+                for e in events
+            ]
+        )
+
+        await message.answer(
+            "🔒 Оберіть івент, який потрібно **завершити**:",
+            reply_markup=kb
+        )
+
     finally:
         await conn.close()
 
+@dp.callback_query(F.data.startswith("close_event_"))
+async def close_event(callback: types.CallbackQuery):
+    event_id = int(callback.data.split("_")[-1])
+    conn = await get_connection()
+    try:
+        event = await conn.fetchrow(
+            "SELECT title, event_date FROM events WHERE event_id = $1",
+            event_id
+        )
+        if not event:
+            await callback.answer("Івент не знайдено", show_alert=True)
+            return
+
+        await conn.execute(
+            "UPDATE events SET status = 'closed' WHERE event_id = $1",
+            event_id
+        )
+
+        await callback.message.edit_text(
+            f"✅ Івент завершено:\n\n"
+            f"🎭 *{event['title']}*\n"
+            f"📅 {event['event_date']}",
+            parse_mode="Markdown"
+        )
+
+        await callback.answer("Івент завершено")
+
+    finally:
+        await conn.close()
 # ================== ACTIVE EVENTS ==================
 
 @dp.message(F.text == "📅 Активні події")
@@ -845,6 +898,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
