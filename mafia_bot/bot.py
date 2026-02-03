@@ -247,7 +247,7 @@ async def close_event(callback: types.CallbackQuery):
     finally:
         await conn.close()
 # ================== ACTIVE EVENTS ==================
-
+event_date_str = event_date.strftime("%d.%m.%Y")
 @dp.message(F.text == "📅 Активні події")
 async def show_active_events(message: types.Message):
     conn = await get_connection()
@@ -266,7 +266,7 @@ async def show_active_events(message: types.Message):
         for ev in events:
             await message.answer(
                 f"🎭 *{ev['title']}*\n"
-                f"📅 {ev['event_date']}\n"
+                f"📅 {event_date_str}\n"
                 f"⏰ {ev['event_time']}\n\n"
                 f"{EVENT_LOCATION}",
                 parse_mode="Markdown",
@@ -334,26 +334,31 @@ async def create_event_time(message: types.Message, state: FSMContext):
             """,
             title, event_date, event_time, admin_id,
         )
-        players = await conn.fetch("SELECT user_id FROM users WHERE is_active = 1")
-        sent_count = 0
-        for p in players:
-            try:
-                await bot.send_message(
-                    p['user_id'],
-                    f"🔔 *Новий івент!*\n\n🎭 *{title}*\n📅 {event_date}\n⏰ {event_time}",
-                    parse_mode="Markdown",
-                    reply_markup=invite_keyboard(event_id),
-                )
-                sent_count += 1
-            except Exception:
-                continue
-        await state.clear()
-        await message.answer(
-            f"✅ Івент створено!\n📢 Запрошення розіслано гравцям: **{sent_count}**",
-            parse_mode="Markdown"
+       event_date_str = event_date.strftime("%d.%m.%Y")
+
+players = await conn.fetch("SELECT user_id FROM users WHERE is_active = 1")
+sent_count = 0
+
+for p in players:
+    try:
+        await bot.send_message(
+            p['user_id'],
+            f"🔔 *Новий івент!*\n\n"
+            f"🎭 *{title}*\n"
+            f"📅 {event_date_str}\n"
+            f"⏰ {event_time}",
+            parse_mode="Markdown",
+            reply_markup=invite_keyboard(event_id),
         )
-    finally:
-        await conn.close()
+        sent_count += 1
+    except Exception:
+        continue
+
+await state.clear()
+await message.answer(
+    f"✅ Івент створено!\n📢 Запрошення розіслано гравцям: **{sent_count}**",
+    parse_mode="Markdown"
+)
 
 #=================== COMMIT EVENT ====================
 @dp.message(F.text == "✅ Підтвердити вечір")
@@ -911,6 +916,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
