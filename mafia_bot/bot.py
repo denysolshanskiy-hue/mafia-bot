@@ -336,7 +336,11 @@ async def create_event_time(message: types.Message, state: FSMContext):
         )
         
 event_date_str = event_date.strftime("%d.%m.%Y")
-players = await conn.fetch("SELECT user_id FROM users WHERE is_active = 1")
+
+players = await conn.fetch(
+    "SELECT user_id FROM users WHERE is_active = 1"
+)
+
 sent_count = 0
 
 for p in players:
@@ -602,17 +606,66 @@ async def invite_cancel(callback: types.CallbackQuery, callback_data: InviteCall
     user_id = callback.from_user.id
     event_id = callback_data.event_id
     MY_ADMIN_ID = 444726017
+
     conn = await get_connection()
     try:
-        event_title = await conn.fetchval("SELECT title FROM events WHERE event_id = $1", int(event_id))
-        user_nick = await conn.fetchval("SELECT display_name FROM users WHERE user_id = $1", int(user_id))
-        display_name = user_nick or callback.from_user.full_name
-        await conn.execute("UPDATE registrations SET status = 'cancelled', updated_at = CURRENT_TIMESTAMP WHERE event_id = $1 AND user_id = $2", int(event_id), int(user_id))
+        # перевіряємо, чи є активний запис
+        reg = await conn.fetchrow(
+            """
+            SELECT r.status, e.title
+            FROM registrations r
+            JOIN events e ON e.event_id = r.event_id
+            WHERE r.event_id = $1
+              AND r.user_id = $2
+              AND r.status = 'active'
+            """,
+            event_id,
+            user_id
+        )
+
+        # ❌ якщо запису немає — просто попап і НІЧОГО не ламаємо
+        if not reg:
+            await callback.answer(
+                "❗ Ви не записані на цей івент",
+                show_alert=True
+            )
+            return
+
+        # якщо запис є — скасовуємо
+        await conn.execute(
+            """
+            UPDATE registrations
+            SET status = 'cancelled',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE event_id = $1
+              AND user_id = $2
+            """,
+            event_id,
+            user_id
+        )
+
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer("Запис скасовано")
-        await bot.send_message(user_id, "❌ Ви скасували свій запис на івент")
+
+        await bot.send_message(
+            user_id,
+            "❌ Ви скасували свій запис на івент"
+        )
+
+        # повідомлення адміну — ТІЛЬКИ якщо реально було що скасовувати
         if user_id != MY_ADMIN_ID:
-            await bot.send_message(MY_ADMIN_ID, f"⚠️ **Скасування!**\n🎭 {event_title}\n👤 {display_name}", parse_mode="Markdown")
+            user_nick = await conn.fetchval(
+                "SELECT display_name FROM users WHERE user_id = $1",
+                user_id
+            )
+            display_name = user_nick or callback.from_user.full_name
+
+            await bot.send_message(
+                MY_ADMIN_ID,
+                f"⚠️ **Скасування!**\n🎭 {reg['title']}\n👤 {display_name}",
+                parse_mode="Markdown"
+            )
+
     finally:
         await conn.close()
 
@@ -916,6 +969,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
