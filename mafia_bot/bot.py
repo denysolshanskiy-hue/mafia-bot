@@ -334,8 +334,8 @@ async def create_event_time(message: types.Message, state: FSMContext):
             """,
             title, event_date, event_time, admin_id,
         )
-       event_date_str = event_date.strftime("%d.%m.%Y")
-
+        
+event_date_str = event_date.strftime("%d.%m.%Y")
 players = await conn.fetch("SELECT user_id FROM users WHERE is_active = 1")
 sent_count = 0
 
@@ -916,6 +916,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
