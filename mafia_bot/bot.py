@@ -247,7 +247,6 @@ async def close_event(callback: types.CallbackQuery):
     finally:
         await conn.close()
 # ================== ACTIVE EVENTS ==================
-event_date_str = event_date.strftime("%d.%m.%Y")
 @dp.message(F.text == "📅 Активні події")
 async def show_active_events(message: types.Message):
     conn = await get_connection()
@@ -260,22 +259,25 @@ async def show_active_events(message: types.Message):
             ORDER BY created_at DESC
             """
         )
+
         if not events:
             await message.answer("ℹ️ Наразі немає активних івентів")
             return
+
         for ev in events:
+            event_date_str = ev["event_date"].strftime("%d.%m.%Y")
+
             await message.answer(
                 f"🎭 *{ev['title']}*\n"
                 f"📅 {event_date_str}\n"
                 f"⏰ {ev['event_time']}\n\n"
                 f"{EVENT_LOCATION}",
                 parse_mode="Markdown",
-                reply_markup=invite_keyboard(ev['event_id']),
+                reply_markup=invite_keyboard(ev["event_id"])
             )
 
     finally:
         await conn.close()
-
 # ================== CREATE EVENT (ADMIN) ==================
 
 @dp.message(F.text == "➕ Створити івент")
@@ -971,6 +973,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
