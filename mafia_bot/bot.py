@@ -13,7 +13,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.filters.callback_data import CallbackData
 from aiogram.client.session.aiohttp import AiohttpSession
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta, time, date
 import asyncio
 
 # Імпортуємо функції з вашого нового database.py
@@ -300,7 +300,20 @@ async def create_event_title(message: types.Message, state: FSMContext):
 
 @dp.message(CreateEventStates.waiting_for_date)
 async def create_event_date(message: types.Message, state: FSMContext):
-    await state.update_data(event_date=message.text)
+    raw = message.text.strip()
+
+    try:
+        # очікуємо формат 07.02. або 07.02
+        event_date = datetime.strptime(raw.rstrip("."), "%d.%m").date()
+
+        # автоматично підставляємо поточний рік
+        event_date = event_date.replace(year=datetime.now().year)
+
+    except ValueError:
+        await message.answer("❌ Невірний формат дати. Введіть, будь ласка, так: 07.02")
+        return
+
+    await state.update_data(event_date=event_date)
     await message.answer("⏰ Введіть час (наприклад: 19:00):")
     await state.set_state(CreateEventStates.waiting_for_time)
 
@@ -316,7 +329,7 @@ async def create_event_time(message: types.Message, state: FSMContext):
         event_id = await conn.fetchval(
             """
             INSERT INTO events (title, event_date, event_time, status, created_by)
-            VALUES ($1, $2, $3, 'true', $4)
+            VALUES ($1, $2, $3, 'active', $4)
             RETURNING event_id
             """,
             title, event_date, event_time, admin_id,
@@ -898,6 +911,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
