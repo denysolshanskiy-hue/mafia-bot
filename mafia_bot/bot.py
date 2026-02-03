@@ -322,51 +322,50 @@ async def create_event_time(message: types.Message, state: FSMContext):
     data = await state.get_data()
     title = data["title"]
     event_date = data["event_date"]
-    event_time = message.text
+    event_time = message.text.strip()
     admin_id = message.from_user.id
+
     conn = await get_connection()
-try:
-    event_id = await conn.fetchval(
-        """
-        INSERT INTO events (title, event_date, event_time, status, created_by)
-        VALUES ($1, $2, $3, 'active', $4)
-        RETURNING event_id
-        """,
-        title, event_date, event_time, admin_id
-    )
+    try:
+        event_id = await conn.fetchval(
+            """
+            INSERT INTO events (title, event_date, event_time, status, created_by)
+            VALUES ($1, $2, $3, 'active', $4)
+            RETURNING event_id
+            """,
+            title, event_date, event_time, admin_id
+        )
 
-    event_date_str = event_date.strftime("%d.%m.%Y")
+        event_date_str = event_date.strftime("%d.%m.%Y")
 
-    players = await conn.fetch(
-        "SELECT user_id FROM users WHERE is_active = 1"
-    )
+        players = await conn.fetch(
+            "SELECT user_id FROM users WHERE is_active = 1"
+        )
 
-    sent_count = 0
-    for p in players:
-        try:
-            await bot.send_message(
-                p["user_id"],
-                f"🔔 *Новий івент!*\n\n"
-                f"🎭 *{title}*\n"
-                f"📅 {event_date_str}\n"
-                f"⏰ {event_time}",
-                parse_mode="Markdown",
-                reply_markup=invite_keyboard(event_id),
-            )
-            sent_count += 1
-        except Exception:
-            continue
+        sent_count = 0
+        for p in players:
+            try:
+                await bot.send_message(
+                    p["user_id"],
+                    f"🔔 *Новий івент!*\n\n"
+                    f"🎭 *{title}*\n"
+                    f"📅 {event_date_str}\n"
+                    f"⏰ {event_time}",
+                    parse_mode="Markdown",
+                    reply_markup=invite_keyboard(event_id)
+                )
+                sent_count += 1
+            except Exception:
+                continue
 
-    await state.clear()
-    await message.answer(
-        f"✅ Івент створено!\n📢 Запрошення розіслано гравцям: **{sent_count}**",
-        parse_mode="Markdown"
-    )
+        await state.clear()
+        await message.answer(
+            f"✅ Івент створено!\n📢 Запрошення розіслано гравцям: **{sent_count}**",
+            parse_mode="Markdown"
+        )
 
-finally:
-    await conn.close()
-
-
+    finally:
+        await conn.close()
 #=================== COMMIT EVENT ====================
 @dp.message(F.text == "✅ Підтвердити вечір")
 async def confirm_event_start(message: types.Message):
@@ -972,6 +971,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
