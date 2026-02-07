@@ -524,22 +524,25 @@ async def invite_join(
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer("Ви записані!")
 
-        # 5️⃣ Коментар
-        await state.set_state(CommentState.waiting_for_comment)
-        await state.update_data(event_id=event_id)
+if event and event.get("created_by"):
+        try:
+            await bot.send_message(
+                event["created_by"],
+                (
+                    "🆕 *Нова реєстрація*\n"
+                    f"🎭 {event['title']}\n"
+                    f"👤 {display_name}\n"
+                    f"💬 {comment if comment else '—'}"
+                ),
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            # ❗️ВАЖЛИВО: не ламаємо основний сценарій
+            print(f"⚠️ Не вдалося надіслати повідомлення адміну: {e}")
 
-        await bot.send_message(
-            user_id,
-            f"🎭 **{event['title']}**\n\n"
-            f"{EVENT_LOCATION}\n\n"
-            f"💬 Напишіть коментар або `-` щоб пропустити",
-            parse_mode="Markdown"
-        )
-
-
-    finally:
-        await conn.close()
-
+finally:
+    # 🔒 Закриваємо зʼєднання ОДИН раз
+    await conn.close()
 
 @dp.message(CommentState.waiting_for_comment)
 async def save_comment(message: types.Message, state: FSMContext):
@@ -977,6 +980,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
