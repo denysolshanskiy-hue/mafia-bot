@@ -589,18 +589,22 @@ async def save_comment(message: types.Message, state: FSMContext):
             reply_markup=cancel_keyboard(event_id)
         )
 
-        # 5️⃣ Повідомлення адміну
-        if event:
-            await bot.send_message(
-                event["created_by"],
-                (
-                    "🆕 *Нова реєстрація*\n"
-                    f"🎭 {event['title']}\n"
-                    f"👤 {display_name}\n"
-                    f"💬 {comment or '—'}"
-                ),
-                parse_mode="Markdown"
-            )
+# 5️⃣ Повідомлення адміну (безпечна версія)
+if event and event.get("created_by"):
+    try:
+        await bot.send_message(
+            event["created_by"],
+            (
+                "🆕 *Нова реєстрація*\n"
+                f"🎭 {event['title']}\n"
+                f"👤 {display_name}\n"
+                f"💬 {comment if comment else '—'}"
+            ),
+            parse_mode="Markdown"
+        )
+    except Exception as e:
+        # не ламаємо реєстрацію через повідомлення адміну
+        print(f"⚠️ Не вдалося надіслати повідомлення адміну: {e}")
 
     finally:
         await conn.close()
@@ -878,7 +882,7 @@ async def reminder_loop():
         print("🕒 reminder loop alive:", now.strftime("%Y-%m-%d %H:%M:%S"))
 
         # рівно о 12:00 за Києвом
-        if now.hour == 12 and now.minute == 0 and now.second < 5:
+        if now.hour == 12 and now.minute == 0:
             conn = await get_connection()
             try:
                 events = await conn.fetch(
@@ -973,6 +977,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
