@@ -453,7 +453,7 @@ async def invite_join(
 
     conn = await get_connection()
     try:
-        # 1️⃣ Беремо САМЕ ТОЙ івент, по якому клікнули
+        # 1️⃣ Беремо івент
         event = await conn.fetchrow(
             """
             SELECT event_id, title, status
@@ -465,21 +465,14 @@ async def invite_join(
 
         if not event:
             await callback.answer("🚫 Івент не знайдено", show_alert=True)
-            await callback.message.edit_reply_markup(reply_markup=None)
             return
 
         if event["status"] != "active":
-            status_text = (
-                "вже завершений" if event["status"] == "closed" else "скасований"
-            )
-            await callback.answer(
-                f"🚫 Цей івент {status_text}.",
-                show_alert=True
-            )
-            await callback.message.edit_reply_markup(reply_markup=None)
+            status_text = "вже завершений" if event["status"] == "closed" else "скасований"
+            await callback.answer(f"🚫 Цей івент {status_text}.", show_alert=True)
             return
 
-        # 2️⃣ Перевіряємо нік
+        # 2️⃣ Перевірка ніку
         user = await conn.fetchrow(
             "SELECT display_name FROM users WHERE user_id = $1",
             user_id
@@ -491,8 +484,8 @@ async def invite_join(
             )
             return
 
-        # 3️⃣ Перевіряємо чи вже записаний
-        existing = await conn.fetchval(
+        # 3️⃣ Перевірка — чи вже записаний
+        exists = await conn.fetchval(
             """
             SELECT 1
             FROM registrations
@@ -503,15 +496,11 @@ async def invite_join(
             event_id,
             user_id
         )
-
-        if existing:
-            await callback.answer(
-                "Ви вже записані на цей івент",
-                show_alert=True
-            )
+        if exists:
+            await callback.answer("Ви вже записані на цей івент", show_alert=True)
             return
 
-        # 4️⃣ Записуємо
+        # 4️⃣ Запис
         await conn.execute(
             """
             INSERT INTO registrations (event_id, user_id, status)
@@ -524,25 +513,18 @@ async def invite_join(
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer("Ви записані!")
 
-        if event and event.get("created_by"):
-                try:
-                    await bot.send_message(
-                        event["created_by"],
-                        (
-                            "🆕 *Нова реєстрація*\n"
-                            f"🎭 {event['title']}\n"
-                            f"👤 {display_name}\n"
-                            f"💬 {comment if comment else '—'}"
-                        ),
-                        parse_mode="Markdown"
-                    )
-                except Exception as e:
-                    # ❗️ВАЖЛИВО: не ламаємо основний сценарій
-                    print(f"⚠️ Не вдалося надіслати повідомлення адміну: {e}")
+        # 5️⃣ Переходимо до коментаря
+        await state.set_state(CommentState.waiting_for_comment)
+        await state.update_data(event_id=event_id)
 
-        finally:
-            # 🔒 Закриваємо зʼєднання ОДИН раз
-            await conn.close()
+        await bot.send_message(
+            user_id,
+            f"🎭 *{event['title']}*\n\n💬 Напишіть коментар або `-` щоб пропустити",
+            parse_mode="Markdown"
+        )
+
+    finally:
+        await conn.close()
 
 @dp.message(CommentState.waiting_for_comment)
 async def save_comment(message: types.Message, state: FSMContext):
@@ -568,7 +550,7 @@ async def save_comment(message: types.Message, state: FSMContext):
             user_id
         )
 
-        # 2️⃣ Беремо дані івенту
+        # 2️⃣ Дані івенту
         event = await conn.fetchrow(
             """
             SELECT title, created_by
@@ -578,7 +560,7 @@ async def save_comment(message: types.Message, state: FSMContext):
             event_id
         )
 
-        # 3️⃣ Беремо нік користувача
+        # 3️⃣ Нік користувача
         display_name = await conn.fetchval(
             "SELECT display_name FROM users WHERE user_id = $1",
             user_id
@@ -592,22 +574,21 @@ async def save_comment(message: types.Message, state: FSMContext):
             reply_markup=cancel_keyboard(event_id)
         )
 
-# 5️⃣ Повідомлення адміну (безпечна версія)
-if event and event.get("created_by"):
-    try:
-        await bot.send_message(
-            event["created_by"],
-            (
-                "🆕 *Нова реєстрація*\n"
-                f"🎭 {event['title']}\n"
-                f"👤 {display_name}\n"
-                f"💬 {comment if comment else '—'}"
-            ),
-            parse_mode="Markdown"
-        )
-    except Exception as e:
-        # не ламаємо реєстрацію через повідомлення адміну
-        print(f"⚠️ Не вдалося надіслати повідомлення адміну: {e}")
+        # 5️⃣ Повідомлення адміну (безпечне)
+        if event and event["created_by"]:
+            try:
+                await bot.send_message(
+                    event["created_by"],
+                    (
+                        "🆕 *Нова реєстрація*\n"
+                        f"🎭 {event['title']}\n"
+                        f"👤 {display_name}\n"
+                        f"💬 {comment if comment else '—'}"
+                    ),
+                    parse_mode="Markdown"
+                )
+            except Exception as e:
+                print(f"⚠️ Не вдалося надіслати повідомлення адміну: {e}")
 
     finally:
         await conn.close()
@@ -980,6 +961,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
