@@ -44,6 +44,12 @@ class InviteCallback(CallbackData, prefix="invite"):
     event_id: int
 
 # ================== KEYBOARDS ==================
+@dp.message(Command("cleanup"))
+async def cleanup(message: types.Message):
+    await message.answer(
+        "🧹",
+        reply_markup=ReplyKeyboardRemove()
+    )
 
 def admin_menu_keyboard():
     return ReplyKeyboardMarkup(
@@ -961,6 +967,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
