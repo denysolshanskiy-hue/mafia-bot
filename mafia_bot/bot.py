@@ -108,15 +108,16 @@ def cancel_keyboard(event_id: int):
     )
 
 # ================== START / NICKNAME ==================
-if message.chat.type != "private":
-    return
-
 @dp.message(Command("clean"))
 async def clean_keyboard(message: types.Message):
+    if message.chat.type != "private":
+    return
     await message.answer("Клавіатуру видалено", reply_markup=types.ReplyKeyboardRemove())
     
 @dp.message(CommandStart())
 async def start_handler(message: types.Message, state: FSMContext):
+    if message.chat.type != "private":
+    return
     user_id = message.from_user.id
     username = message.from_user.username
     conn = await get_connection()
@@ -968,6 +969,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
