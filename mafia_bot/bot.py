@@ -23,11 +23,11 @@ import pytz
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardRemove
 
-@dp.message(Command("cleanup"))
-async def cleanup(message: types.Message):
+@dp.message(F.text == "!!!cleanup")
+async def force_cleanup(message: types.Message):
     await message.answer(
         "🧹 Кнопки прибрано",
-        reply_markup=ReplyKeyboardRemove()
+        reply_markup=types.ReplyKeyboardRemove()
     )
 # ================== INIT ==================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -968,6 +968,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
