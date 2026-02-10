@@ -108,6 +108,9 @@ def cancel_keyboard(event_id: int):
     )
 
 # ================== START / NICKNAME ==================
+if message.chat.type != "private":
+    return
+
 @dp.message(Command("clean"))
 async def clean_keyboard(message: types.Message):
     await message.answer("Клавіатуру видалено", reply_markup=types.ReplyKeyboardRemove())
@@ -965,6 +968,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
