@@ -20,7 +20,15 @@ import asyncio
 from database import get_connection, init_db
 from datetime import datetime, timedelta, time
 import pytz
+from aiogram.filters import Command
+from aiogram.types import ReplyKeyboardRemove
 
+@dp.message(Command("cleanup"))
+async def cleanup(message: types.Message):
+    await message.answer(
+        "🧹 Кнопки прибрано",
+        reply_markup=ReplyKeyboardRemove()
+    )
 # ================== INIT ==================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=BOT_TOKEN)
@@ -44,13 +52,6 @@ class InviteCallback(CallbackData, prefix="invite"):
     event_id: int
 
 # ================== KEYBOARDS ==================
-@dp.message(Command("cleanup"))
-async def cleanup(message: types.Message):
-    await message.answer(
-        "🧹",
-        reply_markup=ReplyKeyboardRemove()
-    )
-
 def admin_menu_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
@@ -967,6 +968,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
