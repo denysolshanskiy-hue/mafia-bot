@@ -23,9 +23,6 @@ import pytz
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardRemove
 
-@dp.message(Command("clean"))
-async def clean_keyboard(message: types.Message):
-    await message.answer("Клавіатуру видалено", reply_markup=types.ReplyKeyboardRemove())
 # ================== INIT ==================
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=BOT_TOKEN)
@@ -111,7 +108,10 @@ def cancel_keyboard(event_id: int):
     )
 
 # ================== START / NICKNAME ==================
-
+@dp.message(Command("clean"))
+async def clean_keyboard(message: types.Message):
+    await message.answer("Клавіатуру видалено", reply_markup=types.ReplyKeyboardRemove())
+    
 @dp.message(CommandStart())
 async def start_handler(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
@@ -965,6 +965,7 @@ if __name__ == "__main__":
         asyncio.run(start_all())
     except (KeyboardInterrupt, SystemExit):
         pass
+
 
 
 
