@@ -1,6 +1,5 @@
 import asyncio
 import os
-from modules.underground.handlers import router as season_router
 from aiohttp import web
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
@@ -16,6 +15,7 @@ from aiogram.filters.callback_data import CallbackData
 from aiogram.client.session.aiohttp import AiohttpSession
 from datetime import datetime, timedelta, time, date
 import asyncio
+from modules.underground.handlers import router as season_router
 
 # Імпортуємо функції з вашого нового database.py
 from database import get_connection, init_db
@@ -28,7 +28,7 @@ from aiogram.types import ReplyKeyboardRemove
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
-#dp.include_router(season_router)
+dp.include_router(season_router)
 EVENT_LOCATION = "📍 *Театр МО*\nвул. ст. лейтенанта Кагала, 38\n(головний вхід)"
 # ================== STATES ==================
 class CreateEventStates(StatesGroup):
