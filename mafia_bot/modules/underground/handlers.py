@@ -5,16 +5,19 @@ router = Router()
 
 
 def get_season_menu(is_admin=False):
-    kb = ReplyKeyboardMarkup(resize_keyboard=True)
-
-    kb.add(KeyboardButton(text="🏆 Мій рейтинг"))
-    kb.add(KeyboardButton(text="💰 Мій баланс"))
+    keyboard = [
+        [KeyboardButton(text="🏆 Мій рейтинг")],
+        [KeyboardButton(text="💰 Мій баланс")]
+    ]
 
     if is_admin:
-        kb.add(KeyboardButton(text="💰 Нарахувати"))
-        kb.add(KeyboardButton(text="📊 Рейтинг"))
+        keyboard.append([KeyboardButton(text="💰 Нарахувати")])
+        keyboard.append([KeyboardButton(text="📊 Рейтинг")])
 
-    return kb
+    return ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True
+    )
 
 
 @router.message(lambda message: message.text == "☣️ UNDERGROUND")
