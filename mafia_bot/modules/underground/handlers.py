@@ -172,7 +172,16 @@ async def apply_action(message: types.Message, state: FSMContext):
 
     income = calculate_income(message.text)
 
-    player = get_player(player_id)
+   def get_player(player_id):
+    data = players_sheet.get_all_records()
+
+    for row in data:
+        keys = {k.strip(): v for k, v in row.items()}
+
+        if str(keys.get("player_id")) == str(player_id):
+            return keys
+
+    return None
 
     if not player:
         add_player(player_id, player_name)
