@@ -53,7 +53,8 @@ def add_player(player_id, nick):
         nick,
         0,  # balance
         0,  # current_streak
-        0   # total_games
+        0,  # total_games
+        0   # black_mark_used
     ])
 
 
@@ -116,3 +117,12 @@ def mark_event_processed(event_id):
 def get_top_players():
     data = players_sheet.get_all_records()
     return sorted(data, key=lambda x: int(x["balance"]), reverse=True)
+
+# ================= BLACK MARK =================
+def use_black_mark(player_id):
+    data = players_sheet.get_all_records()
+
+    for i, row in enumerate(data, start=2):
+        if str(row["player_id"]) == str(player_id):
+            players_sheet.update(f"F{i}", 1)
+            break
