@@ -3,3 +3,5 @@ aiogram
 aiohttp
 asyncpg
 pytz
+gspread
+oauth2client
