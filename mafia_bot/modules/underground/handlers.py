@@ -33,7 +33,33 @@ async def season_menu(message: types.Message):
     )
 #======================== INCOME =========================
 from aiogram import F
+from modules.underground.postgres_reader import get_active_event, get_event_players
 
 @router.message(F.text == "💰 Нарахувати")
 async def start_accrual(message: types.Message):
-    await message.answer("Обробка івенту (скоро тут буде логіка)")
+    event = await get_active_event()
+
+    if not event:
+        await message.answer("❌ Немає активного івенту")
+        return
+
+    players = await get_event_players(event["event_id"])
+
+    if not players:
+        await message.answer("❌ Немає гравців")
+        return
+
+    keyboard = []
+
+    for p in players:
+        keyboard.append([KeyboardButton(text=p["display_name"])])
+
+    kb = ReplyKeyboardMarkup(
+        keyboard=keyboard,
+        resize_keyboard=True
+    )
+
+    await message.answer(
+        f"🎭 {event['title']}\n\nОберіть гравця:",
+        reply_markup=kb
+    )
