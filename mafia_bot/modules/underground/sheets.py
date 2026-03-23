@@ -41,9 +41,14 @@ events_sheet = spreadsheet.worksheet("Events")
 # ================= PLAYERS =================
 def get_player(player_id):
     data = players_sheet.get_all_records()
+
     for row in data:
-        if str(row["player_id"]) == str(player_id):
-            return row
+        # 👉 очищаємо ключі від пробілів
+        clean_row = {k.strip(): v for k, v in row.items()}
+
+        if str(clean_row.get("player_id")) == str(player_id):
+            return clean_row
+
     return None
 
 
