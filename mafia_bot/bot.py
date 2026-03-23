@@ -1,5 +1,8 @@
 import asyncio
 import os
+from modules.underground.handlers import register_handlers as register_season
+
+register_season(dp)
 from aiohttp import web
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import CommandStart
