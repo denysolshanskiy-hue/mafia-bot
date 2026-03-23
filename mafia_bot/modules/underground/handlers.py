@@ -32,8 +32,8 @@ async def season_menu(message: types.Message):
         reply_markup=get_season_menu(is_admin)
     )
 #======================== INCOME =========================
-from aiogram.filters import Text
+from aiogram import F
 
-@router.message(Text("💰 Нарахувати"))
+@router.message(F.text == "💰 Нарахувати")
 async def start_accrual(message: types.Message):
     await message.answer("Обробка івенту (скоро тут буде логіка)")
