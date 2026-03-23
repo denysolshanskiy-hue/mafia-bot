@@ -28,7 +28,7 @@ from aiogram.types import ReplyKeyboardRemove
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
-dp.include_router(season_router)
+#dp.include_router(season_router)
 EVENT_LOCATION = "📍 *Театр МО*\nвул. ст. лейтенанта Кагала, 38\n(головний вхід)"
 # ================== STATES ==================
 class CreateEventStates(StatesGroup):
