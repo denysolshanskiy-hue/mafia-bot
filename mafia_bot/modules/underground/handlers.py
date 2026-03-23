@@ -3,7 +3,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 
 router = Router()
 
-
+#=================== MENU ========================
 def get_season_menu(is_admin=False):
     keyboard = [
         [KeyboardButton(text="🏆 Мій рейтинг")],
@@ -31,3 +31,9 @@ async def season_menu(message: types.Message):
         "Сезонне меню:",
         reply_markup=get_season_menu(is_admin)
     )
+#======================== INCOME =========================
+from aiogram.filters import Text
+
+@router.message(Text("💰 Нарахувати"))
+async def start_accrual(message: types.Message):
+    await message.answer("Обробка івенту (скоро тут буде логіка)")
