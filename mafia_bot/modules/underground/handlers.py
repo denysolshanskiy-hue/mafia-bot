@@ -251,7 +251,7 @@ async def black_mark_menu(message: types.Message):
     await message.answer("🫐 Оберіть ефект:", reply_markup=kb)
 
 
-@router.message(F.text.in_(["💰 Підняти ліміт до 3000", "🔥 Зберегти стрік (1 раз)"]))
+@router.message(F.text.in_(["💰 Підняти ліміт до 3000", "🔥 Зберегти стрік (1 раз)"]), F.state.is_(None))
 async def apply_black_mark(message: types.Message):
     player = get_player(message.from_user.id)
 
