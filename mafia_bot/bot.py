@@ -56,7 +56,7 @@ def admin_menu_keyboard():
 [KeyboardButton(text="✅ Підтвердити вечір"), KeyboardButton(text="🏁 Завершити вечір")],
 [KeyboardButton(text="❌ Скасувати івент")],
 [KeyboardButton(text="☣️ UNDERGROUND")]  # ← ОКРЕМИЙ РЯДОК
-    ]
+    ],
         resize_keyboard=True
     )
 
