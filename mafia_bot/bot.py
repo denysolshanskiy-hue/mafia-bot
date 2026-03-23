@@ -28,7 +28,6 @@ from aiogram.types import ReplyKeyboardRemove
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
-dp.include_router(season_router)
 EVENT_LOCATION = "📍 *Театр МО*\nвул. ст. лейтенанта Кагала, 38\n(головний вхід)"
 # ================== STATES ==================
 class CreateEventStates(StatesGroup):
@@ -52,11 +51,12 @@ class InviteCallback(CallbackData, prefix="invite"):
 def admin_menu_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
-            [KeyboardButton(text="➕ Створити івент"), KeyboardButton(text="📅 Активні події")],
-            [KeyboardButton(text="💳 Оплатити ігри"), KeyboardButton(text="🛠 Адмін: список + скасовані")],
-            [KeyboardButton(text="✅ Підтвердити вечір"), KeyboardButton(text="🏁 Завершити вечір")],
-            [KeyboardButton(text="❌ Скасувати івент")], KeyboardButton(text="☣️ UNDERGROUND")
-        ],
+    [KeyboardButton(text="➕ Створити івент"), KeyboardButton(text="📅 Активні події")],
+    [KeyboardButton(text="💳 Оплатити ігри"), KeyboardButton(text="🛠 Адмін: список + скасовані")],
+    [KeyboardButton(text="✅ Підтвердити вечір"), KeyboardButton(text="🏁 Завершити вечір")],
+    [KeyboardButton(text="❌ Скасувати івент")],
+    [KeyboardButton(text="☣️ UNDERGROUND")]  # ← ОКРЕМИЙ РЯДОК
+]
         resize_keyboard=True
     )
 
@@ -949,7 +949,8 @@ async def reminder_loop():
                 await conn.close()
 
         await asyncio.sleep(60)
-
+# ================== UNDERGROUND =======================
+dp.include_router(season_router)
 # ================== RUNNER & WEB SERVER ==================
 
 async def handle(request):
