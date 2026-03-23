@@ -69,9 +69,9 @@ def update_player(player_id, balance, streak, total_games):
 
     for i, row in enumerate(data, start=2):
         if str(row["player_id"]) == str(player_id):
-            players_sheet.update(f"C{i}", balance)
-            players_sheet.update(f"D{i}", streak)
-            players_sheet.update(f"E{i}", total_games)
+            players_sheet.update(f"C{i}", [[balance]])
+            players_sheet.update(f"D{i}", [[streak]])
+            players_sheet.update(f"E{i}", [[total_games]])
             break
 
 
@@ -130,6 +130,6 @@ def set_black_mark(player_id, bm_type):
 
     for i, row in enumerate(data, start=2):
         if str(row["player_id"]) == str(player_id):
-            players_sheet.update(f"F{i}", 1)
-            players_sheet.update(f"G{i}", bm_type)
+            players_sheet.update(f"F{i}", [[1]])
+            players_sheet.update(f"G{i}", [[bm_type]])
             break
