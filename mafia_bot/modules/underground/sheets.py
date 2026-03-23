@@ -24,6 +24,11 @@ players_sheet = spreadsheet.worksheet("Players")
 results_sheet = spreadsheet.worksheet("Results")
 events_sheet = spreadsheet.worksheet("Events")
 
+if result_exists(event_id, player_id):
+    await message.answer("❌ Вже нараховано цьому гравцю")
+    return
+
+
 def get_player(player_id):
     data = players_sheet.get_all_records()
     for row in data:
@@ -78,3 +83,48 @@ def add_result(event_id, player_id, place, mvp, best_move, sheriff, income):
         income,
         datetime.now().strftime("%Y-%m-%d %H:%M")
     ])
+def result_exists(event_id, player_id):
+    data = results_sheet.get_all_records()
+
+    for row in data:
+        if str(row["event_id"]) == str(event_id) and str(row["player_id"]) == str(player_id):
+            return True
+
+    return False
+
+MAX_BALANCE = 2500
+
+new_balance = min(balance + income, MAX_BALANCE)
+income = new_balance - balance
+
+def get_top_players():
+    data = players_sheet.get_all_records()
+    return sorted(data, key=lambda x: int(x["balance"]), reverse=True)
+
+@router.message(F.text == "📊 Рейтинг")
+async def show_rating(message: types.Message):
+    players = get_top_players()
+
+    if not players:
+        await message.answer("❌ Немає даних")
+        return
+
+    text = "🏆 Рейтинг:\n\n"
+
+    for i, p in enumerate(players[:10], start=1):
+        text += f"{i}. {p['nick']} — {p['balance']} 💰\n"
+
+    await message.answer(text)
+
+@router.message(F.text == "💰 Мій баланс")
+async def my_balance(message: types.Message):
+    player = get_player(message.from_user.id)
+
+    if not player:
+        await message.answer("❌ Ви ще не грали")
+        return
+
+    await message.answer(
+        f"💰 Баланс: {player['balance']}\n"
+        f"🔥 Стрік: {player['current_streak']}"
+    )
