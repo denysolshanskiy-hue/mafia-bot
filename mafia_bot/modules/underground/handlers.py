@@ -1,15 +1,32 @@
-from aiogram import Router, types
+from aiogram import Router, types, F
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.fsm.state import StatesGroup, State
-from aiogram import F
 from aiogram.fsm.context import FSMContext
 
+from modules.keyboards import admin_menu_keyboard
+from modules.underground.postgres_reader import get_active_event, get_event_players
+from modules.underground.sheets import (
+    get_player,
+    add_player,
+    update_player,
+    add_result,
+    result_exists
+)
+
+router = Router()
+
+# ================= FSM =================
 class AccrualState(StatesGroup):
     choosing_player = State()
     choosing_action = State()
-    
-router = Router()
 
+
+# ================= CONFIG =================
+ADMIN_IDS = [444726017]
+MAX_BALANCE = 2500
+
+
+# ================= LOGIC =================
 def calculate_income(action):
     values = {
         "🥇 Топ 1": 150,
@@ -20,7 +37,8 @@ def calculate_income(action):
         "❌ Нічого": 0
     }
     return values.get(action, 0)
-#=================== MENU ========================
+
+
 def get_season_menu(is_admin=False):
     keyboard = [
         [KeyboardButton(text="🏆 Мій рейтинг")],
@@ -31,44 +49,33 @@ def get_season_menu(is_admin=False):
         keyboard.append([KeyboardButton(text="💰 Нарахувати")])
         keyboard.append([KeyboardButton(text="📊 Рейтинг")])
 
-    # 👇 ДОДАЄМО НАЗАД
     keyboard.append([KeyboardButton(text="⬅️ Назад")])
 
-    return ReplyKeyboardMarkup(
-        keyboard=keyboard,
-        resize_keyboard=True
-    )
+    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
 
 
-@router.message(lambda message: message.text == "☣️ UNDERGROUND")
+# ================= MENU =================
+@router.message(F.text == "☣️ UNDERGROUND")
 async def season_menu(message: types.Message):
-    user_id = message.from_user.id
-
-    # 👉 вставте свій ID
-    is_admin = user_id in [444726017]
+    is_admin = message.from_user.id in ADMIN_IDS
 
     await message.answer(
         "Сезонне меню:",
         reply_markup=get_season_menu(is_admin)
     )
 
+
 @router.message(F.text == "⬅️ Назад")
 async def back_to_main(message: types.Message, state: FSMContext):
     await state.clear()
-
-    # 👇 тут використайте вашу існуючу функцію головного меню
-    from bot import admin_menu_keyboard  # або де у вас вона
 
     await message.answer(
         "Головне меню:",
         reply_markup=admin_menu_keyboard()
     )
-#======================== INCOME =========================
-from aiogram import F
-from modules.underground.postgres_reader import get_active_event, get_event_players
 
-from aiogram.fsm.context import FSMContext
 
+# ================= START ACCRUAL =================
 @router.message(F.text == "💰 Нарахувати")
 async def start_accrual(message: types.Message, state: FSMContext):
     event = await get_active_event()
@@ -83,18 +90,12 @@ async def start_accrual(message: types.Message, state: FSMContext):
         await message.answer("❌ Немає гравців")
         return
 
-    keyboard = []
-    for p in players:
-        keyboard.append([KeyboardButton(text=p["display_name"])])
+    keyboard = [[KeyboardButton(text=p["display_name"])] for p in players]
+    keyboard.append([KeyboardButton(text="⬅️ Назад")])
 
-    kb = ReplyKeyboardMarkup(
-        keyboard=keyboard,
-        resize_keyboard=True
-    )
-
-    # 👉 зберігаємо event_id і список гравців
     await state.update_data(
         event_id=event["event_id"],
+        event_title=event["title"],
         players={p["display_name"]: p["user_id"] for p in players}
     )
 
@@ -102,67 +103,74 @@ async def start_accrual(message: types.Message, state: FSMContext):
 
     await message.answer(
         f"🎭 {event['title']}\n\nОберіть гравця:",
-        reply_markup=kb
+        reply_markup=ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
     )
 
+
+# ================= CHOOSE PLAYER =================
 @router.message(AccrualState.choosing_player)
 async def choose_player(message: types.Message, state: FSMContext):
+    if message.text == "⬅️ Назад":
+        await back_to_main(message, state)
+        return
+
     data = await state.get_data()
     players = data.get("players", {})
 
-    player_name = message.text
-
-    if player_name not in players:
+    if message.text not in players:
         await message.answer("❌ Оберіть гравця кнопкою")
         return
 
-    player_id = players[player_name]
-
     await state.update_data(
-        selected_player_id=player_id,
-        selected_player_name=player_name
+        selected_player_id=players[message.text],
+        selected_player_name=message.text
     )
 
-    # 👉 кнопки дій
-    kb = ReplyKeyboardMarkup(
-        keyboard=[
-            [KeyboardButton(text="🥇 Топ 1"), KeyboardButton(text="🥈 Топ 2")],
-            [KeyboardButton(text="🥉 Топ 3"), KeyboardButton(text="🔥 MVP")],
-            [KeyboardButton(text="⚡ Хід"), KeyboardButton(text="👮 Шериф")],
-            [KeyboardButton(text="❌ Нічого")]
-        ],
-        resize_keyboard=True
-    )
+    keyboard = [
+        [KeyboardButton(text="🥇 Топ 1"), KeyboardButton(text="🔥 MVP")],
+        [KeyboardButton(text="⭐️ Топ 5"), KeyboardButton(text="⚡ Хід")],
+        [KeyboardButton(text="👮 Шериф"), KeyboardButton(text="❌ Нічого")],
+        [KeyboardButton(text="⬅️ Назад")]
+    ]
 
     await state.set_state(AccrualState.choosing_action)
 
     await message.answer(
-        f"👤 {player_name}\n\nОберіть результат:",
-        reply_markup=kb
+        f"👤 {message.text}\n\nОберіть результат:",
+        reply_markup=ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
     )
-from modules.underground.sheets import (
-    get_player,
-    add_player,
-    update_player,
-    add_result
-)
-
-MAX_BALANCE = 2500
 
 
+# ================= APPLY ACTION =================
 @router.message(AccrualState.choosing_action)
 async def apply_action(message: types.Message, state: FSMContext):
-    action = message.text
+    if message.text == "⬅️ Назад":
+        await start_accrual(message, state)
+        return
+
+    allowed_actions = [
+        "🥇 Топ 1", "🔥 MVP", "⭐️ Топ 5",
+        "⚡ Хід", "👮 Шериф", "❌ Нічого"
+    ]
+
+    if message.text not in allowed_actions:
+        await message.answer("❌ Оберіть дію кнопкою")
+        return
 
     data = await state.get_data()
 
     player_id = data["selected_player_id"]
     player_name = data["selected_player_name"]
     event_id = data["event_id"]
+    event_title = data["event_title"]
 
-    income = calculate_income(action)
+    # 🚫 антидубль
+    if result_exists(event_id, player_id):
+        await message.answer("❌ Цьому гравцю вже нараховано")
+        return
 
-    # 👉 отримуємо гравця з Sheets
+    income = calculate_income(message.text)
+
     player = get_player(player_id)
 
     if not player:
@@ -173,31 +181,21 @@ async def apply_action(message: types.Message, state: FSMContext):
     streak = int(player["current_streak"])
     total_games = int(player["total_games"])
 
-    # 👉 застосовуємо ліміт
-    new_balance = balance + income
+    new_balance = min(balance + income, MAX_BALANCE)
+    income = new_balance - balance
 
-    if new_balance > MAX_BALANCE:
-        income = MAX_BALANCE - balance
-        new_balance = MAX_BALANCE
-
-    # 👉 оновлення стріку
-    if income > 0:
-        streak += 1
-    else:
-        streak = 0
-
+    streak = streak + 1 if income > 0 else 0
     total_games += 1
 
-    # 👉 запис
     update_player(player_id, new_balance, streak, total_games)
 
     add_result(
         event_id=event_id,
         player_id=player_id,
-        place=action,
-        mvp=1 if action == "🔥 MVP" else 0,
-        best_move=1 if action == "⚡ Хід" else 0,
-        sheriff=1 if action == "👮 Шериф" else 0,
+        place=message.text,
+        mvp=1 if message.text == "🔥 MVP" else 0,
+        best_move=1 if message.text == "⚡ Хід" else 0,
+        sheriff=1 if message.text == "👮 Шериф" else 0,
         income=income
     )
 
@@ -207,4 +205,14 @@ async def apply_action(message: types.Message, state: FSMContext):
         f"Баланс: {new_balance}"
     )
 
+    # 🔁 повертаємо список гравців
+    players = data.get("players", {})
+    keyboard = [[KeyboardButton(text=name)] for name in players.keys()]
+    keyboard.append([KeyboardButton(text="⬅️ Назад")])
+
     await state.set_state(AccrualState.choosing_player)
+
+    await message.answer(
+        f"🎭 {event_title}\n\nОберіть наступного гравця:",
+        reply_markup=ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
+    )
