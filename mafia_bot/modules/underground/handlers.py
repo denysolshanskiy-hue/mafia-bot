@@ -10,7 +10,8 @@ from modules.underground.sheets import (
     add_player,
     update_player,
     add_result,
-    result_exists
+    result_exists,
+    set_black_mark
 )
 
 router = Router()
@@ -23,26 +24,31 @@ class AccrualState(StatesGroup):
 
 # ================= CONFIG =================
 ADMIN_IDS = [444726017]
-MAX_BALANCE = 2500
 
 
 # ================= LOGIC =================
 def calculate_income(action):
-    values = {
+    return {
         "🥇 Топ 1": 150,
         "🔥 MVP": 100,
         "⭐️ Топ 5": 50,
         "⚡ Хід": 150,
         "👮 Шериф": 50,
         "❌ Нічого": 0
-    }
-    return values.get(action, 0)
+    }.get(action, 0)
+
+
+def get_max_balance(player):
+    if player.get("black_mark_type") == "limit":
+        return 3000
+    return 2500
 
 
 def get_season_menu(is_admin=False):
     keyboard = [
         [KeyboardButton(text="🏆 Мій рейтинг")],
-        [KeyboardButton(text="💰 Мій баланс")]
+        [KeyboardButton(text="💰 Мій баланс")],
+        [KeyboardButton(text="🫐 Black Mark")]
     ]
 
     if is_admin:
@@ -68,11 +74,7 @@ async def season_menu(message: types.Message):
 @router.message(F.text == "⬅️ Назад")
 async def back_to_main(message: types.Message, state: FSMContext):
     await state.clear()
-
-    await message.answer(
-        "Головне меню:",
-        reply_markup=admin_menu_keyboard()
-    )
+    await message.answer("Головне меню:", reply_markup=admin_menu_keyboard())
 
 
 # ================= START ACCRUAL =================
@@ -164,7 +166,6 @@ async def apply_action(message: types.Message, state: FSMContext):
     event_id = data["event_id"]
     event_title = data["event_title"]
 
-    # 🚫 антидубль
     if result_exists(event_id, player_id):
         await message.answer("❌ Цьому гравцю вже нараховано")
         return
@@ -181,10 +182,20 @@ async def apply_action(message: types.Message, state: FSMContext):
     streak = int(player["current_streak"])
     total_games = int(player["total_games"])
 
-    new_balance = min(balance + income, MAX_BALANCE)
+    max_balance = get_max_balance(player)
+    new_balance = min(balance + income, max_balance)
     income = new_balance - balance
 
-    streak = streak + 1 if income > 0 else 0
+    # 🔥 streak логіка
+    if income > 0:
+        streak += 1
+    else:
+        if player.get("black_mark_type") == "streak":
+            # використовуємо 1 раз
+            set_black_mark(player_id, "used_streak")
+        else:
+            streak = 0
+
     total_games += 1
 
     update_player(player_id, new_balance, streak, total_games)
@@ -200,12 +211,9 @@ async def apply_action(message: types.Message, state: FSMContext):
     )
 
     await message.answer(
-        f"✅ {player_name}\n"
-        f"+{income} 💰\n"
-        f"Баланс: {new_balance}"
+        f"✅ {player_name}\n+{income} 💰\nБаланс: {new_balance}"
     )
 
-    # 🔁 повертаємо список гравців
     players = data.get("players", {})
     keyboard = [[KeyboardButton(text=name)] for name in players.keys()]
     keyboard.append([KeyboardButton(text="⬅️ Назад")])
@@ -216,3 +224,48 @@ async def apply_action(message: types.Message, state: FSMContext):
         f"🎭 {event_title}\n\nОберіть наступного гравця:",
         reply_markup=ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True)
     )
+
+
+# ================= BLACK MARK =================
+@router.message(F.text == "🫐 Black Mark")
+async def black_mark_menu(message: types.Message):
+    player = get_player(message.from_user.id)
+
+    if not player:
+        await message.answer("❌ Ви ще не грали")
+        return
+
+    if int(player.get("black_mark_used", 0)) == 1:
+        await message.answer("❌ Ви вже використали Black Mark")
+        return
+
+    kb = ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="💰 Підняти ліміт до 3000")],
+            [KeyboardButton(text="🔥 Зберегти стрік (1 раз)")],
+            [KeyboardButton(text="⬅️ Назад")]
+        ],
+        resize_keyboard=True
+    )
+
+    await message.answer("🫐 Оберіть ефект:", reply_markup=kb)
+
+
+@router.message(F.text.in_(["💰 Підняти ліміт до 3000", "🔥 Зберегти стрік (1 раз)"]))
+async def apply_black_mark(message: types.Message):
+    player = get_player(message.from_user.id)
+
+    if not player:
+        await message.answer("❌ Ви ще не грали")
+        return
+
+    if int(player.get("black_mark_used", 0)) == 1:
+        await message.answer("❌ Ви вже використали Black Mark")
+        return
+
+    if message.text == "💰 Підняти ліміт до 3000":
+        set_black_mark(message.from_user.id, "limit")
+        await message.answer("✅ Ліміт піднято до 3000 💰")
+    else:
+        set_black_mark(message.from_user.id, "streak")
+        await message.answer("✅ Стрік буде збережено 1 раз 🔥")
