@@ -166,8 +166,8 @@ async def apply_action(message: types.Message, state: FSMContext):
     event_id = data["event_id"]
     event_title = data["event_title"]
 
-    if result_exists(event_id, player_id):
-        await message.answer("❌ Цьому гравцю вже нараховано")
+    if result_exists(event_id, player_id, message.text):
+        await message.answer("❌ Цей бонус вже нараховано")
         return
 
     income = calculate_income(message.text)
