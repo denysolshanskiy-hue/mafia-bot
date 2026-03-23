@@ -89,11 +89,15 @@ def add_result(event_id, player_id, place, mvp, best_move, sheriff, income):
     ])
 
 
-def result_exists(event_id, player_id):
+def result_exists(event_id, player_id, place):
     data = results_sheet.get_all_records()
 
     for row in data:
-        if str(row["event_id"]) == str(event_id) and str(row["player_id"]) == str(player_id):
+        if (
+            str(row["event_id"]) == str(event_id)
+            and str(row["player_id"]) == str(player_id)
+            and str(row["place"]) == str(place)
+        ):
             return True
 
     return False
