@@ -1,6 +1,8 @@
 from aiogram import Router, types
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.fsm.state import StatesGroup, State
+from aiogram import F
+from aiogram.fsm.context import FSMContext
 
 class AccrualState(StatesGroup):
     choosing_player = State()
@@ -29,6 +31,9 @@ def get_season_menu(is_admin=False):
         keyboard.append([KeyboardButton(text="💰 Нарахувати")])
         keyboard.append([KeyboardButton(text="📊 Рейтинг")])
 
+    # 👇 ДОДАЄМО НАЗАД
+    keyboard.append([KeyboardButton(text="⬅️ Назад")])
+
     return ReplyKeyboardMarkup(
         keyboard=keyboard,
         resize_keyboard=True
@@ -45,6 +50,18 @@ async def season_menu(message: types.Message):
     await message.answer(
         "Сезонне меню:",
         reply_markup=get_season_menu(is_admin)
+    )
+
+@router.message(F.text == "⬅️ Назад")
+async def back_to_main(message: types.Message, state: FSMContext):
+    await state.clear()
+
+    # 👇 тут використайте вашу існуючу функцію головного меню
+    from bot import admin_menu_keyboard  # або де у вас вона
+
+    await message.answer(
+        "Головне меню:",
+        reply_markup=admin_menu_keyboard()
     )
 #======================== INCOME =========================
 from aiogram import F
