@@ -36,7 +36,7 @@ spreadsheet = client.open(SHEET_NAME)
 players_sheet = spreadsheet.worksheet("Players")
 results_sheet = spreadsheet.worksheet("Results")
 events_sheet = spreadsheet.worksheet("Events")
-
+rating_sheet = spreadsheet.worksheet("Ratings")
 
 # ================= PLAYERS =================
 def get_player(player_id):
@@ -124,9 +124,16 @@ def mark_event_processed(event_id):
 
 
 # ================= RATING =================
-def get_top_players():
-    data = players_sheet.get_all_records()
-    return sorted(data, key=lambda x: int(x["balance"]), reverse=True)
+def get_rating_table():
+    data = rating_sheet.get_all_records()
+
+    clean = [{k.strip(): v for k, v in row.items()} for row in data]
+
+    return sorted(
+        clean,
+        key=lambda x: float(x.get("rating") or 0),
+        reverse=True
+    )
 
 # ================= BLACK MARK =================
 def set_black_mark(player_id, bm_type):
