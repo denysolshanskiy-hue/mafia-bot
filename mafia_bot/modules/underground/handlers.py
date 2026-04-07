@@ -309,3 +309,52 @@ async def my_balance(message: types.Message):
 {bm_text}
 """
     )
+# ================= MY RATING =================
+@router.message(F.text == "🏆 Мій рейтинг")
+async def my_rating(message: types.Message):
+
+    players = get_rating_table()
+
+    if not players:
+        await message.answer("❌ Рейтинг поки не заповнений")
+        return
+
+    user_id = str(message.from_user.id)
+
+    position = None
+
+    for i, p in enumerate(players, start=1):
+        if str(p.get("player_id")) == user_id:
+            position = i
+            break
+
+    if position is None:
+        await message.answer("❌ Вас немає в рейтингу")
+        return
+
+    # 🔝 топ 10
+    top_text = ""
+
+    for i, p in enumerate(players[:10], start=1):
+        nick = p.get("nick")
+        rating = float(p.get("rating") or 0)
+
+        medal = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else "▫️"
+
+        top_text += f"{medal} {nick} — {rating}\n"
+
+    my_rating_value = float(players[position - 1].get("rating") or 0)
+
+    await message.answer(
+        f"""
+🏆 РЕЙТИНГ СЕЗОНУ
+
+{top_text}
+
+━━━━━━━━━━━━━━
+
+👤 Ви:
+#{position} місце
+📊 {my_rating_value}
+"""
+    )
