@@ -11,7 +11,8 @@ from modules.underground.sheets import (
     update_player,
     add_result,
     result_exists,
-    set_black_mark
+    set_black_mark,
+    get_rating_table
 )
 
 router = Router()
