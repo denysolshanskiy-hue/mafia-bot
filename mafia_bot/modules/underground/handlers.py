@@ -270,3 +270,42 @@ async def apply_black_mark(message: types.Message, state: FSMContext):
     else:
         set_black_mark(message.from_user.id, "streak")
         await message.answer("🫐 BLACK MARK АКТИВОВАНО\n🔥 Стрік буде врятовано 1 раз")
+
+# ================= MY BALANCE =================
+@router.message(F.text == "💰 Мій баланс")
+async def my_balance(message: types.Message):
+    player = get_player(message.from_user.id)
+
+    if not player:
+        await message.answer("❌ Ви ще не брали участь у сезоні")
+        return
+
+    balance = int(player.get("balance") or 0)
+    streak = int(player.get("current_streak") or 0)
+    games = int(player.get("total_games") or 0)
+
+    bm_used = int(player.get("black_mark_used") or 0)
+    bm_type = player.get("black_mark_type") or ""
+
+    # 🫐 статус Black Mark
+    if bm_used == 0:
+        bm_text = "🫐 Доступний"
+    elif bm_type == "limit":
+        bm_text = "🫐 Використано (ліміт 3000)"
+    elif bm_type == "streak":
+        bm_text = "🫐 Використано (збереження стріку)"
+    elif bm_type == "used_streak":
+        bm_text = "🫐 Використано (вже спрацював)"
+    else:
+        bm_text = "🫐 Використано"
+
+    await message.answer(
+        f"""
+💰 Ваш баланс: {balance}
+
+🔥 Стрік: {streak}
+🎮 Ігор зіграно: {games}
+
+{bm_text}
+"""
+    )
