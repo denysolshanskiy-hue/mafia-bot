@@ -233,7 +233,7 @@ async def black_mark_menu(message: types.Message):
         await message.answer("❌ Ви ще не грали")
         return
 
-    if int(player.get("black_mark_used", 0)) == 1:
+    if int(player.get("black_mark_used") or 0) == 1:
         await message.answer("❌ Ви вже використали Black Mark")
         return
 
@@ -257,7 +257,7 @@ async def apply_black_mark(message: types.Message):
         await message.answer("❌ Ви ще не грали")
         return
 
-    if int(player.get("black_mark_used", 0)) == 1:
+    if int(player.get("black_mark_used") or 0) == 1:
         await message.answer("❌ Ви вже використали Black Mark")
         return
 
