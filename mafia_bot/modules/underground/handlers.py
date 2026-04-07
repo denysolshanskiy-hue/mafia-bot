@@ -225,7 +225,7 @@ async def apply_action(message: types.Message, state: FSMContext):
 
 
 # ================= BLACK MARK =================
-@router.message(F.text == "🫐 Black Mark")
+@router.message(F.text.contains("Black Mark"))
 async def black_mark_menu(message: types.Message):
     player = get_player(message.from_user.id)
 
