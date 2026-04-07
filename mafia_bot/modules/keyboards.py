@@ -12,3 +12,12 @@ def admin_menu_keyboard():
         ],
         resize_keyboard=True
     )
+def user_menu_keyboard():
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text="📅 Активні події")],
+            [KeyboardButton(text="💳 Оплатити ігри")],
+            [KeyboardButton(text="☣️ UNDERGROUND")]
+        ],
+        resize_keyboard=True
+    )
