@@ -249,8 +249,11 @@ async def black_mark_menu(message: types.Message):
     await message.answer("🫐 Оберіть ефект:", reply_markup=kb)
 
 
-@router.message(F.text.in_(["💰 Підняти ліміт до 3000", "🔥 Зберегти стрік (1 раз)"]), F.state.is_(None))
-async def apply_black_mark(message: types.Message):
+@router.message(F.text.in_(["💰 Підняти ліміт до 3000", "🔥 Зберегти стрік (1 раз)"]))
+async def apply_black_mark(message: types.Message, state: FSMContext):
+
+    await state.clear()
+
     player = get_player(message.from_user.id)
 
     if not player:
@@ -263,7 +266,7 @@ async def apply_black_mark(message: types.Message):
 
     if message.text == "💰 Підняти ліміт до 3000":
         set_black_mark(message.from_user.id, "limit")
-        await message.answer("✅ Ліміт піднято до 3000 💰")
+        await message.answer("🫐 BLACK MARK АКТИВОВАНО\n💰 Ліміт = 3000")
     else:
         set_black_mark(message.from_user.id, "streak")
-        await message.answer("✅ Стрік буде збережено 1 раз 🔥")
+        await message.answer("🫐 BLACK MARK АКТИВОВАНО\n🔥 Стрік буде врятовано 1 раз")
