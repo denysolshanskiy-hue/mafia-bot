@@ -359,3 +359,33 @@ async def my_rating(message: types.Message):
 📊 {my_rating_value}
 """
     )
+#================= SYNC POSTGRES ========================
+async def sync_players_from_db():
+    conn = await get_connection()
+    rows = await conn.fetch("SELECT user_id, display_name FROM users")
+
+    sheet = client.open(SHEET_NAME).worksheet("Players")
+
+    existing_ids = sheet.col_values(1)
+
+    for row in rows:
+        user_id = str(row["user_id"])
+        nickname = row["display_name"]
+
+        if user_id not in existing_ids:
+            sheet.append_row([
+                user_id,
+                nickname,
+                0,  # balance
+                0,  # streak
+                0,  # games
+                0,  # black_mark_used
+                ""  # black_mark_type
+            ])
+
+    await conn.close()
+
+@dp.message(Command("sync_players"))
+async def sync_players(message: types.Message):
+    await sync_players_from_db()
+    await message.answer("✅ Гравці синхронізовані")
