@@ -735,7 +735,7 @@ async def send_payment_info(message: types.Message):
     payment_text = (
         "💳 **Оплата ігрових вечорів**\n\n"
         "Kremenchuk Mafia Club\n\n"
-        "🎭 **Олімпійські Ігри Мафії:**\n"
+        "🖤 **MAFIA UNDERGROUND:**\n"
         "1 гра — 60 грн\n"
         "2 гри — 150 грн\n"
         "3 гри — 250 грн\n"
