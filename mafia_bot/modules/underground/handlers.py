@@ -3,6 +3,7 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
+from modules.underground.sheets import client, SHEET_NAME
 from database import get_connection
 from modules.keyboards import admin_menu_keyboard
 from modules.underground.postgres_reader import get_active_event, get_event_players
@@ -365,28 +366,34 @@ async def sync_players_from_db():
     conn = await get_connection()
     rows = await conn.fetch("SELECT user_id, display_name FROM users")
 
+    from modules.underground.sheets import client, SHEET_NAME
     sheet = client.open(SHEET_NAME).worksheet("Players")
 
-    existing_ids = sheet.col_values(1)
+    existing_ids = set(sheet.col_values(1))
+
+    added = 0
 
     for row in rows:
         user_id = str(row["user_id"])
-        nickname = row["display_name"]
+        nickname = row["display_name"] or "NoName"
 
         if user_id not in existing_ids:
             sheet.append_row([
                 user_id,
                 nickname,
-                0,  # balance
-                0,  # streak
-                0,  # games
-                0,  # black_mark_used
-                ""  # black_mark_type
+                0,
+                0,
+                0,
+                0,
+                ""
             ])
+            added += 1
 
     await conn.close()
 
+    return added
+
 @router.message(Command("sync_players"))
 async def sync_players(message: types.Message):
-    await sync_players_from_db()
-    await message.answer("✅ Гравці синхронізовані")
+    added = await sync_players_from_db()
+    await message.answer(f"✅ Додано гравців: {added}")
