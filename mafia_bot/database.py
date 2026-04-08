@@ -2,6 +2,7 @@ import asyncio
 import os
 import asyncpg
 from datetime import datetime
+from mafia_bot.database import get_connection
 
 # Отримуємо URL з Environment Variables на Koyeb
 DATABASE_URL = os.environ.get("DATABASE_URL")
