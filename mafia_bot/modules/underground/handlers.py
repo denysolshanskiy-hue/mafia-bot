@@ -2,7 +2,7 @@ from aiogram import Router, types, F
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
-
+from aiogram.filters import Command
 from modules.keyboards import admin_menu_keyboard
 from modules.underground.postgres_reader import get_active_event, get_event_players
 from modules.underground.sheets import (
@@ -385,7 +385,7 @@ async def sync_players_from_db():
 
     await conn.close()
 
-@dp.message(Command("sync_players"))
+@router.message(Command("sync_players"))
 async def sync_players(message: types.Message):
     await sync_players_from_db()
     await message.answer("✅ Гравці синхронізовані")
