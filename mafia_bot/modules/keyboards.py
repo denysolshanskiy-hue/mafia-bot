@@ -12,7 +12,7 @@ def admin_menu_keyboard():
         ],
         resize_keyboard=True
     )
-def user_menu_keyboard():
+def player_menu_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="📅 Активні події")],
