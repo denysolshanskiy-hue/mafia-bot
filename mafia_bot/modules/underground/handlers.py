@@ -6,6 +6,7 @@ from aiogram.filters import Command
 from modules.underground.sheets import client, SHEET_NAME
 from database import get_connection
 from modules.keyboards import admin_menu_keyboard
+from modules.keyboards import player_menu_keyboard
 from modules.underground.postgres_reader import get_active_event, get_event_players
 from modules.underground.sheets import (
     get_player,
@@ -77,7 +78,14 @@ async def season_menu(message: types.Message):
 @router.message(F.text == "⬅️ Назад")
 async def back_to_main(message: types.Message, state: FSMContext):
     await state.clear()
-    await message.answer("Головне меню:", reply_markup=admin_menu_keyboard())
+
+    if message.from_user.id in ADMIN_IDS:
+        kb = admin_menu_keyboard()
+    else:
+        from modules.keyboards import user_menu_keyboard
+        kb = player_menu_keyboard()
+
+    await message.answer("Головне меню:", reply_markup=kb)
 
 
 # ================= START ACCRUAL =================
