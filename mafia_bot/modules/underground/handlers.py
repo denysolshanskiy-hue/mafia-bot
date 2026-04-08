@@ -4,6 +4,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 from modules.keyboards import admin_menu_keyboard
+from mafia_bot.database import get_connection
 from modules.underground.postgres_reader import get_active_event, get_event_players
 from modules.underground.sheets import (
     get_player,
