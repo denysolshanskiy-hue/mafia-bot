@@ -2,7 +2,7 @@ import asyncio
 import os
 from aiohttp import web
 from aiogram import Bot, Dispatcher, types, F
-from modules.keyboards import admin_menu_keyboard, user_menu_keyboard
+from modules.keyboards import admin_menu_keyboard, player_menu_keyboard
 from aiogram.filters import CommandStart
 from aiogram.types import (
     InlineKeyboardMarkup,
@@ -60,7 +60,7 @@ def admin_menu_keyboard():
         resize_keyboard=True
     )
 
-def user_menu_keyboard():
+def player_menu_keyboard():
     return ReplyKeyboardMarkup(
         keyboard=[
             [KeyboardButton(text="📅 Активні події")],
