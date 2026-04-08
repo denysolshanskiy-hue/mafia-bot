@@ -82,7 +82,7 @@ async def back_to_main(message: types.Message, state: FSMContext):
     if message.from_user.id in ADMIN_IDS:
         kb = admin_menu_keyboard()
     else:
-        from modules.keyboards import user_menu_keyboard
+        from modules.keyboards import player_menu_keyboard
         kb = player_menu_keyboard()
 
     await message.answer("Головне меню:", reply_markup=kb)
