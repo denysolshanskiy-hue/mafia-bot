@@ -183,6 +183,13 @@ async def save_nickname(message: types.Message, state: FSMContext):
     finally:
         await conn.close()
 
+@dp.message(Command("menu"))
+async def force_menu(message: types.Message):
+    await message.answer(
+        "Меню:",
+        reply_markup=player_menu_keyboard()
+    )
+
 # ================== Colse Event ==================
 @dp.message(F.text == "🏁 Завершити вечір")
 async def choose_event_to_close(message: types.Message):
