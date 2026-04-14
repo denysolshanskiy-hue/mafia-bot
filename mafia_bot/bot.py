@@ -40,7 +40,11 @@ class NicknameState(StatesGroup):
 
 class CommentState(StatesGroup):
     waiting_for_comment = State()
-
+    
+class BroadcastStates(StatesGroup):
+    choosing_event = State()
+    typing_message = State()
+    
 # ================== CALLBACK DATA ==================
 class InviteCallback(CallbackData, prefix="invite"):
     action: str   # join | ignore | cancel | list
@@ -54,7 +58,7 @@ def admin_menu_keyboard():
 [KeyboardButton(text="➕ Створити івент"), KeyboardButton(text="📅 Активні події")],
 [KeyboardButton(text="💳 Оплатити ігри"), KeyboardButton(text="🛠 Адмін: список + скасовані")],
 [KeyboardButton(text="✅ Підтвердити вечір"), KeyboardButton(text="🏁 Завершити вечір")],
-[KeyboardButton(text="❌ Скасувати івент")],
+[KeyboardButton(text="❌ Скасувати івент"), KeyboardButton(text="📣 Повідомлення")],
 [KeyboardButton(text="☣️ UNDERGROUND")]  # ← ОКРЕМИЙ РЯДОК
     ],
         resize_keyboard=True
@@ -868,6 +872,111 @@ async def admin_confirm_cancel(callback: types.CallbackQuery):
     finally:
         await conn.close()
 
+@dp.message(F.text == "📣 Повідомлення")
+async def broadcast_start(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+
+    conn = await get_connection()
+    try:
+        role = await conn.fetchval(
+            "SELECT role FROM users WHERE user_id = $1",
+            user_id
+        )
+
+        if role != "admin":
+            return
+
+        events = await conn.fetch("""
+            SELECT event_id, title, event_date
+            FROM events
+            WHERE status = 'active'
+            ORDER BY event_date
+        """)
+
+        if not events:
+            await message.answer("❌ Немає активних івентів")
+            return
+
+        kb = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [
+                    InlineKeyboardButton(
+                        text=f"{e['title']} ({e['event_date']})",
+                        callback_data=f"broadcast_event_{e['event_id']}"
+                    )
+                ] for e in events
+            ]
+        )
+
+        await message.answer("🎯 Оберіть івент:", reply_markup=kb)
+        await state.set_state(BroadcastStates.choosing_event)
+
+    finally:
+        await conn.close()
+
+@dp.callback_query(F.data.startswith("broadcast_event_"))
+async def broadcast_choose_event(callback: types.CallbackQuery, state: FSMContext):
+    event_id = int(callback.data.split("_")[2])
+
+    await state.update_data(event_id=event_id)
+
+    await callback.message.edit_text(
+        "✍️ Введіть повідомлення для гравців:"
+    )
+
+    await state.set_state(BroadcastStates.typing_message)
+    await callback.answer()
+
+@dp.message(BroadcastStates.typing_message)
+async def broadcast_send(message: types.Message, state: FSMContext):
+    text = message.text
+    data = await state.get_data()
+    event_id = data.get("event_id")
+
+    conn = await get_connection()
+    try:
+        # беремо івент
+        event = await conn.fetchrow(
+            "SELECT title FROM events WHERE event_id = $1",
+            event_id
+        )
+
+        # беремо гравців
+        users = await conn.fetch("""
+            SELECT user_id
+            FROM registrations
+            WHERE event_id = $1
+              AND status = 'active'
+        """, event_id)
+
+        if not users:
+            await message.answer("❌ Немає зареєстрованих гравців")
+            return
+
+        sent = 0
+
+        for u in users:
+            try:
+                await bot.send_message(
+                    u["user_id"],
+                    f"📣 *Оновлення по івенту*\n\n"
+                    f"🎭 {event['title']}\n\n"
+                    f"{text}",
+                    parse_mode="Markdown"
+                )
+                sent += 1
+            except:
+                continue
+
+        await message.answer(
+            f"✅ Повідомлення відправлено!\n👥 Отримали: **{sent}**",
+            parse_mode="Markdown"
+        )
+
+        await state.clear()
+
+    finally:
+        await conn.close()
 # ================== REMINDER ==================
 async def reminder_loop():
     tz = pytz.timezone("Europe/Kyiv")
