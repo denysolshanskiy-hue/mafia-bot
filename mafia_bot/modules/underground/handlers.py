@@ -405,3 +405,37 @@ async def sync_players_from_db():
 async def sync_players(message: types.Message):
     added = await sync_players_from_db()
     await message.answer(f"✅ Додано гравців: {added}")
+
+#================= Rate ========================
+@router.message(F.text == "📊 Рейтинг")
+async def show_rating(message: types.Message):
+
+    sheet = client.open(SHEET_NAME).worksheet("Ratings")
+    data = sheet.get_all_records()
+
+    if not data:
+        await message.answer("❌ Рейтинг поки пустий")
+        return
+
+    # сортуємо по рейтингу
+    sorted_players = sorted(data, key=lambda x: float(x.get("rating", 0)), reverse=True)
+
+    top_10 = sorted_players[:10]
+
+    text = "🏆 ТОП-10 РЕЙТИНГУ:\n\n"
+
+    for i, player in enumerate(top_10, start=1):
+        nick = player.get("nick", "Unknown")
+        rating = player.get("rating", 0)
+
+        medal = ""
+        if i == 1:
+            medal = "🥇"
+        elif i == 2:
+            medal = "🥈"
+        elif i == 3:
+            medal = "🥉"
+
+        text += f"{medal} {i}. {nick} — {rating}\n"
+
+    await message.answer(text)
