@@ -234,26 +234,71 @@ async def choose_event_to_close(message: types.Message):
 
 @dp.callback_query(F.data.startswith("close_event_"))
 async def close_event(callback: types.CallbackQuery):
+
     event_id = int(callback.data.split("_")[-1])
+
     conn = await get_connection()
+
     try:
+
         event = await conn.fetchrow(
-            "SELECT title, event_date FROM events WHERE event_id = $1",
+            """
+            SELECT
+                title,
+                event_date,
+                event_type
+            FROM events
+            WHERE event_id = $1
+            """,
             event_id
         )
+
         if not event:
-            await callback.answer("Івент не знайдено", show_alert=True)
+            await callback.answer(
+                "Івент не знайдено",
+                show_alert=True
+            )
             return
 
+        # ================= CLOSE EVENT =================
+
         await conn.execute(
-            "UPDATE events SET status = 'closed' WHERE event_id = $1",
+            """
+            UPDATE events
+            SET status = 'closed'
+            WHERE event_id = $1
+            """,
             event_id
         )
+
+        # =================================================
+
+        # ================= STREAKS =================
+
+        if event["event_type"] == "underground":
+
+            from modules.underground.postgres_reader import get_event_players
+            from modules.underground.handlers import process_streaks
+
+            players = await get_event_players(event_id)
+
+            event_players_ids = [
+                str(player["user_id"])
+                for player in players
+            ]
+
+            await process_streaks(
+                event_id,
+                event_players_ids
+            )
+
+        # ===========================================
 
         await callback.message.edit_text(
             f"✅ Івент завершено:\n\n"
             f"🎭 *{event['title']}*\n"
             f"📅 {event['event_date']}",
+
             parse_mode="Markdown"
         )
 
@@ -261,18 +306,6 @@ async def close_event(callback: types.CallbackQuery):
 
     finally:
         await conn.close()
-
-# тільки underground
-if event_type == "underground":
-
-    players = await get_event_players(event_id)
-
-    event_players_ids = [
-        str(player["user_id"])
-        for player in players
-    ]
-
-    await process_streaks(event_players_ids)
 # ================== ACTIVE EVENTS ==================
 @dp.message(F.text == "📅 Активні події")
 async def show_active_events(message: types.Message):
