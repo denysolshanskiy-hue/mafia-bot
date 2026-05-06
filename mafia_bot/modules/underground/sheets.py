@@ -144,3 +144,24 @@ def set_black_mark(player_id, bm_type):
             players_sheet.update(f"F{i}", [[1]])
             players_sheet.update(f"G{i}", [[bm_type]])
             break
+# ================= STREACK =================
+def update_streak(player_id, new_streak):
+    sheet = client.open(SHEET_NAME).worksheet("Players")
+
+    records = sheet.get_all_records()
+
+    for i, row in enumerate(records, start=2):
+        if str(row["player_id"]) == str(player_id):
+            sheet.update_cell(i, 4, new_streak)  # current_streak
+            return
+
+
+def reset_black_mark(player_id):
+    sheet = client.open(SHEET_NAME).worksheet("Players")
+
+    records = sheet.get_all_records()
+
+    for i, row in enumerate(records, start=2):
+        if str(row["player_id"]) == str(player_id):
+            sheet.update_cell(i, 6, 1)  # black_mark_used
+            return
