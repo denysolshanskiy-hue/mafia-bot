@@ -261,6 +261,18 @@ async def close_event(callback: types.CallbackQuery):
 
     finally:
         await conn.close()
+
+# тільки underground
+if event_type == "underground":
+
+    players = await get_event_players(event_id)
+
+    event_players_ids = [
+        str(player["user_id"])
+        for player in players
+    ]
+
+    await process_streaks(event_players_ids)
 # ================== ACTIVE EVENTS ==================
 @dp.message(F.text == "📅 Активні події")
 async def show_active_events(message: types.Message):
@@ -298,60 +310,147 @@ async def show_active_events(message: types.Message):
 @dp.message(F.text == "➕ Створити івент")
 async def create_event_start(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
+
     conn = await get_connection()
+
     try:
-        row = await conn.fetchrow("SELECT role FROM users WHERE user_id = $1", user_id)
+        row = await conn.fetchrow(
+            "SELECT role FROM users WHERE user_id = $1",
+            user_id
+        )
+
         if not row or row['role'] != "admin":
             await message.answer("❌ У вас немає прав адміністратора")
             return
-        await message.answer("📝 Введіть назву івенту (наприклад: Мафія Класика):")
+
+        await message.answer(
+            "📝 Введіть назву івенту\n\n"
+            "Приклади:\n"
+            "☣️ MAFIA UNDERGROUND\n"
+            "🎓 Школа мафії\n"
+            "🎭 Класична мафія"
+        )
+
         await state.set_state(CreateEventStates.waiting_for_title)
+
     finally:
         await conn.close()
 
+
 @dp.message(CreateEventStates.waiting_for_title)
 async def create_event_title(message: types.Message, state: FSMContext):
-    await state.update_data(title=message.text)
-    await message.answer("📅 Введіть дату (наприклад: 20.01):")
+
+    title = message.text.strip()
+
+    # ================= EVENT TYPE =================
+
+    event_type = "classic"
+
+    if "UNDERGROUND" in title.upper():
+        event_type = "underground"
+
+    elif "ШКОЛ" in title.upper():
+        event_type = "school"
+
+    # ==============================================
+
+    await state.update_data(
+        title=title,
+        event_type=event_type
+    )
+
+    await message.answer(
+        "📅 Введіть дату (наприклад: 20.01):"
+    )
+
     await state.set_state(CreateEventStates.waiting_for_date)
+
 
 @dp.message(CreateEventStates.waiting_for_date)
 async def create_event_date(message: types.Message, state: FSMContext):
+
     raw = message.text.strip()
 
     try:
-        # очікуємо формат 07.02. або 07.02
-        event_date = datetime.strptime(raw.rstrip("."), "%d.%m").date()
+        # формат: 07.02 або 07.02.
+        event_date = datetime.strptime(
+            raw.rstrip("."),
+            "%d.%m"
+        ).date()
 
-        # автоматично підставляємо поточний рік
-        event_date = event_date.replace(year=datetime.now().year)
+        # підставляємо поточний рік
+        event_date = event_date.replace(
+            year=datetime.now().year
+        )
 
     except ValueError:
-        await message.answer("❌ Невірний формат дати. Введіть, будь ласка, так: 07.02")
+
+        await message.answer(
+            "❌ Невірний формат дати.\n"
+            "Введіть так: 07.02"
+        )
+
         return
 
-    await state.update_data(event_date=event_date)
-    await message.answer("⏰ Введіть час (наприклад: 19:00):")
+    await state.update_data(
+        event_date=event_date
+    )
+
+    await message.answer(
+        "⏰ Введіть час (наприклад: 19:00):"
+    )
+
     await state.set_state(CreateEventStates.waiting_for_time)
+
 
 @dp.message(CreateEventStates.waiting_for_time)
 async def create_event_time(message: types.Message, state: FSMContext):
+
     data = await state.get_data()
+
     title = data["title"]
+    event_type = data["event_type"]
+
     event_date = data["event_date"]
+
     event_time = message.text.strip()
+
     admin_id = message.from_user.id
 
     conn = await get_connection()
+
     try:
+
+        # ================= CREATE EVENT =================
+
         event_id = await conn.fetchval(
             """
-            INSERT INTO events (title, event_date, event_time, status, created_by)
-            VALUES ($1, $2, $3, 'active', $4)
+            INSERT INTO events (
+                title,
+                event_date,
+                event_time,
+                status,
+                created_by,
+                event_type
+            )
+            VALUES (
+                $1,
+                $2,
+                $3,
+                'active',
+                $4,
+                $5
+            )
             RETURNING event_id
             """,
-            title, event_date, event_time, admin_id
+            title,
+            event_date,
+            event_time,
+            admin_id,
+            event_type
         )
+
+        # =================================================
 
         event_date_str = event_date.strftime("%d.%m.%Y")
 
@@ -360,24 +459,48 @@ async def create_event_time(message: types.Message, state: FSMContext):
         )
 
         sent_count = 0
+
+        # ================= EVENT EMOJI =================
+
+        event_emoji = "🎭"
+
+        if event_type == "underground":
+            event_emoji = "☣️"
+
+        elif event_type == "school":
+            event_emoji = "🎓"
+
+        # ===============================================
+
         for p in players:
+
             try:
+
                 await bot.send_message(
                     p["user_id"],
+
                     f"🔔 *Новий івент!*\n\n"
-                    f"🎭 *{title}*\n"
+                    f"{event_emoji} *{title}*\n"
                     f"📅 {event_date_str}\n"
                     f"⏰ {event_time}",
+
                     parse_mode="Markdown",
+
                     reply_markup=invite_keyboard(event_id)
                 )
+
                 sent_count += 1
+
             except Exception:
                 continue
 
         await state.clear()
+
         await message.answer(
-            f"✅ Івент створено!\n📢 Запрошення розіслано гравцям: **{sent_count}**",
+            f"✅ Івент створено!\n\n"
+            f"🧩 Тип: *{event_type}*\n"
+            f"📢 Запрошення розіслано: *{sent_count}*",
+
             parse_mode="Markdown"
         )
 
