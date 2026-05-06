@@ -1,6 +1,11 @@
 from aiogram import Router, types, F
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.fsm.state import StatesGroup, State
+from modules.underground.sheets import (
+    get_player,
+    update_streak,
+    reset_black_mark
+)
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import Command
 from modules.underground.sheets import client, SHEET_NAME
@@ -439,3 +444,34 @@ async def show_rating(message: types.Message):
         text += f"{medal} {i}. {nick} — {rating}\n"
 
     await message.answer(text)
+
+#================= STREACK ========================
+async def process_streaks(event_players_ids):
+
+    sheet = client.open(SHEET_NAME).worksheet("Players")
+    players = sheet.get_all_records()
+
+    for player in players:
+
+        player_id = str(player["player_id"])
+        current_streak = int(player.get("current_streak") or 0)
+
+        black_mark_used = int(player.get("black_mark_used") or 0)
+        black_mark_type = player.get("black_mark_type") or ""
+
+        # БУВ НА UNDERGROUND
+        if player_id in event_players_ids:
+
+            update_streak(player_id, current_streak + 1)
+
+        # НЕ БУВ
+        else:
+
+            # BLACK MARK SAVE STREAK
+            if black_mark_type == "streak" and black_mark_used == 0:
+
+                reset_black_mark(player_id)
+
+            else:
+
+                update_streak(player_id, 0)
