@@ -464,7 +464,8 @@ async def create_event_time(message: types.Message, state: FSMContext):
                 event_time,
                 status,
                 created_by,
-                event_type
+                event_type,
+                streak_warning_sent
             )
             VALUES (
                 $1,
@@ -1212,7 +1213,115 @@ async def reminder_loop():
 
             finally:
                 await conn.close()
+        # ================= STREAK WARNING =================
 
+        try:
+
+            underground_events = await conn.fetch(
+                """
+                SELECT
+                    event_id,
+                    title,
+                    event_date,
+                    event_time
+                FROM events
+                WHERE status = 'active'
+                  AND event_type = 'underground'
+                  AND (streak_warning_sent IS NULL OR streak_warning_sent = FALSE)
+                """
+            )
+
+            for event in underground_events:
+
+                event_datetime = datetime.combine(
+                    event["event_date"],
+                    datetime.strptime(
+                        event["event_time"],
+                        "%H:%M"
+                    ).time()
+                )
+
+                event_datetime = tz.localize(event_datetime)
+
+                diff = event_datetime - now
+
+                # 5 годин до івенту
+                if timedelta(hours=3, minutes=55) <= diff <= timedelta(hours=4, minutes=5):
+
+                    players = await conn.fetch(
+                        """
+                        SELECT
+                            u.user_id,
+                            u.display_name
+                        FROM users u
+                        WHERE u.is_active = 1
+                        """
+                    )
+
+                    for p in players:
+
+                        # чи записаний
+                        registered = await conn.fetchval(
+                            """
+                            SELECT 1
+                            FROM registrations
+                            WHERE event_id = $1
+                              AND user_id = $2
+                              AND status = 'active'
+                            """,
+                            event["event_id"],
+                            p["user_id"]
+                        )
+
+                        if registered:
+                            continue
+
+                        # беремо streak
+                        from modules.underground.sheets import get_player
+
+                        player_data = get_player(p["user_id"])
+
+                        if not player_data:
+                            continue
+
+                        streak = int(
+                            player_data.get("current_streak") or 0
+                        )
+
+                        if streak <= 0:
+                            continue
+
+                        try:
+
+                            await bot.send_message(
+                                p["user_id"],
+
+                                f"🔥 *У вас активний стрік: {streak}*\n\n"
+                                f"Якщо ви пропустите сьогоднішній\n"
+                                f"☣️ *MAFIA UNDERGROUND* —\n"
+                                f"стрік буде втрачено.",
+
+                                parse_mode="Markdown",
+
+                                reply_markup=invite_keyboard(
+                                    event["event_id"]
+                                )
+                            )
+await conn.execute(
+    """
+    UPDATE events
+    SET streak_warning_sent = TRUE
+    WHERE event_id = $1
+    """,
+    event["event_id"]
+)
+                        except Exception:
+                            continue
+
+        except Exception as e:
+            print("STREAK WARNING ERROR:", e)
+
+        # ================================================
         await asyncio.sleep(60)
 # ================== UNDERGROUND =======================
 dp.include_router(season_router)
