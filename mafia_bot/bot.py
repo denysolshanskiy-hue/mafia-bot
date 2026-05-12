@@ -1307,14 +1307,14 @@ async def reminder_loop():
                                     event["event_id"]
                                 )
                             )
-await conn.execute(
-    """
-    UPDATE events
-    SET streak_warning_sent = TRUE
-    WHERE event_id = $1
-    """,
-    event["event_id"]
-)
+                await conn.execute(
+                    """
+                    UPDATE events
+                    SET streak_warning_sent = TRUE
+                    WHERE event_id = $1
+                    """,
+                    event["event_id"]
+                )
                         except Exception:
                             continue
 
