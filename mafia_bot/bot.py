@@ -19,7 +19,6 @@ import asyncio
 from modules.underground.handlers import router as season_router
 # Імпортуємо функції з вашого нового database.py
 from database import get_connection, init_db
-from datetime import datetime, timedelta, time
 import pytz
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardRemove
@@ -1217,6 +1216,8 @@ async def reminder_loop():
 
         try:
 
+            conn = await get_connection()
+
             underground_events = await conn.fetch(
                 """
                 SELECT
@@ -1242,25 +1243,21 @@ async def reminder_loop():
                 )
 
                 event_datetime = tz.localize(event_datetime)
-
                 diff = event_datetime - now
 
-                # 5 годин до івенту
+                # 4 години до івенту
                 if timedelta(hours=3, minutes=55) <= diff <= timedelta(hours=4, minutes=5):
 
                     players = await conn.fetch(
                         """
-                        SELECT
-                            u.user_id,
-                            u.display_name
-                        FROM users u
-                        WHERE u.is_active = 1
+                        SELECT user_id
+                        FROM users
+                        WHERE is_active = 1
                         """
                     )
 
                     for p in players:
 
-                        # чи записаний
                         registered = await conn.fetchval(
                             """
                             SELECT 1
@@ -1276,7 +1273,6 @@ async def reminder_loop():
                         if registered:
                             continue
 
-                        # беремо streak
                         from modules.underground.sheets import get_player
 
                         player_data = get_player(p["user_id"])
@@ -1284,39 +1280,35 @@ async def reminder_loop():
                         if not player_data:
                             continue
 
-                        streak = int(
-                            player_data.get("current_streak") or 0
-                        )
+                        streak = int(player_data.get("current_streak") or 0)
 
                         if streak <= 0:
                             continue
 
                         try:
-
                             await bot.send_message(
                                 p["user_id"],
-
                                 f"🔥 *У вас активний стрік: {streak}*\n\n"
                                 f"Якщо ви пропустите сьогоднішній\n"
                                 f"☣️ *MAFIA UNDERGROUND* —\n"
                                 f"стрік буде втрачено.",
-
                                 parse_mode="Markdown",
-
-                                reply_markup=invite_keyboard(
-                                    event["event_id"]
-                                )
+                                reply_markup=invite_keyboard(event["event_id"])
                             )
-                await conn.execute(
-                    """
-                    UPDATE events
-                    SET streak_warning_sent = TRUE
-                    WHERE event_id = $1
-                    """,
-                    event["event_id"]
-                )
                         except Exception:
                             continue
+
+                    # ✅ ПОЗНАЧАЄМО ЩО ВЖЕ ВІДПРАВИЛИ
+                    await conn.execute(
+                        """
+                        UPDATE events
+                        SET streak_warning_sent = TRUE
+                        WHERE event_id = $1
+                        """,
+                        event["event_id"]
+                    )
+
+            await conn.close()
 
         except Exception as e:
             print("STREAK WARNING ERROR:", e)
