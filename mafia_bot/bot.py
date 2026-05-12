@@ -1135,19 +1135,34 @@ async def broadcast_send(message: types.Message, state: FSMContext):
         await conn.close()
 # ================== REMINDER ==================
 async def reminder_loop():
+
     tz = pytz.timezone("Europe/Kyiv")
 
     while True:
-        now = datetime.now(tz)
-        print("🕒 reminder loop alive:", now.strftime("%Y-%m-%d %H:%M:%S"))
 
-        # рівно о 12:00 за Києвом
+        now = datetime.now(tz)
+
+        print(
+            "🕒 reminder loop alive:",
+            now.strftime("%Y-%m-%d %H:%M:%S")
+        )
+
+        # =====================================================
+        # ЗВИЧАЙНЕ НАГАДУВАННЯ ПРО ІВЕНТ (о 12:00)
+        # =====================================================
+
         if now.hour == 12:
+
             conn = await get_connection()
+
             try:
+
                 events = await conn.fetch(
                     """
-                    SELECT event_id, title, event_date
+                    SELECT
+                        event_id,
+                        title,
+                        event_date
                     FROM events
                     WHERE status = 'active'
                       AND reminder_sent = false
@@ -1158,10 +1173,13 @@ async def reminder_loop():
                 print(f"📦 events found: {len(events)}")
 
                 for event in events:
+
                     event_id = event["event_id"]
                     title = event["title"]
 
-                    print(f"➡️ processing event {event_id} | {title}")
+                    print(
+                        f"➡️ processing event {event_id} | {title}"
+                    )
 
                     users = await conn.fetch(
                         """
@@ -1180,39 +1198,57 @@ async def reminder_loop():
                     )
 
                     sent = 0
+
                     for u in users:
+
                         try:
+
                             await bot.send_message(
                                 u["user_id"],
+
                                 f"⏰ *Нагадування!*\n\n"
                                 f"Завтра відбудеться івент:\n"
                                 f"🎭 *{title}*\n\n"
                                 f"{EVENT_LOCATION}\n\n"
                                 f"Ще є час записатись 👇",
+
                                 parse_mode="Markdown",
+
                                 reply_markup=invite_keyboard(event_id)
                             )
+
                             sent += 1
+
                         except Exception:
                             continue
 
                     await conn.execute(
-                        "UPDATE events SET reminder_sent = true WHERE event_id = $1",
+                        """
+                        UPDATE events
+                        SET reminder_sent = true
+                        WHERE event_id = $1
+                        """,
                         event_id
                     )
 
                     ADMIN_ID = 444726017
+
                     await bot.send_message(
                         ADMIN_ID,
+
                         f"📣 *Нагадування надіслано*\n"
                         f"🎭 {title}\n"
                         f"👥 Отримали: **{sent}**",
+
                         parse_mode="Markdown"
                     )
 
             finally:
                 await conn.close()
-        # ================= STREAK WARNING =================
+
+        # =====================================================
+        # STREAK WARNING (за 4 години до UNDERGROUND)
+        # =====================================================
 
         try:
 
@@ -1228,7 +1264,10 @@ async def reminder_loop():
                 FROM events
                 WHERE status = 'active'
                   AND event_type = 'underground'
-                  AND (streak_warning_sent IS NULL OR streak_warning_sent = FALSE)
+                  AND (
+                        streak_warning_sent IS NULL
+                        OR streak_warning_sent = FALSE
+                  )
                 """
             )
 
@@ -1243,10 +1282,15 @@ async def reminder_loop():
                 )
 
                 event_datetime = tz.localize(event_datetime)
+
                 diff = event_datetime - now
 
                 # 4 години до івенту
                 if timedelta(hours=3, minutes=55) <= diff <= timedelta(hours=4, minutes=5):
+
+                    print(
+                        f"🔥 STREAK WARNING: {event['title']}"
+                    )
 
                     players = await conn.fetch(
                         """
@@ -1256,8 +1300,14 @@ async def reminder_loop():
                         """
                     )
 
+                    sent_players = []
+                    skipped = 0
+
+                    from modules.underground.sheets import get_player
+
                     for p in players:
 
+                        # перевірка реєстрації
                         registered = await conn.fetchval(
                             """
                             SELECT 1
@@ -1271,34 +1321,83 @@ async def reminder_loop():
                         )
 
                         if registered:
+                            skipped += 1
                             continue
 
-                        from modules.underground.sheets import get_player
-
-                        player_data = get_player(p["user_id"])
+                        player_data = get_player(
+                            p["user_id"]
+                        )
 
                         if not player_data:
+                            skipped += 1
                             continue
 
-                        streak = int(player_data.get("current_streak") or 0)
+                        streak = int(
+                            player_data.get("current_streak") or 0
+                        )
 
                         if streak <= 0:
+                            skipped += 1
                             continue
 
+                        nick = player_data.get(
+                            "nick",
+                            "Unknown"
+                        )
+
                         try:
+
                             await bot.send_message(
                                 p["user_id"],
+
                                 f"🔥 *У вас активний стрік: {streak}*\n\n"
                                 f"Якщо ви пропустите сьогоднішній\n"
                                 f"☣️ *MAFIA UNDERGROUND* —\n"
                                 f"стрік буде втрачено.",
+
                                 parse_mode="Markdown",
-                                reply_markup=invite_keyboard(event["event_id"])
+
+                                reply_markup=invite_keyboard(
+                                    event["event_id"]
+                                )
                             )
+
+                            sent_players.append(
+                                f"{nick} ({streak})"
+                            )
+
                         except Exception:
+                            skipped += 1
                             continue
 
-                    # ✅ ПОЗНАЧАЄМО ЩО ВЖЕ ВІДПРАВИЛИ
+                    # ================= ADMIN REPORT =================
+
+                    ADMIN_ID = 444726017
+
+                    report = (
+                        f"📣 *STREAK WARNING*\n\n"
+                        f"☣️ {event['title']}\n\n"
+                        f"✅ Надіслано: {len(sent_players)}\n"
+                        f"⏭ Пропущено: {skipped}\n\n"
+                    )
+
+                    if sent_players:
+
+                        report += "👥 Отримали:\n"
+
+                        report += "\n".join(
+                            f"• {p}"
+                            for p in sent_players[:30]
+                        )
+
+                    await bot.send_message(
+                        ADMIN_ID,
+                        report,
+                        parse_mode="Markdown"
+                    )
+
+                    # ================= SAVE FLAG =================
+
                     await conn.execute(
                         """
                         UPDATE events
@@ -1311,9 +1410,14 @@ async def reminder_loop():
             await conn.close()
 
         except Exception as e:
-            print("STREAK WARNING ERROR:", e)
 
-        # ================================================
+            print(
+                "STREAK WARNING ERROR:",
+                e
+            )
+
+        # =====================================================
+
         await asyncio.sleep(60)
 # ================== UNDERGROUND =======================
 dp.include_router(season_router)
