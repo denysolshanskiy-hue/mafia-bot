@@ -472,7 +472,8 @@ async def create_event_time(message: types.Message, state: FSMContext):
                 $3,
                 'active',
                 $4,
-                $5
+                $5,
+                $6
             )
             RETURNING event_id
             """,
