@@ -1287,7 +1287,7 @@ async def reminder_loop():
                 diff = event_datetime - now
 
                 # 4 години до івенту
-                if timedelta(hours=3, minutes=55) <= diff <= timedelta(hours=4, minutes=5):
+                if timedelta(hours=5, minutes=55) <= diff <= timedelta(hours=6, minutes=5):
 
                     print(
                         f"🔥 STREAK WARNING: {event['title']}"
