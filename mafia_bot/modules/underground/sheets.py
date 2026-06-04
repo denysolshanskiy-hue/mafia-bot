@@ -145,6 +145,16 @@ def set_black_mark(player_id, bm_type):
             players_sheet.update(f"G{i}", [[bm_type]])
             break
 # ================= STREACK =================
+def get_max_balance(player):
+
+    if (
+        player.get("black_mark_type") == "limit"
+        and int(player.get("black_mark_used") or 0) == 1
+    ):
+        return 3000
+
+    return 2500
+    
 def update_streak(player_id, new_streak):
     sheet = client.open(SHEET_NAME).worksheet("Players")
 
@@ -165,3 +175,16 @@ def reset_black_mark(player_id):
         if str(row["player_id"]) == str(player_id):
             sheet.update_cell(i, 6, 1)  # black_mark_used
             return
+            
+def get_streak_bonus(streak):
+
+    if streak == 2:
+        return 50
+
+    elif streak == 3:
+        return 100
+
+    elif streak >= 4:
+        return 150
+
+    return 0
