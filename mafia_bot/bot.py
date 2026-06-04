@@ -270,8 +270,6 @@ async def close_event(callback: types.CallbackQuery):
             event_id
         )
 
-        # =================================================
-
         # ================= STREAKS =================
 
         if event["event_type"] == "underground":
@@ -287,13 +285,16 @@ async def close_event(callback: types.CallbackQuery):
             ]
 
             streak_report = await process_streaks(
-            event_players_ids
-        )
-        if streak_report:
-        await bot.send_message(
-            444726017,
-            "📊 СТРІКИ\n\n" + "\n".join(streak_report[:50])
-        )
+                event_players_ids
+            )
+
+            if streak_report:
+
+                await bot.send_message(
+                    444726017,
+                    "📊 СТРІКИ\n\n" + "\n".join(streak_report[:50])
+                )
+
         # ===========================================
 
         await callback.message.edit_text(
