@@ -497,7 +497,13 @@ async def process_streaks(event_players_ids):
                 total_games
             )
 
-            if real_bonus > 0:
+            if bonus == 0:
+
+                report.append(
+                    f"✅ {nick}: стрік {new_streak}"
+                )
+
+            elif real_bonus > 0:
 
                 report.append(
                     f"🔥 {nick}: стрік {new_streak} | +{real_bonus} грн"
@@ -506,10 +512,10 @@ async def process_streaks(event_players_ids):
             else:
 
                 report.append(
-                    f"✅ {nick}: стрік {new_streak} | ліміт досягнуто"
+                    f"💰 {nick}: стрік {new_streak} | ліміт досягнуто"
                 )
         # НЕ БУВ
-        else:
+            else:
 
             # BLACK MARK SAVE STREAK
             if black_mark_type == "streak" and black_mark_used == 0:
