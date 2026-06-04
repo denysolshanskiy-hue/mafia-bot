@@ -446,14 +446,31 @@ async def show_rating(message: types.Message):
     await message.answer(text)
 
 #================= STREACK ========================
+def get_streak_bonus(streak):
+
+    if streak == 2:
+        return 50
+
+    elif streak == 3:
+        return 100
+
+    elif streak >= 4:
+        return 150
+
+    return 0
+
 async def process_streaks(event_players_ids):
 
     sheet = client.open(SHEET_NAME).worksheet("Players")
     players = sheet.get_all_records()
 
+    report = []
+
     for player in players:
 
         player_id = str(player["player_id"])
+        nick = player.get("nick", "Unknown")
+
         current_streak = int(player.get("current_streak") or 0)
 
         black_mark_used = int(player.get("black_mark_used") or 0)
@@ -462,7 +479,25 @@ async def process_streaks(event_players_ids):
         # БУВ НА UNDERGROUND
         if player_id in event_players_ids:
 
-            update_streak(player_id, current_streak + 1)
+            new_streak = current_streak + 1
+
+            update_streak(player_id, new_streak)
+
+            bonus = get_streak_bonus(new_streak)
+
+            if bonus > 0:
+
+                add_balance(player_id, bonus)
+
+                report.append(
+                    f"🔥 {nick}: стрік {new_streak} | +{bonus} грн"
+                )
+
+            else:
+
+                report.append(
+                    f"✅ {nick}: стрік {new_streak}"
+                )
 
         # НЕ БУВ
         else:
@@ -472,6 +507,18 @@ async def process_streaks(event_players_ids):
 
                 reset_black_mark(player_id)
 
+                report.append(
+                    f"🛡 {nick}: Black Mark врятував стрік ({current_streak})"
+                )
+
             else:
 
-                update_streak(player_id, 0)
+                if current_streak > 0:
+
+                    update_streak(player_id, 0)
+
+                    report.append(
+                        f"❌ {nick}: стрік скинуто"
+                    )
+
+    return report
