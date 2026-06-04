@@ -515,7 +515,7 @@ async def process_streaks(event_players_ids):
                     f"💰 {nick}: стрік {new_streak} | ліміт досягнуто"
                 )
         # НЕ БУВ
-            else:
+        else:
 
             # BLACK MARK SAVE STREAK
             if black_mark_type == "streak" and black_mark_used == 0:
