@@ -476,24 +476,38 @@ async def process_streaks(event_players_ids):
 
             new_streak = current_streak + 1
 
-            update_streak(player_id, new_streak)
+            balance = int(player.get("balance") or 0)
+            total_games = int(player.get("total_games") or 0)
 
             bonus = get_streak_bonus(new_streak)
 
-            if bonus > 0:
+            max_balance = get_max_balance(player)
 
-                add_balance(player_id, bonus)
+            new_balance = min(
+                balance + bonus,
+                max_balance
+            )
+
+            real_bonus = new_balance - balance
+
+            update_player(
+                player_id,
+                new_balance,
+                new_streak,
+                total_games
+            )
+
+            if real_bonus > 0:
 
                 report.append(
-                    f"🔥 {nick}: стрік {new_streak} | +{bonus} грн"
+                    f"🔥 {nick}: стрік {new_streak} | +{real_bonus} грн"
                 )
 
             else:
 
                 report.append(
-                    f"✅ {nick}: стрік {new_streak}"
+                    f"✅ {nick}: стрік {new_streak} | ліміт досягнуто"
                 )
-
         # НЕ БУВ
         else:
 
