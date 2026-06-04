@@ -286,11 +286,15 @@ async def close_event(callback: types.CallbackQuery):
                 for player in players
             ]
 
-            await process_streaks(
-                event_id,
-                event_players_ids
-            )
+            streak_report = await process_streaks(
+    event_players_ids
+)
+if streak_report:
 
+    await bot.send_message(
+        444726017,
+        "📊 СТРІКИ\n\n" + "\n".join(streak_report[:50])
+    )
         # ===========================================
 
         await callback.message.edit_text(
