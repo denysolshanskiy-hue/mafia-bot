@@ -200,19 +200,14 @@ async def apply_action(message: types.Message, state: FSMContext):
     new_balance = min(balance + income, max_balance)
     income = new_balance - balance
 
-    # 🔥 streak логіка
-    if income > 0:
-        streak += 1
-    else:
-        if player.get("black_mark_type") == "streak":
-            # використовуємо 1 раз
-            set_black_mark(player_id, "used_streak")
-        else:
-            streak = 0
-
     total_games += 1
 
-    update_player(player_id, new_balance, streak, total_games)
+    update_player(
+        player_id,
+        new_balance,
+        streak,
+        total_games
+    )
 
     add_result(
         event_id=event_id,
