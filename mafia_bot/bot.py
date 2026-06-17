@@ -1423,7 +1423,7 @@ async def reminder_loop():
 
         # =====================================================
 
-        await asyncio.sleep(60)
+        await asyncio.sleep(600)
 # ================== UNDERGROUND =======================
 dp.include_router(season_router)
 # ================== RUNNER & WEB SERVER ==================
