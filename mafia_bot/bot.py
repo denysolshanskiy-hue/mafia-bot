@@ -125,6 +125,12 @@ async def clean_keyboard(message: types.Message):
 async def start_handler(message: types.Message, state: FSMContext):
     if message.chat.type != "private":
         return
+
+    # Видаляємо повідомлення /start
+    try:
+        await message.delete()
+    except Exception:
+        pass
     user_id = message.from_user.id
     username = message.from_user.username
     conn = await get_connection()
