@@ -444,14 +444,12 @@ async def show_rating(message: types.Message):
 # ================= ONE-TIME SEASON STREAK BACKFILL =================
 @router.message(Command("backfill_streaks"))
 async def backfill_season_streaks(message: types.Message):
-    """Apply missed Underground streak bonuses once for the full season."""
+    """Apply missed Underground streak bonuses using batched Google Sheets I/O."""
     if message.from_user.id not in ADMIN_IDS:
         return
 
     conn = await get_connection()
     try:
-        # A database lock prevents two simultaneous runs. The completion marker
-        # makes subsequent invocations safe after a successful run.
         await conn.execute("""
             CREATE TABLE IF NOT EXISTS underground_streak_backfill (
                 backfill_key TEXT PRIMARY KEY,
@@ -466,7 +464,10 @@ async def backfill_season_streaks(message: types.Message):
                 "season_streaks_v1"
             )
             if done:
-                await message.answer("ℹ️ Донарахування стріків за сезон уже виконано. Повторно кошти не нараховуватиму.")
+                await message.answer(
+                    "ℹ️ Донарахування стріків за сезон уже позначене як виконане. "
+                    "Повторно кошти не нараховуватиму."
+                )
                 return
 
             events = await conn.fetch("""
@@ -475,7 +476,6 @@ async def backfill_season_streaks(message: types.Message):
                 WHERE event_type = 'underground' AND status = 'closed'
                 ORDER BY event_date ASC, event_time ASC, event_id ASC
             """)
-
             if not events:
                 await message.answer("❌ Не знайшов закритих Underground-івентів у базі.")
                 return
@@ -490,14 +490,29 @@ async def backfill_season_streaks(message: types.Message):
                 event_players[event["event_id"]] = {str(row["user_id"]) for row in rows}
 
             sheet = client.open(SHEET_NAME).worksheet("Players")
-            players = sheet.get_all_records()
-            bonus_by_id = {}
-            streak_by_id = {}
-            nick_by_id = {}
-            for player in players:
-                pid = str(player.get("player_id", "")).strip()
+            all_values = sheet.get_all_values()
+            if not all_values:
+                await message.answer("❌ Аркуш Players порожній.")
+                return
+
+            headers = [str(v).strip() for v in all_values[0]]
+            required = ["player_id", "nick", "balance", "current_streak", "total_games", "black_mark_used", "black_mark_type"]
+            missing = [h for h in required if h not in headers]
+            if missing:
+                await message.answer("❌ Не знайдено стовпці в Players: " + ", ".join(missing))
+                return
+
+            col = {name: headers.index(name) for name in required}
+            output_rows = []
+            applied = []
+            for row_num, values in enumerate(all_values[1:], start=2):
+                values = values + [""] * (len(headers) - len(values))
+                pid = str(values[col["player_id"]]).strip()
                 if not pid:
+                    output_rows.append(values)
                     continue
+
+                player = {name: values[index] for name, index in col.items()}
                 streak = 0
                 total_bonus = 0
                 for event in events:
@@ -505,38 +520,59 @@ async def backfill_season_streaks(message: types.Message):
                         streak += 1
                         total_bonus += get_streak_bonus(streak)
                     else:
+                        # Black Mark history is not stored per event, so this
+                        # replay follows attendance history without reconstructing
+                        # old one-time streak saves.
                         streak = 0
-                bonus_by_id[pid] = total_bonus
-                streak_by_id[pid] = streak
-                nick_by_id[pid] = player.get("nick") or pid
 
-            # Update each balance once, respecting the player's current cap.
-            # Preserve current total_games; it is managed by the existing accrual flow.
-            applied = []
-            for player in players:
-                pid = str(player.get("player_id", "")).strip()
-                if not pid or pid not in bonus_by_id:
-                    continue
                 balance = int(float(player.get("balance") or 0))
-                current_streak = int(float(player.get("current_streak") or 0))
-                total_bonus = bonus_by_id[pid]
                 max_balance = get_max_balance(player)
                 new_balance = min(balance + total_bonus, max_balance)
                 actual_added = new_balance - balance
-                update_player(
-                    pid,
-                    new_balance,
-                    streak_by_id[pid],
-                    int(float(player.get("total_games") or 0))
-                )
+
+                values[col["balance"]] = str(new_balance)
+                values[col["current_streak"]] = str(streak)
+                # Keep total_games and all other columns unchanged.
+                output_rows.append(values)
                 applied.append({
                     "id": pid,
-                    "nick": nick_by_id[pid],
+                    "nick": player.get("nick") or pid,
                     "calculated": total_bonus,
                     "added": actual_added,
                     "balance": new_balance,
-                    "streak": streak_by_id[pid]
+                    "streak": streak
                 })
+
+            # Single write for the full C:E block, rather than one read/write
+            # cycle per player. Column D is streak, E is total_games.
+            if output_rows:
+                first_row = 2
+                last_row = first_row + len(output_rows) - 1
+                balance_col = col["balance"] + 1
+                streak_col = col["current_streak"] + 1
+                total_games_col = col["total_games"] + 1
+
+                def col_letter(n):
+                    result = ""
+                    while n:
+                        n, rem = divmod(n - 1, 26)
+                        result = chr(65 + rem) + result
+                    return result
+
+                # Write only balance and streak columns as two contiguous ranges,
+                # each in one API request. This avoids overwriting other columns.
+                balance_values = [[row[col["balance"]]] for row in output_rows]
+                streak_values = [[row[col["current_streak"]]] for row in output_rows]
+                sheet.batch_update([
+                    {
+                        "range": f"{col_letter(balance_col)}{first_row}:{col_letter(balance_col)}{last_row}",
+                        "values": balance_values
+                    },
+                    {
+                        "range": f"{col_letter(streak_col)}{first_row}:{col_letter(streak_col)}{last_row}",
+                        "values": streak_values
+                    }
+                ], value_input_option="USER_ENTERED")
 
             summary = (
                 f"events={len(events)}; players={len(applied)}; "
@@ -561,14 +597,16 @@ async def backfill_season_streaks(message: types.Message):
                 f"• {p['nick']}: +{p['added']} грн / {p['balance']} грн / стрік {p['streak']}"
                 for p in sorted(applied, key=lambda x: x["added"], reverse=True)
             )
-            # Telegram message limit is 4096 chars; send the report in chunks.
-            text = "\n".join(report)
-            for start in range(0, len(text), 3500):
-                await message.answer(text[start:start + 3500])
+            report_text = "\n".join(report)
+            for offset in range(0, len(report_text), 3500):
+                await message.answer(report_text[offset:offset + 3500])
         finally:
             await conn.execute("SELECT pg_advisory_unlock(774120261)")
     except Exception as exc:
-        await message.answer(f"❌ Помилка під час відновлення стріків: {type(exc).__name__}: {exc}")
+        await message.answer(
+            f"❌ Помилка під час відновлення стріків: {type(exc).__name__}: {exc}\n"
+            "Не запускай команду повторно, доки не перевіримо зміни в Google Sheets."
+        )
         raise
     finally:
         await conn.close()
