@@ -65,14 +65,33 @@ def add_player(player_id, nick):
 
 
 def update_player(player_id, balance, streak, total_games):
+    """Update and verify balance, streak, and total games in one row write."""
     data = players_sheet.get_all_records()
 
     for i, row in enumerate(data, start=2):
-        if str(row["player_id"]) == str(player_id):
-            players_sheet.update(f"C{i}", [[balance]])
-            players_sheet.update(f"D{i}", [[streak]])
-            players_sheet.update(f"E{i}", [[total_games]])
-            break
+        if str(row.get("player_id", "")).strip() == str(player_id).strip():
+            expected = [int(balance), int(streak), int(total_games)]
+            players_sheet.update(
+                range_name=f"C{i}:E{i}",
+                values=[expected],
+                value_input_option="USER_ENTERED",
+            )
+
+            saved = players_sheet.get(f"C{i}:E{i}")
+            if not saved or len(saved[0]) < 3:
+                raise RuntimeError(
+                    f"Could not verify saved values for player_id={player_id}"
+                )
+
+            actual = [int(float(value or 0)) for value in saved[0][:3]]
+            if actual != expected:
+                raise RuntimeError(
+                    f"Player write verification failed for {player_id}: "
+                    f"expected {expected}, got {actual}"
+                )
+            return True
+
+    raise LookupError(f"Player player_id={player_id} was not found in Players sheet")
 
 
 # ================= RESULTS =================
