@@ -441,35 +441,28 @@ async def show_rating(message: types.Message):
     await message.answer(text)
 
 
-# ================= ONE-TIME SEASON STREAK BACKFILL =================
+# ================= RECONCILE SEASON STREAK BONUSES =================
 @router.message(Command("backfill_streaks"))
 async def backfill_season_streaks(message: types.Message):
-    """Apply missed Underground streak bonuses using batched Google Sheets I/O."""
+    """
+    Reconcile season streak bonuses to a deterministic target.
+    Uses a per-player ledger so repeat runs only apply the difference.
+    """
     if message.from_user.id not in ADMIN_IDS:
         return
 
     conn = await get_connection()
     try:
         await conn.execute("""
-            CREATE TABLE IF NOT EXISTS underground_streak_backfill (
-                backfill_key TEXT PRIMARY KEY,
-                completed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                details TEXT
+            CREATE TABLE IF NOT EXISTS underground_streak_backfill_players (
+                player_id TEXT PRIMARY KEY,
+                target_bonus INTEGER NOT NULL DEFAULT 0,
+                applied_bonus INTEGER NOT NULL DEFAULT 0,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         """)
         await conn.execute("SELECT pg_advisory_lock(774120261)")
         try:
-            done = await conn.fetchrow(
-                "SELECT backfill_key FROM underground_streak_backfill WHERE backfill_key = $1",
-                "season_streaks_v1"
-            )
-            if done:
-                await message.answer(
-                    "ℹ️ Донарахування стріків за сезон уже позначене як виконане. "
-                    "Повторно кошти не нараховуватиму."
-                )
-                return
-
             events = await conn.fetch("""
                 SELECT event_id, title, event_date, event_time
                 FROM events
@@ -501,101 +494,123 @@ async def backfill_season_streaks(message: types.Message):
             if missing:
                 await message.answer("❌ Не знайдено стовпці в Players: " + ", ".join(missing))
                 return
-
             col = {name: headers.index(name) for name in required}
-            output_rows = []
-            applied = []
-            for row_num, values in enumerate(all_values[1:], start=2):
+
+            # Compute the correct historical streak/bonus target from event attendance.
+            computed = []
+            for values in all_values[1:]:
                 values = values + [""] * (len(headers) - len(values))
                 pid = str(values[col["player_id"]]).strip()
                 if not pid:
-                    output_rows.append(values)
                     continue
-
-                player = {name: values[index] for name, index in col.items()}
                 streak = 0
-                total_bonus = 0
+                target_bonus = 0
                 for event in events:
                     if pid in event_players[event["event_id"]]:
                         streak += 1
-                        total_bonus += get_streak_bonus(streak)
+                        target_bonus += get_streak_bonus(streak)
                     else:
-                        # Black Mark history is not stored per event, so this
-                        # replay follows attendance history without reconstructing
-                        # old one-time streak saves.
                         streak = 0
-
-                balance = int(float(player.get("balance") or 0))
-                max_balance = get_max_balance(player)
-                new_balance = min(balance + total_bonus, max_balance)
-                actual_added = new_balance - balance
-
-                values[col["balance"]] = str(new_balance)
-                values[col["current_streak"]] = str(streak)
-                # Keep total_games and all other columns unchanged.
-                output_rows.append(values)
-                applied.append({
+                computed.append({
                     "id": pid,
-                    "nick": player.get("nick") or pid,
-                    "calculated": total_bonus,
-                    "added": actual_added,
-                    "balance": new_balance,
-                    "streak": streak
+                    "nick": str(values[col["nick"]] or pid),
+                    "balance": int(float(values[col["balance"]] or 0)),
+                    "max_balance": get_max_balance({
+                        "black_mark_type": str(values[col["black_mark_type"]] or "")
+                    }),
+                    "streak": streak,
+                    "target_bonus": target_bonus,
+                    "row": values
                 })
 
-            # Single write for the full C:E block, rather than one read/write
-            # cycle per player. Column D is streak, E is total_games.
-            if output_rows:
+            # IMPORTANT: a prior pre-ledger run may have partially changed balances.
+            # Never guess whether those amounts were already applied. If no ledger
+            # exists for any player, establish a baseline without changing money;
+            # then future runs can safely reconcile differences deterministically.
+            ledger_rows = await conn.fetch(
+                "SELECT player_id, target_bonus, applied_bonus FROM underground_streak_backfill_players"
+            )
+            ledger = {str(row["player_id"]): row for row in ledger_rows}
+            missing_ledger = [p for p in computed if p["id"] not in ledger]
+
+            if missing_ledger:
+                async with conn.transaction():
+                    for p in missing_ledger:
+                        await conn.execute("""
+                            INSERT INTO underground_streak_backfill_players
+                                (player_id, target_bonus, applied_bonus)
+                            VALUES ($1, $2, $3)
+                            ON CONFLICT (player_id) DO NOTHING
+                        """, p["id"], p["target_bonus"], p["target_bonus"])
+                await message.answer(
+                    "⚠️ Знайдено гравців без журналу донарахувань від попереднього запуску. "
+                    "Щоб не додати бонуси вдруге, для них зафіксував поточний стан як базовий. "
+                    "Баланс не змінювався. Запусти команду ще раз — вона звірить дані та покаже результат."
+                )
+                return
+
+            changed = []
+            balance_values = []
+            streak_values = []
+            for p in computed:
+                old = ledger[p["id"]]
+                previously_applied = int(old["applied_bonus"] or 0)
+                target = p["target_bonus"]
+                delta = target - previously_applied
+
+                # Apply only the uncredited difference. Negative delta is supported
+                # to correct an over-credit, never dropping balance below zero.
+                new_balance = max(0, min(p["balance"] + delta, p["max_balance"]))
+                actual_delta = new_balance - p["balance"]
+                p["new_balance"] = new_balance
+                p["actual_delta"] = actual_delta
+                p["row"][col["balance"]] = str(new_balance)
+                p["row"][col["current_streak"]] = str(p["streak"])
+                balance_values.append([str(new_balance)])
+                streak_values.append([str(p["streak"])])
+                changed.append(p)
+
+            # One batch write, only the two intended columns.
+            def col_letter(n):
+                result = ""
+                while n:
+                    n, rem = divmod(n - 1, 26)
+                    result = chr(65 + rem) + result
+                return result
+
+            if computed:
                 first_row = 2
-                last_row = first_row + len(output_rows) - 1
-                balance_col = col["balance"] + 1
-                streak_col = col["current_streak"] + 1
-                total_games_col = col["total_games"] + 1
-
-                def col_letter(n):
-                    result = ""
-                    while n:
-                        n, rem = divmod(n - 1, 26)
-                        result = chr(65 + rem) + result
-                    return result
-
-                # Write only balance and streak columns as two contiguous ranges,
-                # each in one API request. This avoids overwriting other columns.
-                balance_values = [[row[col["balance"]]] for row in output_rows]
-                streak_values = [[row[col["current_streak"]]] for row in output_rows]
+                last_row = first_row + len(computed) - 1
                 sheet.batch_update([
-                    {
-                        "range": f"{col_letter(balance_col)}{first_row}:{col_letter(balance_col)}{last_row}",
-                        "values": balance_values
-                    },
-                    {
-                        "range": f"{col_letter(streak_col)}{first_row}:{col_letter(streak_col)}{last_row}",
-                        "values": streak_values
-                    }
+                    {"range": f"{col_letter(col['balance'] + 1)}{first_row}:{col_letter(col['balance'] + 1)}{last_row}", "values": balance_values},
+                    {"range": f"{col_letter(col['current_streak'] + 1)}{first_row}:{col_letter(col['current_streak'] + 1)}{last_row}", "values": streak_values}
                 ], value_input_option="USER_ENTERED")
 
-            summary = (
-                f"events={len(events)}; players={len(applied)}; "
-                f"calculated={sum(p['calculated'] for p in applied)}; "
-                f"added={sum(p['added'] for p in applied)}"
-            )
-            await conn.execute("""
-                INSERT INTO underground_streak_backfill (backfill_key, details)
-                VALUES ($1, $2)
-            """, "season_streaks_v1", summary)
+            # Persist target as applied only after the Sheets write succeeds.
+            async with conn.transaction():
+                for p in computed:
+                    await conn.execute("""
+                        INSERT INTO underground_streak_backfill_players
+                            (player_id, target_bonus, applied_bonus, updated_at)
+                        VALUES ($1, $2, $2, CURRENT_TIMESTAMP)
+                        ON CONFLICT (player_id) DO UPDATE SET
+                            target_bonus = EXCLUDED.target_bonus,
+                            applied_bonus = EXCLUDED.applied_bonus,
+                            updated_at = CURRENT_TIMESTAMP
+                    """, p["id"], p["target_bonus"])
 
             report = [
-                "✅ РАЗОВЕ ДОНАРАХУВАННЯ СТРІКІВ ЗА СЕЗОН ЗАВЕРШЕНО",
+                "✅ ЗВІРКА СТРІКІВ ЗАВЕРШЕНА",
                 f"Закритих Underground-івентів: {len(events)}",
-                f"Гравців оброблено: {len(applied)}",
-                f"Бонусів за стріки за розрахунком: {sum(p['calculated'] for p in applied)} грн",
-                f"Фактично додано з урахуванням лімітів: {sum(p['added'] for p in applied)} грн",
+                f"Гравців: {len(computed)}",
+                f"Сума цільових бонусів за історією: {sum(p['target_bonus'] for p in computed)} грн",
+                f"Зміна балансів цього запуску: {sum(p['actual_delta'] for p in computed)} грн",
                 "",
-                "Гравці (нараховано / новий баланс / поточний стрік):"
+                "Гравці (зміна / баланс / стрік):"
             ]
             report.extend(
-                f"• {p['nick']}: +{p['added']} грн / {p['balance']} грн / стрік {p['streak']}"
-                for p in sorted(applied, key=lambda x: x["added"], reverse=True)
+                f"• {p['nick']}: {p['actual_delta']:+} грн / {p['new_balance']} грн / стрік {p['streak']}"
+                for p in sorted(computed, key=lambda x: abs(x["actual_delta"]), reverse=True)
             )
             report_text = "\n".join(report)
             for offset in range(0, len(report_text), 3500):
@@ -604,8 +619,8 @@ async def backfill_season_streaks(message: types.Message):
             await conn.execute("SELECT pg_advisory_unlock(774120261)")
     except Exception as exc:
         await message.answer(
-            f"❌ Помилка під час відновлення стріків: {type(exc).__name__}: {exc}\n"
-            "Не запускай команду повторно, доки не перевіримо зміни в Google Sheets."
+            f"❌ Помилка під час звірки стріків: {type(exc).__name__}: {exc}. "
+            "Не запускай команду повторно, поки не перевіримо результат."
         )
         raise
     finally:
