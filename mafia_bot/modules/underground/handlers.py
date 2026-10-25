@@ -440,6 +440,139 @@ async def show_rating(message: types.Message):
 
     await message.answer(text)
 
+
+# ================= ONE-TIME SEASON STREAK BACKFILL =================
+@router.message(Command("backfill_streaks"))
+async def backfill_season_streaks(message: types.Message):
+    """Apply missed Underground streak bonuses once for the full season."""
+    if message.from_user.id not in ADMIN_IDS:
+        return
+
+    conn = await get_connection()
+    try:
+        # A database lock prevents two simultaneous runs. The completion marker
+        # makes subsequent invocations safe after a successful run.
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS underground_streak_backfill (
+                backfill_key TEXT PRIMARY KEY,
+                completed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                details TEXT
+            )
+        """)
+        await conn.execute("SELECT pg_advisory_lock(774120261)")
+        try:
+            done = await conn.fetchrow(
+                "SELECT backfill_key FROM underground_streak_backfill WHERE backfill_key = $1",
+                "season_streaks_v1"
+            )
+            if done:
+                await message.answer("ℹ️ Донарахування стріків за сезон уже виконано. Повторно кошти не нараховуватиму.")
+                return
+
+            events = await conn.fetch("""
+                SELECT event_id, title, event_date, event_time
+                FROM events
+                WHERE event_type = 'underground' AND status = 'closed'
+                ORDER BY event_date ASC, event_time ASC, event_id ASC
+            """)
+
+            if not events:
+                await message.answer("❌ Не знайшов закритих Underground-івентів у базі.")
+                return
+
+            event_players = {}
+            for event in events:
+                rows = await conn.fetch("""
+                    SELECT user_id
+                    FROM registrations
+                    WHERE event_id = $1 AND status = 'active'
+                """, event["event_id"])
+                event_players[event["event_id"]] = {str(row["user_id"]) for row in rows}
+
+            sheet = client.open(SHEET_NAME).worksheet("Players")
+            players = sheet.get_all_records()
+            bonus_by_id = {}
+            streak_by_id = {}
+            nick_by_id = {}
+            for player in players:
+                pid = str(player.get("player_id", "")).strip()
+                if not pid:
+                    continue
+                streak = 0
+                total_bonus = 0
+                for event in events:
+                    if pid in event_players[event["event_id"]]:
+                        streak += 1
+                        total_bonus += get_streak_bonus(streak)
+                    else:
+                        streak = 0
+                bonus_by_id[pid] = total_bonus
+                streak_by_id[pid] = streak
+                nick_by_id[pid] = player.get("nick") or pid
+
+            # Update each balance once, respecting the player's current cap.
+            # Preserve current total_games; it is managed by the existing accrual flow.
+            applied = []
+            for player in players:
+                pid = str(player.get("player_id", "")).strip()
+                if not pid or pid not in bonus_by_id:
+                    continue
+                balance = int(float(player.get("balance") or 0))
+                current_streak = int(float(player.get("current_streak") or 0))
+                total_bonus = bonus_by_id[pid]
+                max_balance = get_max_balance(player)
+                new_balance = min(balance + total_bonus, max_balance)
+                actual_added = new_balance - balance
+                update_player(
+                    pid,
+                    new_balance,
+                    streak_by_id[pid],
+                    int(float(player.get("total_games") or 0))
+                )
+                applied.append({
+                    "id": pid,
+                    "nick": nick_by_id[pid],
+                    "calculated": total_bonus,
+                    "added": actual_added,
+                    "balance": new_balance,
+                    "streak": streak_by_id[pid]
+                })
+
+            summary = (
+                f"events={len(events)}; players={len(applied)}; "
+                f"calculated={sum(p['calculated'] for p in applied)}; "
+                f"added={sum(p['added'] for p in applied)}"
+            )
+            await conn.execute("""
+                INSERT INTO underground_streak_backfill (backfill_key, details)
+                VALUES ($1, $2)
+            """, "season_streaks_v1", summary)
+
+            report = [
+                "✅ РАЗОВЕ ДОНАРАХУВАННЯ СТРІКІВ ЗА СЕЗОН ЗАВЕРШЕНО",
+                f"Закритих Underground-івентів: {len(events)}",
+                f"Гравців оброблено: {len(applied)}",
+                f"Бонусів за стріки за розрахунком: {sum(p['calculated'] for p in applied)} грн",
+                f"Фактично додано з урахуванням лімітів: {sum(p['added'] for p in applied)} грн",
+                "",
+                "Гравці (нараховано / новий баланс / поточний стрік):"
+            ]
+            report.extend(
+                f"• {p['nick']}: +{p['added']} грн / {p['balance']} грн / стрік {p['streak']}"
+                for p in sorted(applied, key=lambda x: x["added"], reverse=True)
+            )
+            # Telegram message limit is 4096 chars; send the report in chunks.
+            text = "\n".join(report)
+            for start in range(0, len(text), 3500):
+                await message.answer(text[start:start + 3500])
+        finally:
+            await conn.execute("SELECT pg_advisory_unlock(774120261)")
+    except Exception as exc:
+        await message.answer(f"❌ Помилка під час відновлення стріків: {type(exc).__name__}: {exc}")
+        raise
+    finally:
+        await conn.close()
+
 #================= STREACK ========================
 def get_streak_bonus(streak):
 
