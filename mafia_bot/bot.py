@@ -1041,16 +1041,17 @@ async def admin_confirm_cancel(callback: types.CallbackQuery):
 
 @dp.message(F.text == "📣 Повідомлення")
 async def broadcast_start(message: types.Message, state: FSMContext):
-    user_id = message.from_user.id
+    if message.chat.type != "private":
+        return
 
     conn = await get_connection()
     try:
         role = await conn.fetchval(
             "SELECT role FROM users WHERE user_id = $1",
-            user_id
+            message.from_user.id
         )
-
         if role != "admin":
+            await message.answer("❌ У вас немає прав адміністратора.")
             return
 
         events = await conn.fetch("""
@@ -1059,9 +1060,8 @@ async def broadcast_start(message: types.Message, state: FSMContext):
             WHERE status = 'active'
             ORDER BY event_date
         """)
-
         if not events:
-            await message.answer("❌ Немає активних івентів")
+            await message.answer("❌ Немає активних івентів для розсилки.")
             return
 
         kb = InlineKeyboardMarkup(
@@ -1071,79 +1071,123 @@ async def broadcast_start(message: types.Message, state: FSMContext):
                         text=f"{e['title']} ({e['event_date']})",
                         callback_data=f"broadcast_event_{e['event_id']}"
                     )
-                ] for e in events
+                ]
+                for e in events
             ]
         )
-
-        await message.answer("🎯 Оберіть івент:", reply_markup=kb)
+        await message.answer("🎯 Оберіть івент для розсилки:", reply_markup=kb)
         await state.set_state(BroadcastStates.choosing_event)
-
     finally:
         await conn.close()
+
 
 @dp.callback_query(F.data.startswith("broadcast_event_"))
 async def broadcast_choose_event(callback: types.CallbackQuery, state: FSMContext):
-    event_id = int(callback.data.split("_")[2])
+    conn = await get_connection()
+    try:
+        role = await conn.fetchval(
+            "SELECT role FROM users WHERE user_id = $1",
+            callback.from_user.id
+        )
+        if role != "admin":
+            await callback.answer("❌ У вас немає прав адміністратора.", show_alert=True)
+            return
 
-    await state.update_data(event_id=event_id)
+        try:
+            event_id = int(callback.data.rsplit("_", 1)[1])
+        except (ValueError, IndexError):
+            await callback.answer("❌ Некоректний івент.", show_alert=True)
+            return
 
-    await callback.message.edit_text(
-        "✍️ Введіть повідомлення для гравців:"
-    )
+        event_exists = await conn.fetchval(
+            "SELECT 1 FROM events WHERE event_id = $1 AND status = 'active'",
+            event_id
+        )
+        if not event_exists:
+            await callback.answer("❌ Івент неактивний або не знайдений.", show_alert=True)
+            return
 
-    await state.set_state(BroadcastStates.typing_message)
-    await callback.answer()
+        await state.update_data(event_id=event_id)
+        await state.set_state(BroadcastStates.typing_message)
+        await callback.message.answer(
+            "✍️ Введіть текст повідомлення для гравців, зареєстрованих на цей івент."
+        )
+        await callback.answer()
+    finally:
+        await conn.close()
+
 
 @dp.message(BroadcastStates.typing_message)
 async def broadcast_send(message: types.Message, state: FSMContext):
+    if message.chat.type != "private":
+        return
     text = message.text
+    if not text or not text.strip():
+        await message.answer("❌ Надішліть текстове повідомлення.")
+        return
+
     data = await state.get_data()
     event_id = data.get("event_id")
+    if not event_id:
+        await state.clear()
+        await message.answer("❌ Івент не вибрано. Натисніть «📣 Повідомлення» ще раз.")
+        return
 
     conn = await get_connection()
     try:
-        # беремо івент
+        role = await conn.fetchval(
+            "SELECT role FROM users WHERE user_id = $1",
+            message.from_user.id
+        )
+        if role != "admin":
+            await state.clear()
+            await message.answer("❌ У вас немає прав адміністратора.")
+            return
+
         event = await conn.fetchrow(
-            "SELECT title FROM events WHERE event_id = $1",
+            "SELECT title, status FROM events WHERE event_id = $1",
             event_id
         )
+        if not event or event["status"] != "active":
+            await state.clear()
+            await message.answer("❌ Івент неактивний або не знайдений.")
+            return
 
-        # беремо гравців
         users = await conn.fetch("""
-            SELECT user_id
-            FROM registrations
-            WHERE event_id = $1
-              AND status = 'active'
+            SELECT DISTINCT u.user_id
+            FROM registrations r
+            JOIN users u ON u.user_id = r.user_id
+            WHERE r.event_id = $1
+              AND r.status = 'active'
         """, event_id)
 
         if not users:
-            await message.answer("❌ Немає зареєстрованих гравців")
+            await message.answer("❌ На цей івент немає зареєстрованих гравців.")
+            await state.clear()
             return
 
         sent = 0
-
-        for u in users:
+        failed = 0
+        for user in users:
             try:
                 await bot.send_message(
-                    u["user_id"],
-                    f"📣 *Оновлення по івенту*\n\n"
-                    f"🎭 {event['title']}\n\n"
-                    f"{text}",
-                    parse_mode="Markdown"
+                    user["user_id"],
+                    f"📣 Повідомлення щодо івенту: {event['title']}\n\n{text.strip()}"
                 )
                 sent += 1
-            except:
-                continue
+            except Exception as exc:
+                failed += 1
+                print(f"Broadcast failed for user_id={user['user_id']}: {exc}")
 
         await message.answer(
-            f"✅ Повідомлення відправлено!\n👥 Отримали: **{sent}**",
-            parse_mode="Markdown"
+            f"✅ Розсилку завершено: {event['title']}\n"
+            f"📨 Успішно надіслано: {sent}\n"
+            f"⚠️ Не доставлено: {failed}"
         )
-
         await state.clear()
-
     finally:
         await conn.close()
+
 # ================== REMINDER ==================
 async def reminder_loop():
 
