@@ -949,9 +949,10 @@ async def calculate_season_activity_bonus(request):
                 attended_slots=attended_regular+attended_finals
                 app_actions=int(await conn.fetchval(
                     """
-                    SELECT COALESCE(SUM(GREATEST(score_value,0)),0)
+                    SELECT COUNT(DISTINCT metadata->>'event_id')
                     FROM chronos.activity_events
                     WHERE season_id=$1 AND user_id=$2 AND verified=TRUE
+                      AND score_value>0 AND metadata ? 'event_id'
                     """,
                     season["season_id"],user_id,
                 ) or 0)
