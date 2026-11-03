@@ -199,6 +199,46 @@ async def open_prediction_markets(request):
         await conn.close()
 
 
+async def _void_market_if_roster_changed(conn, market):
+    current_rows=await conn.fetch(
+        """
+        SELECT user_id FROM public.registrations
+        WHERE event_id=$1 AND status='active'
+        """,
+        market["bot_event_id"],
+    )
+    candidate_rows=await conn.fetch(
+        "SELECT user_id FROM chronos.prediction_candidates WHERE market_id=$1",
+        market["market_id"],
+    )
+    current={int(row["user_id"]) for row in current_rows}
+    frozen={int(row["user_id"]) for row in candidate_rows}
+    if current==frozen:
+        return False
+    await conn.execute(
+        "UPDATE chronos.prediction_markets SET status='void',settled_at=NOW() WHERE market_id=$1",
+        market["market_id"],
+    )
+    bets=await conn.fetch(
+        "SELECT * FROM chronos.prediction_bets WHERE market_id=$1 AND status='pending' FOR UPDATE",
+        market["market_id"],
+    )
+    for bet in bets:
+        await conn.execute(
+            "UPDATE chronos.prediction_bets SET status='refunded',settled_at=NOW() WHERE bet_id=$1",
+            bet["bet_id"],
+        )
+        await award_ledger(
+            conn,bet["bettor_user_id"],"EX",bet["stake"],"prediction_refund",
+            f"prediction:refund:{bet['bet_id']}",str(bet["bet_id"]),
+        )
+        await notify_user(
+            conn,bet["bettor_user_id"],"predictions","Ринок скасовано",
+            "Склад вечора змінився після відкриття ринку. Ставку повернено на EX.",
+        )
+    return True
+
+
 async def place_bet(request):
     user_id=request["telegram_user"]["id"]
     market_id=int(request.match_info["market_id"])
@@ -227,6 +267,8 @@ async def place_bet(request):
                 if market["status"]=="open":
                     await conn.execute("UPDATE chronos.prediction_markets SET status='locked' WHERE market_id=$1",market_id)
                 return json_response({"error":"market_closed"},409)
+            if await _void_market_if_roster_changed(conn,market):
+                return json_response({"error":"roster_changed_market_voided","message":"Склад змінився. Ринок скасовано, ставки повернуто."},409)
             season=await conn.fetchrow(
                 "SELECT platform_settings FROM chronos.seasons WHERE season_id=$1",
                 market["season_id"],
@@ -248,6 +290,12 @@ async def place_bet(request):
                 market_id,candidate_id,
             ):
                 return json_response({"error":"candidate_not_available"},404)
+            duplicate_bet=await conn.fetchval(
+                "SELECT EXISTS(SELECT 1 FROM chronos.prediction_bets WHERE market_id=$1 AND bettor_user_id=$2)",
+                market_id,user_id,
+            )
+            if duplicate_bet:
+                return json_response({"error":"already_bet_on_this_market"},409)
             playing=await conn.fetchval(
                 "SELECT EXISTS(SELECT 1 FROM public.registrations WHERE event_id=$1 AND user_id=$2 AND status='active')",
                 market["bot_event_id"],user_id,
