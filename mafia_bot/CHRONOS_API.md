@@ -11,7 +11,7 @@ The Mini App is served by the existing bot aiohttp server. It uses the existing 
 - iMafia ranking snapshots and global synchronization counter (690 game participations).
 - CODE BREAKER and MEMORY server-authoritative mini-games. Session state and answer keys are stored on the server.
 - CR / EX / XP ledger, achievements, collection, catalogue, equipment and player ledger history.
-- No-stake Prediction Exchange: probability-weighted EX rewards, no penalty for an incorrect forecast, self-prediction protection, per-event limits and automatic voiding when the registered roster changes.
+- No-stake Prediction Exchange: probability-weighted EX rewards, no penalty for an incorrect forecast, self-prediction protection, per-event limits, automatic roster-change voiding, and neutral median-based handling for registered newcomers missing from the ranking snapshot.
 - In-app notification inbox and category preferences.
 
 ### Admin console
