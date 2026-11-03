@@ -8,7 +8,7 @@ from datetime import timedelta
 import asyncpg
 from aiohttp import web
 
-from modules.chronos_common import active_season_id, award_ledger, check_player_achievements, json_response, notify_user
+from modules.chronos_common import active_season_id, award_ledger, check_player_achievements, json_response, json_value, notify_user
 
 
 def _public_state(game_code, state, session):
@@ -37,30 +37,41 @@ def _public_state(game_code, state, session):
 
 
 async def _award_minigame_xp(conn, season_id, user_id, game_code, session_id):
+    row=await conn.fetchrow(
+        "SELECT platform_settings FROM chronos.seasons WHERE season_id=$1",
+        season_id,
+    )
+    platform=json_value(row["platform_settings"],{}) if row else {}
+    economy=(platform or {}).get("economy",{})
+    if economy.get("status")!="approved":
+        return 0
+    first_xp=max(0,int(economy.get("minigame_first_clear_xp",20)))
+    repeat_xp=max(0,int(economy.get("minigame_repeat_xp",5)))
+    repeat_cap=max(0,int(economy.get("minigame_repeat_cap",10)))
     first_key = f"minigame:first:{season_id}:{user_id}:{game_code}"
     first_awarded = await award_ledger(
-        conn,user_id,"XP",20,"minigame_first",first_key,
-        reference_key=str(session_id),metadata={"game_code":game_code},
+        conn,user_id,"XP",first_xp,"minigame_first",first_key,
+        reference_key=str(session_id),metadata={"game_code":game_code,"season_id":season_id},
     )
     if first_awarded:
-        return 20
+        return first_xp
     repeat_count = await conn.fetchval(
         """
         SELECT COUNT(*) FROM chronos.ledger
         WHERE user_id=$1 AND currency='XP' AND reason_code='minigame_repeat'
-          AND reference_key LIKE $2
+          AND metadata->>'season_id'=$2
         """,
-        user_id,f"{season_id}:%",
+        user_id,str(season_id),
     )
-    if int(repeat_count or 0) >= 10:
+    if int(repeat_count or 0) >= repeat_cap:
         return 0
-    amount = 5
     repeat_key = f"minigame:repeat:{season_id}:{user_id}:{session_id}"
     created = await award_ledger(
-        conn,user_id,"XP",amount,"minigame_repeat",repeat_key,
-        reference_key=f"{season_id}:{session_id}",metadata={"game_code":game_code},
+        conn,user_id,"XP",repeat_xp,"minigame_repeat",repeat_key,
+        reference_key=f"{season_id}:{session_id}",
+        metadata={"game_code":game_code,"season_id":season_id},
     )
-    return amount if created else 0
+    return repeat_xp if created else 0
 
 
 async def start_game(request):
@@ -75,6 +86,14 @@ async def start_game(request):
             season_id = await active_season_id(conn)
             if not season_id:
                 return json_response({"error":"season_not_active"},409)
+            season_row=await conn.fetchrow(
+                "SELECT platform_settings FROM chronos.seasons WHERE season_id=$1",
+                season_id,
+            )
+            platform=json_value(season_row["platform_settings"],{}) if season_row else {}
+            economy=(platform or {}).get("economy",{})
+            if economy.get("status")!="approved":
+                return json_response({"error":"economy_not_approved"},409)
             user = await conn.fetchrow(
                 "SELECT display_name,is_active FROM public.users WHERE user_id=$1",
                 user_id,
