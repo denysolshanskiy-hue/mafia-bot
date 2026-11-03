@@ -229,21 +229,26 @@ async def get_event(request):
         if not event:
             return _json({"error": "event_not_found"}, 404)
 
-        # One unique, verified Mini App interaction per event. Reopening the
-        # same event detail does not farm additional Activity Score points.
-        await conn.execute(
-            """
-            INSERT INTO chronos.activity_events
-              (season_id,user_id,action_code,score_value,source_key,verified,metadata)
-            SELECT season_id,$2,'event_detail_view',1,$3,TRUE,$4::jsonb
-            FROM chronos.seasons
-            WHERE status='active'
-            ON CONFLICT(source_key) DO NOTHING
-            """,
+        # One unique, verified Mini App interaction per active bot player/event.
+        # Reopening the same event detail does not farm additional Activity Score.
+        player_active=await conn.fetchval(
+            "SELECT EXISTS(SELECT 1 FROM public.users WHERE user_id=$1 AND is_active=1)",
             tg_user["id"],
-            f"miniapp-event-view:{event_id}:{tg_user['id']}",
-            json.dumps({"event_id":event_id,"interaction":"event_detail_view"}),
         )
+        if player_active:
+            await conn.execute(
+                """
+                INSERT INTO chronos.activity_events
+                  (season_id,user_id,action_code,score_value,source_key,verified,metadata)
+                SELECT season_id,$2,'event_detail_view',1,$3,TRUE,$4::jsonb
+                FROM chronos.seasons
+                WHERE status='active'
+                ON CONFLICT(source_key) DO NOTHING
+                """,
+                tg_user["id"],
+                f"miniapp-event-view:{event_id}:{tg_user['id']}",
+                json.dumps({"event_id":event_id,"interaction":"event_detail_view"}),
+            )
 
         roster = await conn.fetch(
             """
