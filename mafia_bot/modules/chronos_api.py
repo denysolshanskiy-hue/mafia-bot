@@ -346,6 +346,20 @@ async def register_for_event(request):
                     "message": "Ви вже записані на цей вечір.",
                 }, 409)
 
+            await conn.execute(
+                """
+                INSERT INTO chronos.activity_events
+                  (season_id,user_id,action_code,score_value,source_key,verified,metadata)
+                SELECT s.season_id,$2,'event_registration',1,$3,TRUE,$4::jsonb
+                FROM chronos.seasons s
+                WHERE s.status='active'
+                ON CONFLICT(source_key) DO NOTHING
+                """,
+                await conn.fetchval("SELECT season_id FROM chronos.seasons WHERE status='active' ORDER BY season_id DESC LIMIT 1"),
+                tg_user["id"],
+                f"miniapp-registration:{event_id}:{tg_user['id']}",
+                json.dumps({"event_id":event_id}),
+            )
         return _json({
             "registered": True,
             "event_id": event_id,
@@ -368,6 +382,44 @@ async def miniapp_index(request):
     )
 
 
+
+async def cancel_event_registration(request):
+    event_id=int(request.match_info["event_id"])
+    user_id=request["telegram_user"]["id"]
+    from database import get_connection
+    conn=await get_connection()
+    try:
+        async with conn.transaction():
+            event=await conn.fetchrow(
+                "SELECT event_id,status,event_type FROM public.events WHERE event_id=$1",
+                event_id,
+            )
+            if not event or event["event_type"]!="chronos" or event["status"]!="active":
+                return _json({"error":"event_not_available"},409)
+            registration=await conn.fetchrow(
+                """
+                UPDATE public.registrations SET status='cancelled',updated_at=NOW()
+                WHERE event_id=$1 AND user_id=$2 AND status='active'
+                RETURNING registration_id
+                """,
+                event_id,user_id,
+            )
+            if not registration:
+                return _json({"error":"active_registration_not_found"},404)
+            await conn.execute(
+                """
+                INSERT INTO chronos.activity_events
+                  (season_id,user_id,action_code,score_value,source_key,verified,metadata)
+                SELECT season_id,$2,'event_cancellation',0,$3,TRUE,$4::jsonb
+                FROM chronos.seasons WHERE status='active'
+                ON CONFLICT(source_key) DO NOTHING
+                """,
+                user_id,f"miniapp-cancel:{event_id}:{user_id}",json.dumps({"event_id":event_id}),
+            )
+        return _json({"cancelled":True,"event_id":event_id})
+    finally:
+        await conn.close()
+
 def register_chronos_routes(app):
     """Mount authenticated API routes and the static Mini App on the bot server."""
     app.router.add_get("/miniapp", miniapp_index)
@@ -384,6 +436,10 @@ def register_chronos_routes(app):
     app.router.add_post(
         API_PREFIX + "/events/{event_id:\\d+}/register",
         register_for_event,
+    )
+    app.router.add_post(
+        API_PREFIX + "/events/{event_id:\\d+}/cancel",
+        cancel_event_registration,
     )
 
     from modules.chronos_identity import register_identity_routes
