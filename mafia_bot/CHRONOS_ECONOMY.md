@@ -119,11 +119,11 @@ Activity Score = 80 × attendance_ratio + 15 × app_ratio + 5 × minigame_ratio
 
 Where:
 - attendance_ratio = attended_eligible_slots / eligible_slots
-- app_ratio = min(verified_app_actions, 15) / 15
+- app_ratio = min(unique_event_actions, 13) / 13
 - minigame_ratio = min(completed_minigames, 5) / 5
 - Activity Coefficient = Activity Score / 100
 
-The point caps mean a player cannot farm unlimited app clicks or mini-game sessions for an advantage. App actions must be verified server-side and each action must use a unique source key. The Activity Score is not part of the sporting iMafia ranking.
+The app component counts at most one positive verified interaction per distinct season event; repeat actions in the same event do not add points. This cap is 13 because the season has at most 13 scheduled events. Mini-game completions are capped at five. Both are verified server-side and written with unique source keys. The Activity Score is not part of the sporting iMafia ranking.
 
 The separate 500 UAH activity bonus is allocated proportionally among the **initial Top 10 invited to the Main Final who meet the 30% game qualification**. It does not reduce the fixed prizes.
 
