@@ -250,6 +250,10 @@ def simulate_economy() -> dict[str, Any]:
             "games": 69, "attended": 13, "eligible": 13,
             "app_actions": 15, "minigames": 5, "predictions": 39,
         },
+        "active_top10_with_main_final": {
+            "games": 79, "attended": 13, "eligible": 13,
+            "app_actions": 15, "minigames": 5, "predictions": 39,
+        },
         "top10_skips_one_final": {
             "games": 61, "attended": 12, "eligible": 13,
             "app_actions": 15, "minigames": 5, "predictions": 36,
@@ -275,13 +279,17 @@ def simulate_economy() -> dict[str, Any]:
             "ex_catalog": _catalog_affordability(income["EX_expected"], EX_CATALOG),
         }
 
-    # Full season, one player at every core participation and all 13 event slots.
-    maximum_income = player_currency_income(69, 13, 12, 39)
+    # Core season: 69 games in the 690 aggregate participation target.
+    core_maximum_income = player_currency_income(69, 13, 12, 39)
+    # Top-10 player may additionally play 10 Main Final games. They earn CR/XP,
+    # but are deliberately excluded from the 690 core synchronization target.
+    top10_with_main_final_income = player_currency_income(79, 13, 12, 39)
     prize_budget = season_prize_budget()
     return {
         "version": ECONOMY_VERSION,
         "cohorts": report,
-        "full_season_player_max": maximum_income,
+        "core_season_player_max": core_maximum_income,
+        "top10_with_main_final_max": top10_with_main_final_income,
         "cr_catalog_total_sink_capacity": sum(CR_CATALOG.values()),
         "ex_catalog_total_sink_capacity": sum(EX_CATALOG.values()),
         "cr_catalog_prices": CR_CATALOG,
