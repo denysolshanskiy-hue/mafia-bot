@@ -33,11 +33,12 @@ def plackett_luce_probabilities(
 ) -> dict[int, dict[str, float]]:
     """Estimate placement probabilities with a Plackett–Luce simulation.
 
-    The score blends points/game, bonus points, win rate and current rank.
-    Candidates with no confirmed games receive neutral median features from
-    candidates with history instead of being assigned zero skill. The result
-    is a provisional model estimate, not a guarantee. Odds are frozen by the
-    caller when the market is opened.
+    Features are net base points/game (total points minus included bonuses),
+    bonus points/game, win rate, and current rank. Per-game rates are shrunk
+    toward the roster median with a 10-game prior so short histories do not
+    dominate the forecast. Candidates with no confirmed games receive the
+    neutral roster median. This remains a provisional model, not a guarantee.
+    Odds are frozen by the caller when the market is opened.
     """
     if len(players) < 2:
         raise ValueError("At least two ranked candidates are required")
@@ -76,21 +77,44 @@ def plackett_luce_probabilities(
     games = [max(0, safe_int(player.get("games_played", 0))) for player in players]
     known_indexes = [index for index, count in enumerate(games) if count > 0]
 
+    # iMafia's total points already include its positive bonus component.
+    # Remove that component before using it as a separate feature; otherwise
+    # bonuses are counted twice. Normalize bonuses by games to avoid favoring
+    # players merely because they have a longer history.
     ppg = [
-        safe_float(player.get("points", 0)) / max(1, games[index])
+        (
+            safe_float(player.get("points", 0))
+            - safe_float(player.get("bonus_points", 0))
+        ) / max(1, games[index])
         for index, player in enumerate(players)
     ]
-    bonus = [safe_float(player.get("bonus_points", 0)) for player in players]
+    bonus = [
+        safe_float(player.get("bonus_points", 0)) / max(1, games[index])
+        for index, player in enumerate(players)
+    ]
     win_rate = [
         max(0, safe_int(player.get("wins", 0))) / max(1, games[index])
         for index, player in enumerate(players)
     ]
 
-    # A newcomer must not be treated as a zero-skill player. Use the median
-    # of candidates with history as a neutral prior for every missing feature.
+    # Shrink short histories toward the roster median. Ten prior games are a
+    # conservative pilot default; review this constant after the first three
+    # CHRONOS evenings instead of tuning it from one historical event.
+    prior_games = 10
     ppg_prior = median_or([ppg[index] for index in known_indexes], 0.0)
     bonus_prior = median_or([bonus[index] for index in known_indexes], 0.0)
     win_rate_prior = median_or([win_rate[index] for index in known_indexes], 0.0)
+
+    for index, count in enumerate(games):
+        if count > 0:
+            sample_weight = count / (count + prior_games)
+            ppg[index] = sample_weight * ppg[index] + (1 - sample_weight) * ppg_prior
+            bonus[index] = sample_weight * bonus[index] + (1 - sample_weight) * bonus_prior
+            win_rate[index] = sample_weight * win_rate[index] + (1 - sample_weight) * win_rate_prior
+        else:
+            ppg[index] = ppg_prior
+            bonus[index] = bonus_prior
+            win_rate[index] = win_rate_prior
 
     rank_values: list[float | None] = []
     for index, player in enumerate(players):
