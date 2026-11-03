@@ -142,6 +142,13 @@ async def buy_item(request):
     conn = await get_connection()
     try:
         async with conn.transaction():
+            # Serialize all wallet debits for this player to prevent concurrent double-spend.
+            player_lock=await conn.fetchval(
+                "SELECT user_id FROM public.users WHERE user_id=$1 FOR UPDATE",
+                user_id,
+            )
+            if not player_lock:
+                return json_response({"error":"player_not_found"},404)
             item = await conn.fetchrow(
                 "SELECT * FROM chronos.catalog_items WHERE item_id=$1 AND is_enabled=TRUE FOR UPDATE",
                 item_id,
