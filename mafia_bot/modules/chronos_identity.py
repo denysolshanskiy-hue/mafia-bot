@@ -10,6 +10,7 @@ from modules.chronos_common import (
     active_season_id, audit, json_response, json_value, ledger_balance, require_admin, check_player_achievements
 )
 from modules.chronos_logic import AVATAR_BASES, level_for_xp
+from modules.chronos_economy import calculate_activity_score, qualification_games_required
 
 
 async def get_identity(request):
@@ -109,7 +110,15 @@ async def store_catalog(request):
             user_id,
         )
         season_id=await active_season_id(conn)
-        accepted_bets=await conn.fetchval(
+        platform_settings=json_value(
+            await conn.fetchval(
+                "SELECT platform_settings FROM chronos.seasons WHERE season_id=$1",
+                season_id,
+            ),{}
+        ) if season_id else {}
+        prediction_rules=(platform_settings or {}).get("predictions",{})
+        required_forecasts=int(prediction_rules.get("store_unlock_after_predictions",6))
+        accepted_forecasts=await conn.fetchval(
             """
             SELECT COUNT(*) FROM chronos.prediction_bets b
             JOIN chronos.prediction_markets m ON m.market_id=b.market_id
@@ -117,14 +126,15 @@ async def store_catalog(request):
             """,
             season_id,user_id,
         ) if season_id else 0
-        unlocked=int(accepted_bets or 0)>=6
+        unlocked=int(accepted_forecasts or 0)>=required_forecasts
         return json_response({
             "balances": {
                 "CR": await ledger_balance(conn,user_id,"CR"),
                 "EX": await ledger_balance(conn,user_id,"EX"),
             },
             "ex_store_unlocked":unlocked,
-            "accepted_bets":int(accepted_bets or 0),
+            "accepted_forecasts":int(accepted_forecasts or 0),
+            "required_forecasts":required_forecasts,
             "items": [dict(row) for row in items],
         })
     except asyncpg.UndefinedTableError:
@@ -158,12 +168,18 @@ async def buy_item(request):
                     """
                     SELECT COUNT(*) FROM chronos.prediction_bets b
                     JOIN chronos.prediction_markets m ON m.market_id=b.market_id
-                    WHERE m.season_id=$1 AND b.bettor_user_id=$2
+                    WHERE m.season_id=$1 AND b.bettor_user_id=$2 AND b.status<>'refunded'
                     """,
                     season_id,user_id,
                 ) if season_id else 0
-                if int(accepted_bets or 0)<6:
-                    return json_response({"error":"ex_store_locked","accepted_bets":int(accepted_bets or 0),"required_bets":6},403)
+                required_forecasts=6
+                if season_id:
+                    platform=json_value(await conn.fetchval(
+                        "SELECT platform_settings FROM chronos.seasons WHERE season_id=$1",season_id
+                    ),{}) or {}
+                    required_forecasts=int(platform.get("predictions",{}).get("store_unlock_after_predictions",6))
+                if int(accepted_bets or 0)<required_forecasts:
+                    return json_response({"error":"ex_store_locked","accepted_forecasts":int(accepted_bets or 0),"required_forecasts":required_forecasts},403)
             balance = await ledger_balance(conn,user_id,item["currency"])
             if balance < item["price"]:
                 return json_response({"error":"insufficient_funds","balance":balance},409)
@@ -494,7 +510,7 @@ async def operations(request):
         )
         attended_finals = await conn.fetchval(
             """
-            SELECT COUNT(*) FROM chronos.final_invitations fi
+            SELECT COUNT(DISTINCT s.slot_id) FROM chronos.final_invitations fi
             JOIN chronos.event_slots s ON s.slot_id=fi.slot_id
             JOIN chronos.games g ON g.bot_event_id=s.bot_event_id AND g.status='confirmed'
             JOIN chronos.game_players gp ON gp.game_id=g.game_id AND gp.user_id=$2
@@ -518,7 +534,11 @@ async def operations(request):
             season_id,user_id,
         )
         app_actions = await conn.fetchval(
-            "SELECT COUNT(*) FROM chronos.activity_events WHERE season_id=$1 AND user_id=$2 AND verified=TRUE",
+            """
+            SELECT COALESCE(SUM(GREATEST(score_value,0)),0)
+            FROM chronos.activity_events
+            WHERE season_id=$1 AND user_id=$2 AND verified=TRUE
+            """,
             season_id,user_id,
         )
         settings = json_value(season["platform_settings"], {}) or {}
@@ -526,13 +546,23 @@ async def operations(request):
         attendance_total = int(eligible_regular or 0) + int(invited_finals or 0)
         attendance_done = int(attended_regular or 0) + int(attended_finals or 0)
         attendance_pct = round(100*attendance_done/attendance_total,1) if attendance_total else 0.0
-        qualifies = int(played_games or 0) >= math.ceil(0.3*int(conducted_games or 0)) if conducted_games else False
+        required_games=qualification_games_required(int(conducted_games or 0))
+        qualifies = int(played_games or 0) >= required_games if conducted_games else False
+        score=calculate_activity_score(
+            attended_slots=attendance_done,
+            eligible_slots=attendance_total,
+            verified_app_actions=int(app_actions or 0),
+            completed_minigames=int(mini_game_count or 0),
+            weights=weights.get("weights",{"attendance":80,"app":15,"minigame":5}),
+            app_actions_cap=int(weights.get("app_actions_cap",15)),
+            minigame_completions_cap=int(weights.get("minigame_completions_cap",5)),
+        )
         return json_response({
             "season":{"status":season["status"]},
             "participation":{
                 "games_played":int(played_games or 0),
                 "games_conducted":int(conducted_games or 0),
-                "qualification_minimum":math.ceil(0.3*int(conducted_games or 0)),
+                "qualification_minimum":required_games,
                 "qualified":qualifies,
             },
             "attendance":{"eligible_evenings":attendance_total,"attended":attendance_done,"percent":attendance_pct},
@@ -540,6 +570,10 @@ async def operations(request):
             "verified_app_actions":int(app_actions or 0),
             "activity_score_status":weights.get("status","draft"),
             "activity_score_weights":weights.get("weights",{"attendance":80,"app":15,"minigame":5}),
+            "activity_score":score,
+            "activity_coefficient":score["activity_coefficient"],
+            "activity_score_eligible_slots":attendance_total,
+            "activity_score_attended_slots":attendance_done,
             "invitations":[dict(row) for row in invitations],
         })
     finally:
