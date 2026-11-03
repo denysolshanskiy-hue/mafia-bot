@@ -2,10 +2,26 @@
 
 import asyncpg
 from aiohttp import web
+from datetime import date, datetime
+from decimal import Decimal
+
+
+def json_safe(value):
+    if isinstance(value, dict):
+        return {str(k): json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_safe(v) for v in value]
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, asyncpg.Record):
+        return json_safe(dict(value))
+    return value
 
 
 def json_response(payload, status=200):
-    return web.json_response(payload, status=status, headers={"Cache-Control": "no-store"})
+    return web.json_response(json_safe(payload), status=status, headers={"Cache-Control": "no-store"})
 
 
 async def active_season_id(conn):
