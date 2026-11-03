@@ -8,7 +8,7 @@ import asyncpg
 from aiohttp import web
 
 from modules.chronos_common import (
-    active_season_id, audit, json_response, json_value, ledger_balance, notify_user, require_admin, award_ledger
+    active_season_id, audit, check_player_achievements, json_response, json_value, ledger_balance, notify_user, require_admin, award_ledger
 )
 from modules.chronos_logic import plackett_luce_probabilities
 
@@ -288,6 +288,7 @@ async def place_bet(request):
                 conn,user_id,"EX",-stake,"prediction_stake",
                 f"prediction:stake:{bet['bet_id']}",str(bet["bet_id"]),
             )
+            await check_player_achievements(conn,market["season_id"],user_id)
             await conn.execute(
                 """
                 INSERT INTO chronos.activity_events(season_id,user_id,action_code,score_value,source_key,verified,metadata)
