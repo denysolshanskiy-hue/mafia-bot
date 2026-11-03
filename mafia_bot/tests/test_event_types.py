@@ -1,6 +1,9 @@
 import unittest
 
-from modules.event_types import detect_event_type
+try:
+    from modules.event_types import detect_event_type
+except ModuleNotFoundError:
+    from mafia_bot.modules.event_types import detect_event_type
 
 
 class DetectEventTypeTests(unittest.TestCase):
