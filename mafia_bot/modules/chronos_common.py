@@ -4,6 +4,7 @@ import asyncpg
 from aiohttp import web
 from datetime import date, datetime
 from decimal import Decimal
+import json
 
 
 def json_safe(value):
@@ -17,6 +18,17 @@ def json_safe(value):
         return float(value)
     if isinstance(value, asyncpg.Record):
         return json_safe(dict(value))
+    return value
+
+
+def json_value(value, fallback=None):
+    if value is None:
+        return fallback
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except (TypeError, ValueError):
+            return fallback
     return value
 
 
