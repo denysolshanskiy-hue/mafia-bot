@@ -49,10 +49,19 @@ jobs:
               "/api/chronos/events",
               "/api/chronos/events/{event_id}",
               "/api/chronos/events/{event_id}/register",
+              "/miniapp",
+              "/miniapp/",
+              "/miniapp/assets",
           }
           registered = {resource.canonical for resource in app.router.resources()}
           missing = expected - registered
           if missing:
               raise SystemExit(f"Missing routes: {sorted(missing)}")
-          print("CHRONOS routes registered successfully")
+
+          from pathlib import Path
+          miniapp_dir = Path("mafia_bot/miniapp")
+          for asset in ("index.html", "assets/app.css", "assets/app.js"):
+              if not (miniapp_dir / asset).is_file():
+                  raise SystemExit(f"Missing Mini App asset: {asset}")
+          print("CHRONOS API and Mini App routes/assets verified")
           PY
