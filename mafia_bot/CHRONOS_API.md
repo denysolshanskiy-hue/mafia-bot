@@ -1,84 +1,113 @@
-# CHRONOS Mini App API
+# CHRONOS Mini App and platform
 
-The API is mounted on the existing bot `aiohttp` server. It uses the same `BOT_TOKEN` and `DATABASE_URL` as the Telegram bot.
+The Mini App is served by the existing bot aiohttp server. It uses the existing BOT_TOKEN and DATABASE_URL; it does not create a second bot, event system, or registration table.
 
-## Authentication
+## Current implementation
 
-Send Telegram's raw `Telegram.WebApp.initData` value on every request:
+### Player experience
+- Home, 10-floor Tower, planned/live event calendar, event detail and roster, registration and cancellation.
+- Profile identity: eight selectable avatar bases, earned titles and up to two earned badges.
+- Operations: personal confirmed game count, current qualification check, attendance summary and final invitations.
+- iMafia ranking snapshots and global synchronization counter (690 game participations).
+- CODE BREAKER and MEMORY server-authoritative mini-games. Session state and answer keys are stored on the server.
+- CR / EX / XP ledger, achievements, collection, catalogue, equipment and player ledger history.
+- Prediction Exchange with frozen odds, duplicate protection, per-evening limits, manual result settlement and refunds if a roster changes.
+- In-app notification inbox and category preferences.
 
-```http
-Authorization: tma <raw-initData>
-```
+### Admin console
+- Season state and draft activity/prediction settings.
+- Planned slot dates/titles and mapping to real bot-created CHRONOS events.
+- iMafia screenshot upload, server OCR draft, manual JSON correction, review, confirm or reject.
+- Ranking snapshot import and confirmed game-results import. Each game must have exactly 10 unique mapped players and placements 1–10.
+- Final TOP-10 invitation creation, accepted/declined responses, next-rank replacement and manual expiry processing.
+- Attendance closure after the linked bot event is closed.
+- Prediction market creation and settlement / void-refunds.
+- Prize award drafts, approval and manual paid status.
+- Catalog pricing/enablement, controlled ledger corrections, player list and audit log.
 
-Do not send `initDataUnsafe` and do not trust a Telegram user ID supplied in the request body. The backend verifies Telegram's HMAC signature and the `auth_date` timestamp. The default maximum age is 24 hours; it can be changed with `TELEGRAM_INIT_DATA_MAX_AGE` (seconds).
+## Authentication and data ownership
 
-Example browser request:
+Every /api/chronos/* request must include Telegram's raw Telegram.WebApp.initData value in the Authorization header using the tma scheme.
 
-```js
-const initData = window.Telegram.WebApp.initData;
+Do not send initDataUnsafe and do not trust a Telegram user ID supplied in the body. The backend verifies Telegram's HMAC signature and auth_date. Default maximum age is 24 hours; configure TELEGRAM_INIT_DATA_MAX_AGE in seconds to change it.
 
-const response = await fetch("/api/chronos/events", {
-  headers: { Authorization: `tma ${initData}` },
-});
-const data = await response.json();
-```
+- The Telegram bot remains the only creator of live events and the owner of bot/group event broadcasts.
+- Live events and rosters use the existing public.events and public.registrations tables.
+- Mini App registration/cancellation uses those same registrations. It does not send a second broadcast.
+- Evening roster size is not capped at ten. Ten is the number of seats in one Mafia game.
+- Ranking snapshots, played-game rows, and attendance are only changed by an admin-confirmed import; OCR output alone never changes a ranking.
 
-## Endpoints
+## API routes
 
-| Method | Path | Purpose |
+All paths below are authenticated with Telegram initData.
+
+| Area | Method | Path |
 |---|---|---|
-| GET | `/api/chronos/me` | Checks whether the Telegram user has a bot profile and game nickname |
-| GET | `/api/chronos/events` | Returns the current draft/active/paused CHRONOS season, active bot-created CHRONOS events, and unlinked planned slots |
-| GET | `/api/chronos/events/{event_id}` | Returns an event and its active roster |
-| POST | `/api/chronos/events/{event_id}/register` | Registers the authenticated Telegram user in the existing `public.registrations` table |
+| Events | GET | /api/chronos/events |
+| Events | GET | /api/chronos/events/{event_id} |
+| Events | POST | /api/chronos/events/{event_id}/register |
+| Events | POST | /api/chronos/events/{event_id}/cancel |
+| Profile | GET / POST | /api/chronos/identity, /identity/avatar, /identity/appearance |
+| Store | GET / POST | /api/chronos/store, /store/{item_id}/buy, /store/{item_id}/equip |
+| Player data | GET | /api/chronos/operations, /rankings, /achievements, /collection, /ledger |
+| Notifications | GET / POST | /api/chronos/notifications, /notifications/{id}/read, /notifications/preferences |
+| Mini-games | GET / POST | /api/chronos/games, /games/{game_code}, /games/sessions/{session_id}/action |
+| Predictions | GET / POST | /api/chronos/predictions, /predictions/markets/open, /predictions/markets/{id}/bet, /predictions/markets/{id}/settle |
+| Admin | GET / POST | /api/chronos/admin/* (overview, slots, imports, invitations, prizes, economy, catalog, players, audit and settings) |
 
-Registration body is optional:
+## Database migrations
 
-```json
-{ "comment": "Optional note, up to 500 characters" }
-```
+Run these manually in a staging Neon branch first, after confirming the existing public schema and making a backup:
 
-The backend requires the user to have completed `/start` in the bot and have a game nickname. A registration is allowed only while the CHRONOS season is active and the original bot event has `event_type = 'chronos'` and `status = 'active'`.
+1. 001_chronos_foundation.sql — schema, draft CHRONOS season and 13 planned slots.
+2. 002_active_registration_unique.sql — partial unique index preventing duplicate active registrations. It intentionally stops when duplicate pairs exist.
+3. 003_chronos_platform.sql — identity, inventory, currency ledger, ranking/game imports, attendance, mini-games, predictions, notifications, prizes and audit structures.
 
-## Data ownership and safety
+Do not execute database.init_db() as a production migration. It contains a legacy DDL definition and is not a schema migration tool.
 
-- The Telegram bot remains the only creator of live events and owns the event broadcast.
-- The Mini App reads live event details from `public.events` and the roster from `public.registrations`.
-- Mini App registration writes to the same `public.registrations` table. It does not create an event or send a duplicate group/bot broadcast.
-- Planned slots are stored in `chronos.event_slots`; when the bot creates the real event, an admin-side mapping can link the slot to its `event_id`.
-- Event rosters are not capped at ten people. `players_per_game = 10` is the number of seats in one Mafia game, not the maximum size of an evening roster.
-- Active duplicate registrations are prevented by the partial unique index created in migration `002_active_registration_unique.sql`. Cancelled historical rows are preserved.
+**Schema compatibility check before applying:** the existing bot database must contain public.users, public.events, and public.registrations with the columns used by the API, including public.events.event_type. PR #2 adds event-type detection in the bot but does not include a SQL migration. Confirm that the deployed database already has event_type; if it does not, add and review a separate compatibility migration before deploying.
 
-## Database rollout
+## Environment variables
 
-Run migrations manually in Neon SQL Editor in this order:
+Existing:
+- BOT_TOKEN
+- DATABASE_URL
+- PAYMENT_CARD_NUMBER — required by PR #2 to preserve the current bot payment-message flow.
 
-1. `001_chronos_foundation.sql` — creates the schema, a draft `CHRONOS` season, and 13 planned slots.
-2. `002_active_registration_unique.sql` — prevents duplicate active registrations.
+For Mini App:
+- CHRONOS_WEBAPP_URL=https://YOUR-PUBLIC-HOST/miniapp — actual Koyeb public HTTPS URL.
+- TELEGRAM_INIT_DATA_MAX_AGE=86400 — optional initData age limit in seconds.
 
-Migration 002 deliberately stops if duplicate active `(event_id, user_id)` registrations exist. Do not run `database.init_db()` against production; that function contains an outdated schema definition.
+The Docker image installs Tesseract with Ukrainian and English language packs for screenshot OCR. OCR is an assistive draft only; an admin must correct and confirm every import.
 
-The season is deliberately seeded as `draft`. When the schedule and app are ready to accept registrations, activate it manually:
+## Rules intentionally left as draft
 
-```sql
-UPDATE chronos.seasons
-SET status = 'active', updated_at = NOW()
-WHERE season_code = 'CHRONOS';
-```
+These values are not active season policy until the organizer approves them:
+- Activity Score weights currently prefilled as 80 / 15 / 5.
+- Prediction Exchange limits, house margin, candidate model and EX rewards.
+- Store catalogue prices and which items are enabled.
+- XP progression curve and any real-money activity coefficient/bonus treatment.
+- Prize rules. Existing example amounts are stored disabled; award records require manual drafting and approval.
 
-Pause registrations without deleting data by changing the status to `paused`. Planned slots remain in the calendar; only events created by the bot and marked `event_type = 'chronos'` are treated as live events.
+The sporting TOP-10 and 30% participation qualification come from confirmed iMafia/game data, not XP, CR, EX or app usage. The current Operations view displays attendance and draft Activity Score inputs; the final cumulative Activity Score / monetary coefficient calculation still requires rule approval and implementation verification.
 
-## Current scope
+## Checks already run
 
-This PR adds the backend API only. The Mini App's visual frontend, launch button/menu entry, and admin-side event-slot mapping are separate next steps.
+GitHub Actions on the latest PR #4 head completed successfully:
+- Python compile check.
+- JavaScript syntax check for app.js and modules.js.
+- Existing unit tests.
+- Imports and aiohttp route registration for player/admin modules.
+- Existence of all Mini App static assets.
 
+This is not a live Neon integration test or a rendered Telegram WebView test. Those remain pre-launch acceptance checks.
 
-## Mini App launch
+## Safe rollout order
 
-The visual Mini App is served from `/miniapp` on the same aiohttp server as the bot. Set the Koyeb environment variable:
+1. Review and merge PR #2 first (event type classifier; it remains a draft and requires PAYMENT_CARD_NUMBER in Koyeb).
+2. Merge PR #4 only after PR #2 is on main.
+3. Apply migrations 001, 002 and 003 in staging, verify schema and sample data, then repeat on production only after backup and approval.
+4. Configure CHRONOS_WEBAPP_URL, TELEGRAM_INIT_DATA_MAX_AGE, and verify the public HTTPS Mini App launch in Telegram.
+5. Run admin/player acceptance tests and only then decide whether to activate the season.
 
-```text
-CHRONOS_WEBAPP_URL=https://YOUR-PUBLIC-HOST/miniapp
-```
-
-Use the real public HTTPS domain assigned to the Koyeb service. The CHRONOS launch button appears in the admin/player Telegram reply keyboard only when this value is a valid HTTPS URL. Without it, existing menus remain unchanged.
+No Neon migration, PR merge, Koyeb deployment, environment-variable change or season activation is performed by this implementation work.
