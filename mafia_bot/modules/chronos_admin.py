@@ -969,9 +969,147 @@ async def admin_update_settings(request):
         await conn.close()
 
 
+
+
+async def update_planned_slot(request):
+    actor_id=request["telegram_user"]["id"]
+    slot_id=int(request.match_info["slot_id"])
+    try:
+        payload=await request.json()
+    except (ValueError,json.JSONDecodeError):
+        return json_response({"error":"invalid_json"},400)
+    allowed={"title","planned_date","status"}
+    if not isinstance(payload,dict) or not payload or not set(payload).issubset(allowed):
+        return json_response({"error":"invalid_slot_update"},400)
+    if "status" in payload and payload["status"] not in ("planned","cancelled"):
+        return json_response({"error":"invalid_slot_status"},400)
+    if "title" in payload and (not isinstance(payload["title"],str) or not payload["title"].strip() or len(payload["title"])>120):
+        return json_response({"error":"invalid_slot_title"},400)
+    planned_date=None
+    if "planned_date" in payload and payload["planned_date"]:
+        try:
+            planned_date=date.fromisoformat(payload["planned_date"])
+        except (TypeError,ValueError):
+            return json_response({"error":"planned_date_must_be_YYYY_MM_DD"},400)
+    from database import get_connection
+    conn=await get_connection()
+    try:
+        error=await require_admin(request,conn)
+        if error:
+            return error
+        slot=await conn.fetchrow("SELECT * FROM chronos.event_slots WHERE slot_id=$1",slot_id)
+        if not slot:
+            return json_response({"error":"slot_not_found"},404)
+        title=payload.get("title",slot["title"])
+        status=payload.get("status",slot["status"])
+        target_date=planned_date if "planned_date" in payload else slot["planned_date"]
+        await conn.execute(
+            "UPDATE chronos.event_slots SET title=$2,planned_date=$3,status=$4,updated_at=NOW() WHERE slot_id=$1",
+            slot_id,title,target_date,status,
+        )
+        await audit(conn,actor_id,"event_slot_updated","event_slot",slot_id,payload)
+        return json_response({"updated":True,"slot_id":slot_id})
+    finally:
+        await conn.close()
+
+
+async def set_season_status(request):
+    actor_id=request["telegram_user"]["id"]
+    try:
+        payload=await request.json()
+        status=payload["status"]
+    except (ValueError,KeyError,TypeError,json.JSONDecodeError):
+        return json_response({"error":"status_required"},400)
+    if status not in ("draft","active","paused","completed"):
+        return json_response({"error":"invalid_season_status"},400)
+    from database import get_connection
+    conn=await get_connection()
+    try:
+        error=await require_admin(request,conn)
+        if error:
+            return error
+        async with conn.transaction():
+            season=await conn.fetchrow("SELECT season_id,status FROM chronos.seasons ORDER BY season_id DESC LIMIT 1 FOR UPDATE")
+            if not season:
+                return json_response({"error":"season_not_found"},404)
+            if status=="active":
+                # Prevent two CHRONOS seasons from being active simultaneously.
+                await conn.execute("UPDATE chronos.seasons SET status='paused',updated_at=NOW() WHERE status='active' AND season_id<>$1",season["season_id"])
+            await conn.execute("UPDATE chronos.seasons SET status=$2,updated_at=NOW() WHERE season_id=$1",season["season_id"],status)
+            await audit(conn,actor_id,"season_status_changed","season",season["season_id"],{"from":season["status"],"to":status})
+        return json_response({"updated":True,"status":status})
+    finally:
+        await conn.close()
+
+
+async def reject_import(request):
+    actor_id=request["telegram_user"]["id"]
+    import_id=int(request.match_info["import_id"])
+    try:
+        payload=await request.json()
+        reason=str(payload.get("reason","")).strip()
+    except (ValueError,json.JSONDecodeError):
+        reason=""
+    from database import get_connection
+    conn=await get_connection()
+    try:
+        error=await require_admin(request,conn)
+        if error:
+            return error
+        result=await conn.execute(
+            """
+            UPDATE chronos.import_batches SET status='rejected',confirmed_by=$2,confirmed_at=NOW()
+            WHERE import_id=$1 AND status='needs_review'
+            """,
+            import_id,actor_id,
+        )
+        if result.endswith("0"):
+            return json_response({"error":"import_not_rejectable"},409)
+        await audit(conn,actor_id,"import_rejected","import",import_id,{"reason":reason})
+        return json_response({"rejected":True})
+    finally:
+        await conn.close()
+
+
+async def update_prize_rule(request):
+    actor_id=request["telegram_user"]["id"]
+    try:
+        payload=await request.json()
+        event_kind=payload["event_kind"]
+        place=int(payload["place"])
+        amount=int(payload["amount_uah"])
+        enabled=bool(payload.get("is_enabled",False))
+        note=str(payload.get("rule_note",""))
+    except (ValueError,KeyError,TypeError,json.JSONDecodeError):
+        return json_response({"error":"invalid_prize_rule"},400)
+    if event_kind not in ("intermediate_final","main_final","legacy") or place<1 or amount<0:
+        return json_response({"error":"invalid_prize_rule_values"},400)
+    from database import get_connection
+    conn=await get_connection()
+    try:
+        error=await require_admin(request,conn)
+        if error:
+            return error
+        season_id=await conn.fetchval("SELECT season_id FROM chronos.seasons ORDER BY season_id DESC LIMIT 1")
+        await conn.execute(
+            """
+            INSERT INTO chronos.prize_rules(season_id,event_kind,place,amount_uah,is_enabled,rule_note)
+            VALUES($1,$2,$3,$4,$5,$6)
+            ON CONFLICT(season_id,event_kind,place) DO UPDATE
+              SET amount_uah=EXCLUDED.amount_uah,is_enabled=EXCLUDED.is_enabled,rule_note=EXCLUDED.rule_note
+            """,
+            season_id,event_kind,place,amount,enabled,note,
+        )
+        await audit(conn,actor_id,"prize_rule_updated","season",season_id,payload)
+        return json_response({"saved":True})
+    finally:
+        await conn.close()
+
 def register_admin_routes(app):
     app.router.add_get("/api/chronos/admin/overview",admin_overview)
     app.router.add_get("/api/chronos/admin/slots",admin_slots)
+    app.router.add_post("/api/chronos/admin/slots/{slot_id:\\d+}",update_planned_slot)
+    app.router.add_post("/api/chronos/admin/season/status",set_season_status)
     app.router.add_post("/api/chronos/admin/slots/{slot_id:\\d+}/link",link_slot_to_bot_event)
     app.router.add_post("/api/chronos/admin/slots/{slot_id:\\d+}/invitations",generate_invitations)
     app.router.add_post("/api/chronos/admin/invitations/process-expired",process_expired_invitations)
@@ -983,10 +1121,12 @@ def register_admin_routes(app):
     app.router.add_get("/api/chronos/admin/imports/{import_id:\\d+}/image",import_image)
     app.router.add_post("/api/chronos/admin/imports/{import_id:\\d+}/review",save_import_review)
     app.router.add_post("/api/chronos/admin/imports/{import_id:\\d+}/confirm",confirm_import)
+    app.router.add_post("/api/chronos/admin/imports/{import_id:\\d+}/reject",reject_import)
 
     app.router.add_get("/api/chronos/admin/players",admin_players)
     app.router.add_get("/api/chronos/admin/audit",admin_audit)
     app.router.add_get("/api/chronos/admin/prizes",admin_prizes)
+    app.router.add_post("/api/chronos/admin/prize-rules",update_prize_rule)
     app.router.add_post("/api/chronos/admin/prizes",create_prize_awards)
     app.router.add_post("/api/chronos/admin/prizes/{award_id:\\d+}/status",update_prize_status)
     app.router.add_post("/api/chronos/admin/economy/adjust",admin_adjust_ledger)
