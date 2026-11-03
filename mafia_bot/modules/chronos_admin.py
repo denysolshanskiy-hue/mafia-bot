@@ -1328,6 +1328,12 @@ async def admin_adjust_ledger(request):
         if error:
             return error
         async with conn.transaction():
+            player_lock=await conn.fetchval(
+                "SELECT user_id FROM public.users WHERE user_id=$1 FOR UPDATE",
+                user_id,
+            )
+            if not player_lock:
+                return json_response({"error":"user_not_found"},404)
             if currency=="EX" and amount>0 and not reason.lower().startswith("correction:"):
                 return json_response({"error":"EX_is_only_earned_through_predictions_or_explicit_correction"},403)
             created=await award_ledger(conn,user_id,currency,amount,"admin_adjustment",f"admin:{idempotency_key}",metadata={"reason":reason},created_by=actor_id)
