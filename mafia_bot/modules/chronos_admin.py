@@ -9,7 +9,7 @@ import asyncpg
 from aiohttp import web
 
 from modules.chronos_common import (
-    audit, check_player_achievements, json_response, json_value, ledger_balance, notify_user, require_admin, award_ledger
+    audit, award_game_and_evening_rewards, check_player_achievements, json_response, json_value, ledger_balance, notify_user, require_admin, award_ledger
 )
 
 
@@ -472,17 +472,41 @@ async def confirm_import(request):
                     """,
                     import_id,event["slot_id"],
                 )
-                participants=await conn.fetch(
+                reward_rows=await conn.fetch(
                     """
-                    SELECT DISTINCT gp.user_id FROM chronos.game_players gp
-                    JOIN chronos.games g ON g.game_id=gp.game_id
-                    WHERE g.source_import_id=$1
+                    SELECT g.game_id,g.bot_event_id,g.counts_for_sync,gp.user_id
+                    FROM chronos.games g
+                    JOIN chronos.game_players gp ON gp.game_id=g.game_id
+                    WHERE g.source_import_id=$1 AND g.status='confirmed'
+                    ORDER BY g.game_id,gp.user_id
                     """,
                     import_id,
                 )
-                for participant in participants:
-                    await check_player_achievements(conn,batch["season_id"],participant["user_id"])
-                summary={"games":inserted_games,"counts_for_sync":counts_for_sync}
+                season_settings=json_value(
+                    await conn.fetchval(
+                        "SELECT platform_settings FROM chronos.seasons WHERE season_id=$1",
+                        batch["season_id"],
+                    ),
+                    {},
+                ) or {}
+                economy_settings=season_settings.get("economy",{})
+                issued={"CR":0,"XP":0}
+                for reward_row in reward_rows:
+                    amounts=await award_game_and_evening_rewards(
+                        conn,batch["season_id"],reward_row["bot_event_id"],
+                        reward_row["game_id"],reward_row["user_id"],economy_settings,
+                    )
+                    issued["CR"]+=amounts["CR"]
+                    issued["XP"]+=amounts["XP"]
+                participants=sorted({row["user_id"] for row in reward_rows})
+                for participant_id in participants:
+                    await check_player_achievements(conn,batch["season_id"],participant_id)
+                summary={
+                    "games":inserted_games,
+                    "counts_for_sync":counts_for_sync,
+                    "currency_issued":issued,
+                    "economy_rewards_pending":economy_settings.get("status")!="approved",
+                }
             await conn.execute(
                 """
                 UPDATE chronos.import_batches
