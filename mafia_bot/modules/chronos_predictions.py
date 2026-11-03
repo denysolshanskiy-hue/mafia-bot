@@ -33,6 +33,11 @@ async def list_predictions(request):
             WHERE status='open' AND closes_at<=NOW()
             """
         )
+        active_config = await conn.fetchrow(
+            "SELECT platform_settings FROM chronos.seasons WHERE status IN ('draft','active','paused') ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'paused' THEN 1 ELSE 2 END,season_id DESC LIMIT 1"
+        )
+        active_settings = json_value(active_config["platform_settings"], {}) if active_config else {}
+        rules_status = (active_settings or {}).get("predictions", {}).get("status", "draft")
         markets = await conn.fetch(
             """
             SELECT m.market_id,m.bot_event_id,m.market_type,m.status,m.opened_at,m.closes_at,
@@ -77,7 +82,7 @@ async def list_predictions(request):
         return json_response({
             "balance_ex":await ledger_balance(conn,user_id,"EX"),
             "markets":out,
-            "rules_status":(settings.get("status","draft") if "settings" in locals() else "draft"),
+            "rules_status":rules_status,
             "currency_notice":"EX — ігрова валюта без грошової вартості. Її не можна купити, передати або вивести.",
         })
     except asyncpg.UndefinedTableError:
