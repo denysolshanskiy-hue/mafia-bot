@@ -109,7 +109,33 @@ Limits:
 - EX Store opens permanently after six accepted non-void forecasts across the player's CHRONOS history (normally two events if all three markets are used).
 - The 5 EX reward floor preserves the expected-value curve even for very high-probability candidates. The 100 EX ceiling reduces the expected value of very unlikely candidates below 5 EX, limiting the faucet on long shots.
 
-The candidate probability model is a Plackett–Luce simulation based on confirmed iMafia snapshot statistics. It is a forecast heuristic, not a promise of winning probability. It must be checked against actual outcomes after the season before the model is treated as calibrated.
+The candidate probability model is a Plackett–Luce simulation based on a confirmed iMafia ranking snapshot. It is a forecast heuristic, not a promise of winning probability.
+
+**Pilot model policy (three first evenings):**
+- Keep the existing feature weights fixed during the first three CHRONOS evenings: points/game 40%, total bonus points 20%, win rate 20%, and inverse current rank 20%. The single historical check below is not enough evidence to tune weights.
+- If a registered player has no row in the latest snapshot, the market opener adds an empty cold-start row. The model replaces missing/zero-history features with the median of the known candidates in that roster. A newcomer is not assigned zero skill or automatically placed last.
+- If no candidates in the roster have prior games, the feature values are equal and the model produces an approximately uniform forecast.
+- Candidate probabilities and rewards remain frozen when markets open. Model changes apply only to future markets; never recalculate a forecast using post-event data.
+
+After each of the first three evenings, record the frozen TOP1/TOP2/TOP3 probabilities and actual placements. Review:
+1. Top-1/top-2/top-3 hit rates against a uniform 1/N baseline.
+2. Multiclass log loss and Brier score for each placement market.
+3. Calibration by probability bands (predicted probability versus actual frequency), with sample counts shown.
+4. Share of participants receiving neutral cold-start treatment and the effect of missing ranking rows.
+5. EX issued per accepted forecast and the distribution of predicted probabilities.
+
+Do not reweight the model after the first evening. After three evenings, decide whether to retain it or version a change. Three evenings are still a small sample; treat the result as an initial operational review, not proof of statistical calibration.
+
+### Preliminary historical smoke test — 25 October 2026
+
+Mafia Scout lists the KMC evening on 25 October 2026 as 8 games and 10 players. The observed evening podium was Кубик, Бетховен and Bananchikk. For a retrospective check, the model inputs were reconstructed by subtracting each player's 25 October contribution from their cumulative KMC totals; the two players with no prior KMC games were given the new neutral cold-start treatment. The pre-evening rank positions were reconstructed approximately from the cumulative ranking, not taken from an archived pre-evening snapshot.
+
+Using the existing 40/20/20/20 model, a fixed seed and 12,000 Plackett–Luce simulations, the realized placements had these probabilities:
+- Кубик — 10.47% for TOP1 (actual 1st).
+- Бетховен — 8.98% for TOP2 (actual 2nd).
+- Bananchikk — 15.80% for TOP3 (actual 3rd).
+
+The model's highest TOP1 estimate was for Sakura (about 22.55%), so it did not identify the actual winner as the favorite. Across these three realized outcomes, the summed log loss was about 6.51 versus 6.91 for a uniform 10-player baseline; mean multiclass Brier score was about 0.884 versus 0.900 for the uniform baseline. This is only one evening and the input snapshot is reconstructed, so these numbers are a smoke test, not a reliable estimate of long-run accuracy. The weights are therefore kept unchanged for the first three CHRONOS evenings.
 
 ## 5. Activity Score and the UAH 500 bonus
 
