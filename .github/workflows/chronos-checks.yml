@@ -68,6 +68,7 @@ jobs:
               "/api/chronos/admin/imports/upload",
               "/api/chronos/admin/season-bonus/calculate",
               "/api/chronos/admin/economy/reconcile",
+              "/api/chronos/admin/economy/report",
               "/miniapp",
               "/miniapp/",
               "/miniapp/assets",
