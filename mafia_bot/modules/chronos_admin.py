@@ -1364,18 +1364,24 @@ async def admin_update_catalog_item(request):
         if error:
             return error
         item=await conn.fetchrow(
-            "SELECT item_id,item_code,currency FROM chronos.catalog_items WHERE item_id=$1",
+            "SELECT item_id,item_code,currency,price FROM chronos.catalog_items WHERE item_id=$1",
             item_id,
         )
         if not item:
             return json_response({"error":"catalog_item_not_found"},404)
+        season=await conn.fetchrow(
+            "SELECT platform_settings FROM chronos.seasons ORDER BY season_id DESC LIMIT 1",
+        )
+        settings=json_value(season["platform_settings"],{}) if season else {}
+        economy=(settings or {}).get("economy",{})
+        predictions=(settings or {}).get("predictions",{})
+        if economy.get("status")=="approved" and price!=int(item["price"]):
+            return json_response({
+                "error":"catalogue_prices_locked_for_approved_economy",
+                "current_price":int(item["price"]),
+                "message":"Зміна ціни потребує нової версії економіки та міграції.",
+            },409)
         if enabled:
-            season=await conn.fetchrow(
-                "SELECT platform_settings FROM chronos.seasons ORDER BY season_id DESC LIMIT 1",
-            )
-            settings=json_value(season["platform_settings"],{}) if season else {}
-            economy=(settings or {}).get("economy",{})
-            predictions=(settings or {}).get("predictions",{})
             if economy.get("status")!="approved":
                 return json_response({"error":"economy_not_approved"},409)
             if item["currency"]=="EX" and predictions.get("status")!="approved":
