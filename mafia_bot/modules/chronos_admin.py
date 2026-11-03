@@ -12,7 +12,6 @@ from modules.chronos_common import (
     audit, award_game_and_evening_rewards, check_player_achievements, json_response, json_value, ledger_balance, notify_user, require_admin, award_ledger
 )
 from modules.chronos_economy import allocate_activity_bonus, calculate_activity_score, qualification_games_required
-)
 
 
 def _user_id_from_row(row):
