@@ -22,7 +22,7 @@ DEFAULT_ECONOMY = {
     "minigame_repeat_xp": 5,
     "minigame_repeat_cap": 10,
     "prediction_expected_reward_ex": 5,
-    "prediction_min_reward_ex": 25,
+    "prediction_min_reward_ex": 5,
     "prediction_max_reward_ex": 100,
     "prediction_max_forecasts_per_event": 3,
     "prediction_ex_season_cap": 500,
