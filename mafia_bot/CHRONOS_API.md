@@ -53,7 +53,8 @@ All paths below are authenticated with Telegram initData.
 | Notifications | GET / POST | /api/chronos/notifications, /notifications/{id}/read, /notifications/preferences |
 | Mini-games | GET / POST | /api/chronos/games, /games/{game_code}, /games/sessions/{session_id}/action |
 | Predictions | GET / POST | /api/chronos/predictions, /predictions/markets/open, /predictions/markets/{id}/bet, /predictions/markets/{id}/settle |
-| Admin | GET / POST | /api/chronos/admin/* (overview, slots, imports, invitations, prizes, economy, catalog, players, audit and settings) |
+| Admin | GET | /api/chronos/admin/economy/report — live CR/EX/XP ledger flows, balances, catalogue sinks and UAH commitments |
+| Admin | GET / POST | /api/chronos/admin/* (overview, slots, imports, invitations, prizes, economy reconciliation, catalog, players, audit and settings) |
 
 ## Database migrations
 
