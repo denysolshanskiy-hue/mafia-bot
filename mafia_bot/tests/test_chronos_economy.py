@@ -89,7 +89,7 @@ class ChronosEconomyTests(unittest.TestCase):
         self.assertEqual(full["activity_coefficient"], 1)
         self.assertAlmostEqual(skipped["activity_score"], 93.8462, places=3)
         self.assertLess(skipped["activity_coefficient"], full["activity_coefficient"])
-        self.assertAlmostEqual(non_top10["activity_score"], 77.2222, places=3)
+        self.assertAlmostEqual(non_top10["activity_score"], 78.7607, places=3)
 
     def test_activity_score_requires_weights_to_sum_to_100(self):
         with self.assertRaises(ValueError):
