@@ -39,12 +39,35 @@ class ChronosEconomyTests(unittest.TestCase):
     def test_currency_sources_for_player_archetypes(self):
         minimum = player_currency_income(21, 5, 3, 6)
         regular = player_currency_income(35, 7, 5, 18)
-        active = player_currency_income(69, 13, 5, 39)
+        # The 690 core participations are 69 games across 12 progression evenings.
+        active = player_currency_income(69, 12, 5, 36)
+        # The separate Main Final adds 10 games and one evening; it is outside the 690 target.
         active_with_main_final = player_currency_income(79, 13, 5, 39)
         self.assertEqual(minimum, {"CR": 155, "EX_expected": 30, "XP": 280})
         self.assertEqual(regular, {"CR": 245, "EX_expected": 90, "XP": 440})
-        self.assertEqual(active, {"CR": 475, "EX_expected": 195, "XP": 810})
+        self.assertEqual(active, {"CR": 465, "EX_expected": 180, "XP": 805})
         self.assertEqual(active_with_main_final, {"CR": 525, "EX_expected": 195, "XP": 910})
+
+    def test_event_rates_are_transparent_and_match_the_reward_ledger(self):
+        # 5 games in a regular evening; 8 in an intermediate final; 10 in Main Final.
+        self.assertEqual(player_currency_income(5, 1, 0), {"CR": 35, "EX_expected": 0, "XP": 55})
+        self.assertEqual(player_currency_income(8, 1, 0), {"CR": 50, "EX_expected": 0, "XP": 85})
+        self.assertEqual(player_currency_income(10, 1, 0), {"CR": 60, "EX_expected": 0, "XP": 105})
+
+    def test_income_simulator_uses_versioned_rates(self):
+        custom = player_currency_income(
+            2, 1, 1, 1,
+            economy_settings={
+                "cr_per_confirmed_game": 3,
+                "xp_per_confirmed_game": 7,
+                "cr_per_attended_evening": 4,
+                "xp_per_attended_evening": 2,
+                "minigame_first_clear_xp": 11,
+                "minigame_repeat_xp": 2,
+                "minigame_repeat_cap": 3,
+            },
+        )
+        self.assertEqual(custom, {"CR": 10, "EX_expected": 5, "XP": 27})
 
     def test_minigame_xp_is_capped(self):
         self.assertEqual(minigame_xp_reward(0), 0)
@@ -118,6 +141,24 @@ class ChronosEconomyTests(unittest.TestCase):
         self.assertEqual(sum(allocations.values()), 500)
         self.assertEqual(len(allocations), 10)
         self.assertGreaterEqual(allocations[1], allocations[10])
+
+    def test_one_missed_invitation_reduces_the_activity_bonus(self):
+        full_score = calculate_activity_score(
+            attended_slots=13, eligible_slots=13,
+            verified_app_actions=13, completed_minigames=5,
+        )["activity_score"]
+        skipped_score = calculate_activity_score(
+            attended_slots=12, eligible_slots=13,
+            verified_app_actions=13, completed_minigames=5,
+        )["activity_score"]
+        players = [
+            {"user_id": user_id, "rank_position": user_id, "activity_score": full_score if user_id < 10 else skipped_score}
+            for user_id in range(1, 11)
+        ]
+        allocations = allocate_activity_bonus(players)
+        self.assertEqual(sum(allocations.values()), 500)
+        self.assertLess(allocations[10], allocations[1])
+        self.assertEqual(allocations[1] - allocations[10], 3)
 
     def test_bonus_pool_fails_if_every_score_is_zero(self):
         with self.assertRaises(ValueError):
