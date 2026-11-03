@@ -1372,31 +1372,82 @@ async def admin_update_settings(request):
         )
         if not season:
             return json_response({"error":"season_not_found"},404)
-        settings=json_value(season["platform_settings"], {}) or {}
-        if "predictions" in payload:
-            p=payload["predictions"]
-            if not isinstance(p,dict):
-                return json_response({"error":"invalid_predictions_settings"},400)
-            if p.get("status") not in ("draft","approved"):
-                return json_response({"error":"prediction_status_must_be_draft_or_approved"},400)
-            min_stake=int(p.get("min_stake",settings["predictions"]["min_stake"]))
-            max_stake=int(p.get("max_stake",settings["predictions"]["max_stake"]))
-            max_evening=int(p.get("max_per_evening",settings["predictions"]["max_per_evening"]))
-            max_bets=int(p.get("max_bets_per_evening",settings["predictions"]["max_bets_per_evening"]))
-            margin=float(p.get("house_margin",settings["predictions"]["house_margin"]))
-            if min_stake<1 or max_stake<min_stake or max_evening<max_stake or max_bets<1 or not 0<=margin<0.5:
-                return json_response({"error":"invalid_prediction_limits"},400)
-            settings["predictions"].update({
-                "status":p["status"],"min_stake":min_stake,"max_stake":max_stake,
-                "max_per_evening":max_evening,"max_bets_per_evening":max_bets,"house_margin":margin
-            })
+        settings=json_value(season["platform_settings"],{}) or {}
+        settings.setdefault("activity_score",{
+            "status":"draft","weights":{"attendance":80,"app":15,"minigame":5},
+            "app_actions_cap":15,"minigame_completions_cap":5,
+        })
+        settings.setdefault("predictions",{
+            "status":"draft","expected_reward_ex":5,"min_reward_ex":25,"max_reward_ex":100,
+            "max_predictions_per_event":3,"ex_season_cap":500,"store_unlock_after_predictions":6,
+        })
+        settings.setdefault("economy",{
+            "status":"draft","cr_per_confirmed_game":5,"xp_per_confirmed_game":10,
+            "cr_per_attended_evening":10,"xp_per_attended_evening":5,
+            "minigame_first_clear_xp":20,"minigame_repeat_xp":5,"minigame_repeat_cap":10,
+            "season_activity_bonus_uah":500,
+        })
+
         if "activity_score" in payload:
-            a=payload["activity_score"]
-            weights=a.get("weights",{})
-            total=sum(int(weights.get(k,0)) for k in ("attendance","app","minigame"))
-            if total!=100 or a.get("status") not in ("draft","approved"):
-                return json_response({"error":"activity_weights_must_sum_to_100_and_have_valid_status"},400)
-            settings["activity_score"]={"status":a["status"],"weights":{k:int(weights[k]) for k in ("attendance","app","minigame")}}
+            value=payload["activity_score"]
+            if not isinstance(value,dict) or value.get("status") not in ("draft","approved"):
+                return json_response({"error":"invalid_activity_score_status"},400)
+            weights=value.get("weights",settings["activity_score"].get("weights",{}))
+            fixed={"attendance":80,"app":15,"minigame":5}
+            if {key:int(weights.get(key,-1)) for key in fixed}!=fixed:
+                return json_response({"error":"activity_score_weights_are_fixed_80_15_5"},400)
+            settings["activity_score"].update({
+                "status":value["status"],
+                "weights":fixed,
+                "app_actions_cap":15,
+                "minigame_completions_cap":5,
+            })
+
+        if "economy" in payload:
+            value=payload["economy"]
+            if not isinstance(value,dict) or value.get("status") not in ("draft","approved"):
+                return json_response({"error":"invalid_economy_status"},400)
+            settings["economy"]["status"]=value["status"]
+            # The v1 earning rates and the 500 UAH pool are fixed by the signed-off
+            # economy model. Adjusting them requires a new versioned migration.
+            settings["economy"].update({
+                "version":"1.0",
+                "cr_per_confirmed_game":5,
+                "xp_per_confirmed_game":10,
+                "cr_per_attended_evening":10,
+                "xp_per_attended_evening":5,
+                "minigame_first_clear_xp":20,
+                "minigame_repeat_xp":5,
+                "minigame_repeat_cap":10,
+                "season_activity_bonus_uah":500,
+                "fixed_prizes_are_not_reduced_by_activity_coefficient":True,
+            })
+
+        if "predictions" in payload:
+            value=payload["predictions"]
+            if not isinstance(value,dict) or value.get("status") not in ("draft","approved"):
+                return json_response({"error":"invalid_prediction_status"},400)
+            settings["predictions"]["status"]=value["status"]
+            settings["predictions"].update({
+                "expected_reward_ex":5,
+                "min_reward_ex":25,
+                "max_reward_ex":100,
+                "max_predictions_per_event":3,
+                "ex_season_cap":500,
+                "store_unlock_after_predictions":6,
+                "self_prediction_allowed":False,
+                "stake_required":False,
+                "loss_on_wrong_prediction":False,
+            })
+
+        activity_approved=settings["activity_score"].get("status")=="approved"
+        economy_approved=settings["economy"].get("status")=="approved"
+        predictions_approved=settings["predictions"].get("status")=="approved"
+        if economy_approved and not activity_approved:
+            return json_response({"error":"approve_activity_score_before_economy"},409)
+        if predictions_approved and not (activity_approved and economy_approved):
+            return json_response({"error":"approve_activity_score_and_economy_before_predictions"},409)
+
         await conn.execute(
             "UPDATE chronos.seasons SET platform_settings=$2::jsonb,updated_at=NOW() WHERE season_id=$1",
             season["season_id"],json.dumps(settings),
@@ -1405,10 +1456,6 @@ async def admin_update_settings(request):
         return json_response({"saved":True,"platform_settings":settings})
     finally:
         await conn.close()
-
-
-
-
 
 
 async def close_slot_attendance(request):
