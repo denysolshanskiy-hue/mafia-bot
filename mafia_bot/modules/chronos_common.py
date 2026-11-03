@@ -110,3 +110,85 @@ async def award_ledger(conn, user_id, currency, amount, reason_code, idempotency
         __import__("json").dumps(metadata or {}), created_by,
     )
     return row is not None
+
+
+async def award_achievement(conn, user_id, achievement_code, source_key=None):
+    row = await conn.fetchrow(
+        "SELECT achievement_id,name,reward_cr,reward_xp FROM chronos.achievement_definitions WHERE achievement_code=$1 AND is_enabled=TRUE",
+        achievement_code,
+    )
+    if not row:
+        return False
+    inserted = await conn.fetchval(
+        """
+        INSERT INTO chronos.user_achievements(user_id,achievement_id,source_key)
+        VALUES($1,$2,$3) ON CONFLICT DO NOTHING RETURNING achievement_id
+        """,
+        user_id,row["achievement_id"],source_key,
+    )
+    if not inserted:
+        return False
+    if row["reward_cr"]:
+        await award_ledger(
+            conn,user_id,"CR",int(row["reward_cr"]),"achievement_reward",
+            f"achievement:cr:{user_id}:{achievement_code}",metadata={"achievement":achievement_code},
+        )
+    if row["reward_xp"]:
+        await award_ledger(
+            conn,user_id,"XP",int(row["reward_xp"]),"achievement_reward",
+            f"achievement:xp:{user_id}:{achievement_code}",metadata={"achievement":achievement_code},
+        )
+    await notify_user(conn,user_id,"rewards","Нове досягнення",f"Отримано: {row['name']}.")
+    return True
+
+
+async def check_player_achievements(conn, season_id, user_id):
+    games = await conn.fetchval(
+        """
+        SELECT COUNT(*) FROM chronos.game_players gp
+        JOIN chronos.games g ON g.game_id=gp.game_id
+        WHERE gp.user_id=$1 AND g.season_id=$2 AND g.status='confirmed' AND g.counts_for_sync=TRUE
+        """,
+        user_id,season_id,
+    )
+    if games >= 1:
+        await award_achievement(conn,user_id,"FIRST_SYNC",f"first-sync:{season_id}:{user_id}")
+    if games >= 10:
+        await award_achievement(conn,user_id,"TEN_GAMES",f"ten-games:{season_id}:{user_id}")
+
+    for game_code, achievement_code in (("MEMORY","FIRST_MEMORY"),("CODE_BREAKER","FIRST_CODE")):
+        played = await conn.fetchval(
+            """
+            SELECT EXISTS(
+              SELECT 1 FROM chronos.minigame_sessions
+              WHERE season_id=$1 AND user_id=$2 AND game_code=$3 AND status='completed'
+            )
+            """,
+            season_id,user_id,game_code,
+        )
+        if played:
+            await award_achievement(conn,user_id,achievement_code,f"minigame:{season_id}:{user_id}:{game_code}")
+
+    bets = await conn.fetchval(
+        """
+        SELECT COUNT(*) FROM chronos.prediction_bets b
+        JOIN chronos.prediction_markets m ON m.market_id=b.market_id
+        WHERE m.season_id=$1 AND b.bettor_user_id=$2
+        """,
+        season_id,user_id,
+    )
+    if bets >= 6:
+        await award_achievement(conn,user_id,"SIX_PREDICTIONS",f"six-predictions:{season_id}:{user_id}")
+
+    finals = await conn.fetchval(
+        """
+        SELECT COUNT(DISTINCT s.slot_id)
+        FROM chronos.event_slots s
+        JOIN chronos.games g ON g.bot_event_id=s.bot_event_id AND g.status='confirmed'
+        JOIN chronos.game_players gp ON gp.game_id=g.game_id AND gp.user_id=$2
+        WHERE s.season_id=$1 AND s.slot_type='intermediate_final'
+        """,
+        season_id,user_id,
+    )
+    if finals >= 3:
+        await award_achievement(conn,user_id,"THREE_FINALS",f"three-finals:{season_id}:{user_id}")
