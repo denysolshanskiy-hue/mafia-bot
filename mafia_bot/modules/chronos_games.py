@@ -8,7 +8,7 @@ from datetime import timedelta
 import asyncpg
 from aiohttp import web
 
-from modules.chronos_common import active_season_id, award_ledger, json_response, notify_user
+from modules.chronos_common import active_season_id, award_ledger, check_player_achievements, json_response, notify_user
 
 
 def _public_state(game_code, state, session):
@@ -195,6 +195,7 @@ async def game_action(request):
                 if status=="completed":
                     xp=await _award_minigame_xp(conn,session["season_id"],user_id,game_code,session_id)
                     await conn.execute("UPDATE chronos.minigame_sessions SET xp_awarded=$2 WHERE session_id=$1",session_id,xp)
+                    await check_player_achievements(conn,session["season_id"],user_id)
                     await notify_user(conn,user_id,"rewards","Симуляцію завершено",f"CODE BREAKER: +{xp} XP.")
                 return json_response({
                     "status":status,"feedback":state["guesses"][-1],
@@ -243,6 +244,7 @@ async def game_action(request):
             if status=="completed":
                 xp=await _award_minigame_xp(conn,session["season_id"],user_id,game_code,session_id)
                 await conn.execute("UPDATE chronos.minigame_sessions SET xp_awarded=$2 WHERE session_id=$1",session_id,xp)
+                await check_player_achievements(conn,session["season_id"],user_id)
                 await notify_user(conn,user_id,"rewards","Симуляцію завершено",f"MEMORY: +{xp} XP.")
             return json_response({
                 "status":status,
