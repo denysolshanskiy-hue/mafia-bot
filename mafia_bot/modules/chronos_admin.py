@@ -1398,7 +1398,7 @@ async def admin_update_settings(request):
             "app_actions_cap":13,"minigame_completions_cap":5,
         })
         settings.setdefault("predictions",{
-            "status":"draft","expected_reward_ex":5,"min_reward_ex":25,"max_reward_ex":100,
+            "status":"draft","expected_reward_ex":5,"min_reward_ex":5,"max_reward_ex":100,
             "max_predictions_per_event":3,"ex_season_cap":500,"store_unlock_after_predictions":6,
         })
         settings.setdefault("economy",{
@@ -1450,7 +1450,7 @@ async def admin_update_settings(request):
             settings["predictions"]["status"]=value["status"]
             settings["predictions"].update({
                 "expected_reward_ex":5,
-                "min_reward_ex":25,
+                "min_reward_ex":5,
                 "max_reward_ex":100,
                 "max_predictions_per_event":3,
                 "ex_season_cap":500,
