@@ -11,6 +11,8 @@ from aiohttp import web
 from modules.chronos_common import (
     audit, award_game_and_evening_rewards, check_player_achievements, json_response, json_value, ledger_balance, notify_user, require_admin, award_ledger
 )
+from modules.chronos_economy import allocate_activity_bonus, calculate_activity_score, qualification_games_required
+)
 
 
 def _user_id_from_row(row):
@@ -793,6 +795,366 @@ async def process_expired_invitations(request):
         return json_response({"processed":changed})
     finally:
         await conn.close()
+
+
+async def calculate_season_activity_bonus(request):
+    """Create a draft allocation of the fixed UAH 500 activity bonus pool."""
+    actor_id=request["telegram_user"]["id"]
+    from database import get_connection
+    conn=await get_connection()
+    try:
+        error=await require_admin(request,conn)
+        if error:
+            return error
+        async with conn.transaction():
+            season=await conn.fetchrow(
+                """
+                SELECT season_id,status,platform_settings
+                FROM chronos.seasons ORDER BY season_id DESC LIMIT 1 FOR UPDATE
+                """
+            )
+            if not season:
+                return json_response({"error":"season_not_found"},404)
+            if season["status"]!="completed":
+                return json_response({"error":"season_must_be_completed"},409)
+            platform=json_value(season["platform_settings"],{}) or {}
+            activity_rules=platform.get("activity_score",{})
+            economy=platform.get("economy",{})
+            if activity_rules.get("status")!="approved" or economy.get("status")!="approved":
+                return json_response({"error":"activity_economy_rules_not_approved"},409)
+
+            main_slot=await conn.fetchrow(
+                """
+                SELECT slot_id,bot_event_id,title FROM chronos.event_slots
+                WHERE season_id=$1 AND slot_type='main_final'
+                """,
+                season["season_id"],
+            )
+            if not main_slot or not main_slot["bot_event_id"]:
+                return json_response({"error":"main_final_must_be_linked"},409)
+            event_status=await conn.fetchval(
+                "SELECT status FROM public.events WHERE event_id=$1",
+                main_slot["bot_event_id"],
+            )
+            if event_status!="closed":
+                return json_response({"error":"main_final_must_be_closed"},409)
+
+            rule=await conn.fetchrow(
+                """
+                SELECT amount_uah,is_enabled FROM chronos.prize_rules
+                WHERE season_id=$1 AND event_kind='legacy' AND place=1
+                """,
+                season["season_id"],
+            )
+            pool=int((economy or {}).get("season_activity_bonus_uah",500))
+            if not rule or not rule["is_enabled"] or int(rule["amount_uah"])!=pool:
+                return json_response({
+                    "error":"activity_bonus_rule_not_enabled",
+                    "configured_pool_uah":pool,
+                },409)
+
+            initial_top=await conn.fetch(
+                """
+                SELECT invitation_id,user_id,rank_at_invite
+                FROM (
+                  SELECT fi.invitation_id,fi.user_id,fi.rank_at_invite,
+                         ROW_NUMBER() OVER(ORDER BY fi.invitation_id) AS invite_order
+                  FROM chronos.final_invitations fi
+                  WHERE fi.slot_id=$1
+                ) ranked
+                WHERE invite_order<=10
+                ORDER BY invite_order
+                """,
+                main_slot["slot_id"],
+            )
+            if len(initial_top)!=10:
+                return json_response({"error":"main_final_initial_top10_required","found":len(initial_top)},409)
+
+            existing=await conn.fetchval(
+                """
+                SELECT COUNT(*) FROM chronos.season_bonus_allocations
+                WHERE season_id=$1 AND status IN ('approved','paid')
+                """,
+                season["season_id"],
+            )
+            if int(existing or 0):
+                return json_response({"error":"bonus_already_approved_or_paid"},409)
+
+            conducted_games=int(await conn.fetchval(
+                """
+                SELECT COUNT(*) FROM chronos.games
+                WHERE season_id=$1 AND status='confirmed' AND counts_for_sync=TRUE
+                """,
+                season["season_id"],
+            ) or 0)
+            required_games=qualification_games_required(conducted_games)
+            eligible_regular=int(await conn.fetchval(
+                """
+                SELECT COUNT(*) FROM chronos.event_slots s
+                JOIN public.events e ON e.event_id=s.bot_event_id
+                WHERE s.season_id=$1 AND s.slot_type='regular' AND e.status='closed'
+                """,
+                season["season_id"],
+            ) or 0)
+            participants=[]
+            snapshots=[]
+
+            for invitee in initial_top:
+                user_id=invitee["user_id"]
+                games_played=int(await conn.fetchval(
+                    """
+                    SELECT COUNT(*) FROM chronos.game_players gp
+                    JOIN chronos.games g ON g.game_id=gp.game_id
+                    WHERE g.season_id=$1 AND g.status='confirmed'
+                      AND g.counts_for_sync=TRUE AND gp.user_id=$2
+                    """,
+                    season["season_id"],user_id,
+                ) or 0)
+                if games_played<required_games:
+                    continue
+
+                attended_regular=int(await conn.fetchval(
+                    """
+                    SELECT COUNT(DISTINCT s.slot_id)
+                    FROM chronos.event_slots s
+                    JOIN chronos.games g ON g.bot_event_id=s.bot_event_id AND g.status='confirmed'
+                    JOIN chronos.game_players gp ON gp.game_id=g.game_id AND gp.user_id=$2
+                    JOIN public.events e ON e.event_id=s.bot_event_id AND e.status='closed'
+                    WHERE s.season_id=$1 AND s.slot_type='regular'
+                    """,
+                    season["season_id"],user_id,
+                ) or 0)
+                invited_finals=int(await conn.fetchval(
+                    """
+                    SELECT COUNT(*) FROM chronos.final_invitations fi
+                    JOIN chronos.event_slots s ON s.slot_id=fi.slot_id
+                    WHERE s.season_id=$1 AND fi.user_id=$2
+                      AND s.slot_type IN ('intermediate_final','main_final')
+                    """,
+                    season["season_id"],user_id,
+                ) or 0)
+                attended_finals=int(await conn.fetchval(
+                    """
+                    SELECT COUNT(DISTINCT s.slot_id)
+                    FROM chronos.final_invitations fi
+                    JOIN chronos.event_slots s ON s.slot_id=fi.slot_id
+                    JOIN chronos.games g ON g.bot_event_id=s.bot_event_id AND g.status='confirmed'
+                    JOIN chronos.game_players gp ON gp.game_id=g.game_id AND gp.user_id=$2
+                    WHERE s.season_id=$1 AND fi.user_id=$2
+                      AND s.slot_type IN ('intermediate_final','main_final')
+                    """,
+                    season["season_id"],user_id,
+                ) or 0)
+                eligible_slots=eligible_regular+invited_finals
+                attended_slots=attended_regular+attended_finals
+                app_actions=int(await conn.fetchval(
+                    """
+                    SELECT COALESCE(SUM(GREATEST(score_value,0)),0)
+                    FROM chronos.activity_events
+                    WHERE season_id=$1 AND user_id=$2 AND verified=TRUE
+                    """,
+                    season["season_id"],user_id,
+                ) or 0)
+                minigames=int(await conn.fetchval(
+                    """
+                    SELECT COUNT(*) FROM chronos.minigame_sessions
+                    WHERE season_id=$1 AND user_id=$2 AND status='completed'
+                    """,
+                    season["season_id"],user_id,
+                ) or 0)
+                score=calculate_activity_score(
+                    attended_slots=attended_slots,
+                    eligible_slots=eligible_slots,
+                    verified_app_actions=app_actions,
+                    completed_minigames=minigames,
+                    weights=activity_rules.get("weights",{"attendance":80,"app":15,"minigame":5}),
+                    app_actions_cap=int(activity_rules.get("app_actions_cap",15)),
+                    minigame_completions_cap=int(activity_rules.get("minigame_completions_cap",5)),
+                )
+                participants.append({
+                    "user_id":user_id,
+                    "rank_position":int(invitee["rank_at_invite"]),
+                    "activity_score":score["activity_score"],
+                })
+                snapshots.append({
+                    "user_id":user_id,
+                    "rank_position":int(invitee["rank_at_invite"]),
+                    "games_played":games_played,
+                    "attended_slots":attended_slots,
+                    "eligible_slots":eligible_slots,
+                    "verified_app_actions":app_actions,
+                    "completed_minigames":minigames,
+                    **score,
+                })
+
+            if not participants:
+                return json_response({"error":"no_qualified_top10_players"},409)
+            allocations=allocate_activity_bonus(participants,pool)
+
+            await conn.execute(
+                """
+                DELETE FROM chronos.season_bonus_allocations
+                WHERE season_id=$1 AND status='draft'
+                """,
+                season["season_id"],
+            )
+            for snapshot in snapshots:
+                await conn.execute(
+                    """
+                    INSERT INTO chronos.season_bonus_allocations
+                      (season_id,slot_id,user_id,rank_at_lock,games_played,games_conducted,
+                       attended_slots,eligible_slots,verified_app_actions,completed_minigames,
+                       attendance_points,app_points,minigame_points,activity_score,activity_coefficient,
+                       pool_amount_uah,allocation_amount_uah,status)
+                    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,'draft')
+                    """,
+                    season["season_id"],main_slot["slot_id"],snapshot["user_id"],
+                    snapshot["rank_position"],snapshot["games_played"],conducted_games,
+                    snapshot["attended_slots"],snapshot["eligible_slots"],
+                    snapshot["verified_app_actions"],snapshot["completed_minigames"],
+                    snapshot["attendance_points"],snapshot["app_points"],snapshot["minigame_points"],
+                    snapshot["activity_score"],snapshot["activity_coefficient"],pool,
+                    allocations[snapshot["user_id"]],
+                )
+            await audit(
+                conn,actor_id,"season_activity_bonus_calculated","season",season["season_id"],
+                {"pool_uah":pool,"eligible_players":len(snapshots),"distributed_uah":sum(allocations.values()),
+                 "required_games":required_games},
+            )
+        return json_response({
+            "calculated":True,
+            "pool_uah":pool,
+            "eligible_players":len(snapshots),
+            "distributed_uah":sum(allocations.values()),
+            "required_games":required_games,
+            "allocations":sorted(
+                [{**row,"allocation_amount_uah":allocations[row["user_id"]]} for row in snapshots],
+                key=lambda row:row["rank_position"],
+            ),
+            "status":"draft",
+        },201)
+    except asyncpg.UndefinedTableError:
+        return json_response({"error":"database_not_ready"},503)
+    finally:
+        await conn.close()
+
+
+async def update_activity_bonus_status(request):
+    actor_id=request["telegram_user"]["id"]
+    allocation_id=int(request.match_info["allocation_id"])
+    try:
+        payload=await request.json()
+        status=payload.get("status")
+    except (ValueError,json.JSONDecodeError):
+        return json_response({"error":"invalid_json"},400)
+    if status not in ("approved","paid","void"):
+        return json_response({"error":"invalid_bonus_status"},400)
+    from database import get_connection
+    conn=await get_connection()
+    try:
+        error=await require_admin(request,conn)
+        if error:
+            return error
+        row=await conn.fetchrow(
+            "SELECT status FROM chronos.season_bonus_allocations WHERE allocation_id=$1 FOR UPDATE",
+            allocation_id,
+        )
+        if not row:
+            return json_response({"error":"bonus_allocation_not_found"},404)
+        if status=="paid" and row["status"]!="approved":
+            return json_response({"error":"approve_bonus_before_marking_paid"},409)
+        await conn.execute(
+            """
+            UPDATE chronos.season_bonus_allocations
+            SET status=$2,
+                approved_by=CASE WHEN $2='approved' THEN $3 ELSE approved_by END,
+                approved_at=CASE WHEN $2='approved' THEN NOW() ELSE approved_at END,
+                paid_at=CASE WHEN $2='paid' THEN NOW() ELSE paid_at END,
+                updated_at=NOW()
+            WHERE allocation_id=$1
+            """,
+            allocation_id,status,actor_id,
+        )
+        await audit(conn,actor_id,"activity_bonus_status_changed","season_bonus",allocation_id,{"status":status})
+        return json_response({"updated":True,"status":status})
+    finally:
+        await conn.close()
+
+
+async def reconcile_economy_ledger(request):
+    """Backfill missed CR/XP grants safely after the economy rules are approved."""
+    actor_id=request["telegram_user"]["id"]
+    from database import get_connection
+    conn=await get_connection()
+    try:
+        error=await require_admin(request,conn)
+        if error:
+            return error
+        async with conn.transaction():
+            season=await conn.fetchrow(
+                """
+                SELECT season_id,platform_settings FROM chronos.seasons
+                ORDER BY season_id DESC LIMIT 1 FOR UPDATE
+                """
+            )
+            if not season:
+                return json_response({"error":"season_not_found"},404)
+            platform=json_value(season["platform_settings"],{}) or {}
+            economy=platform.get("economy",{})
+            if economy.get("status")!="approved":
+                return json_response({"error":"economy_not_approved"},409)
+            rows=await conn.fetch(
+                """
+                SELECT g.game_id,g.bot_event_id,gp.user_id
+                FROM chronos.games g
+                JOIN chronos.game_players gp ON gp.game_id=g.game_id
+                WHERE g.season_id=$1 AND g.status='confirmed'
+                ORDER BY g.game_id,gp.user_id
+                """,
+                season["season_id"],
+            )
+            minted={"CR":0,"XP":0}
+            participants=set()
+            for row in rows:
+                amounts=await award_game_and_evening_rewards(
+                    conn,season["season_id"],row["bot_event_id"],row["game_id"],row["user_id"],economy
+                )
+                minted["CR"]+=amounts["CR"]
+                minted["XP"]+=amounts["XP"]
+                participants.add(row["user_id"])
+            # Reconcile completed minigame sessions in chronological order; ledger
+            # idempotency keys and the season cap prevent duplicate XP.
+            sessions=await conn.fetch(
+                """
+                SELECT session_id,user_id,game_code FROM chronos.minigame_sessions
+                WHERE season_id=$1 AND status='completed' AND xp_awarded=0
+                ORDER BY started_at,session_id
+                FOR UPDATE
+                """,
+                season["season_id"],
+            )
+            minigame_xp=0
+            for session in sessions:
+                amount=await _award_minigame_xp(
+                    conn,season["season_id"],session["user_id"],session["game_code"],session["session_id"]
+                )
+                await conn.execute(
+                    "UPDATE chronos.minigame_sessions SET xp_awarded=$2 WHERE session_id=$1",
+                    session["session_id"],amount,
+                )
+                minigame_xp+=amount
+                participants.add(session["user_id"])
+            await audit(
+                conn,actor_id,"economy_ledger_reconciled","season",season["season_id"],
+                {"games":len(rows),"participants":len(participants),"currency_minted":minted,"minigame_xp":minigame_xp},
+            )
+        return json_response({
+            "reconciled":True,"games":len(rows),"participants":len(participants),
+            "currency_minted":minted,"minigame_xp":minigame_xp,
+        })
+    finally:
+        await conn.close()
+
 
 
 async def create_prize_awards(request):
