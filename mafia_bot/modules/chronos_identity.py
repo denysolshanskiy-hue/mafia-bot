@@ -333,6 +333,28 @@ async def save_notification_preferences(request):
         await conn.close()
 
 
+async def ledger_history(request):
+    user_id=request["telegram_user"]["id"]
+    try:
+        limit=max(1,min(100,int(request.query.get("limit","50"))))
+    except ValueError:
+        limit=50
+    from database import get_connection
+    conn=await get_connection()
+    try:
+        rows=await conn.fetch(
+            """
+            SELECT currency,amount,reason_code,reference_key,metadata,created_at
+            FROM chronos.ledger WHERE user_id=$1
+            ORDER BY created_at DESC,ledger_id DESC LIMIT $2
+            """,
+            user_id,limit,
+        )
+        return json_response({"entries":[dict(row) for row in rows]})
+    finally:
+        await conn.close()
+
+
 async def achievements(request):
     user_id = request["telegram_user"]["id"]
     from database import get_connection
@@ -596,6 +618,7 @@ def register_identity_routes(app):
     app.router.add_post("/api/chronos/store/{item_id:\\d+}/buy", buy_item)
     app.router.add_post("/api/chronos/store/{item_id:\\d+}/equip", equip_item)
     app.router.add_get("/api/chronos/achievements", achievements)
+    app.router.add_get("/api/chronos/ledger", ledger_history)
     app.router.add_get("/api/chronos/notifications", notifications)
     app.router.add_post("/api/chronos/notifications/{notification_id:\\d+}/read", mark_notification_read)
     app.router.add_get("/api/chronos/operations", operations)
