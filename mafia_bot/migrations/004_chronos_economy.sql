@@ -9,7 +9,9 @@ ALTER TABLE chronos.prediction_bets
 ALTER TABLE chronos.prediction_bets
     ALTER COLUMN stake SET DEFAULT 0;
 ALTER TABLE chronos.prediction_bets
-    ADD CONSTRAINT prediction_bets_stake_nonnegative CHECK (stake >= 0);
+    DROP CONSTRAINT IF EXISTS prediction_bets_stake_nonnegative_check;
+ALTER TABLE chronos.prediction_bets
+    ADD CONSTRAINT prediction_bets_stake_nonnegative_check CHECK (stake >= 0);
 
 ALTER TABLE chronos.prediction_candidates
     ADD COLUMN IF NOT EXISTS reward_ex SMALLINT NOT NULL DEFAULT 50
