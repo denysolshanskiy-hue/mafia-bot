@@ -59,8 +59,11 @@ class ChronosEconomyTests(unittest.TestCase):
             reward = prediction_reward_ex(probability)
             self.assertAlmostEqual(probability * reward, 5, delta=0.06)
         self.assertEqual(prediction_reward_ex(0.05), 100)
+        self.assertEqual(prediction_reward_ex(0.01), 100)
         self.assertEqual(prediction_reward_ex(0.10), 50)
         self.assertEqual(prediction_reward_ex(0.20), 25)
+        self.assertEqual(prediction_reward_ex(0.50), 10)
+        self.assertEqual(prediction_reward_ex(1.00), 5)
 
     def test_prediction_reward_rejects_invalid_probability(self):
         for probability in (0, -0.1, 1.01):
