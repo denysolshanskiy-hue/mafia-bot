@@ -42,6 +42,34 @@ except ModuleNotFoundError:
 
 
 class ChronosEconomyTests(unittest.TestCase):
+    def test_prediction_model_uses_per_game_bonus_without_double_counting(self):
+        # Both players have identical per-game performance. Their total points
+        # include the bonus component, so the model must subtract it before
+        # evaluating base points and must not reward a longer history twice.
+        players = [
+            {
+                "user_id": 1, "rank_position": 1, "points": 150,
+                "games_played": 50, "wins": 40, "bonus_points": 25,
+            },
+            {
+                "user_id": 2, "rank_position": 1, "points": 30,
+                "games_played": 10, "wins": 8, "bonus_points": 5,
+            },
+        ]
+        probabilities = plackett_luce_probabilities(
+            players, simulations=12000, seed=20261025, house_margin=0,
+        )
+        self.assertAlmostEqual(
+            probabilities[1]["1"]["probability"],
+            probabilities[1]["2"]["probability"],
+            delta=0.01,
+        )
+        self.assertAlmostEqual(
+            probabilities[2]["1"]["probability"],
+            probabilities[2]["2"]["probability"],
+            delta=0.01,
+        )
+
     def test_prediction_model_gives_newcomers_neutral_roster_prior(self):
         players = [
             {
