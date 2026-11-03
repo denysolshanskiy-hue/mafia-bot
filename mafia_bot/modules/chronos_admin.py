@@ -1083,6 +1083,7 @@ async def update_activity_bonus_status(request):
 
 async def reconcile_economy_ledger(request):
     """Backfill missed CR/XP grants safely after the economy rules are approved."""
+    from modules.chronos_games import _award_minigame_xp
     actor_id=request["telegram_user"]["id"]
     from database import get_connection
     conn=await get_connection()
@@ -1166,8 +1167,8 @@ async def create_prize_awards(request):
         awards=payload["awards"]
     except (ValueError,KeyError,TypeError,json.JSONDecodeError):
         return json_response({"error":"invalid_awards_payload"},400)
-    if event_kind not in ("intermediate_final","main_final","legacy") or not isinstance(awards,list) or not awards:
-        return json_response({"error":"invalid_awards"},400)
+    if event_kind not in ("intermediate_final","main_final") or not isinstance(awards,list) or not awards:
+        return json_response({"error":"fixed_place_awards_only"},400)
     from database import get_connection
     conn=await get_connection()
     try:
@@ -1188,9 +1189,18 @@ async def create_prize_awards(request):
                 place=int(award["place"])
                 base=int(award["base_amount_uah"])
                 coefficient=float(award.get("activity_coefficient",1.0))
-                final=int(round(base*coefficient))
-                if place<1 or base<0 or not 0<=coefficient<=1:
-                    return json_response({"error":"invalid_award_values"},400)
+                rule=await conn.fetchrow(
+                    """
+                    SELECT amount_uah,is_enabled FROM chronos.prize_rules
+                    WHERE season_id=$1 AND event_kind=$2 AND place=$3
+                    """,
+                    slot["season_id"],event_kind,place,
+                )
+                if place<1 or not rule or not rule["is_enabled"] or base!=int(rule["amount_uah"]):
+                    return json_response({"error":"award_must_match_enabled_fixed_prize_rule","place":place},409)
+                if coefficient!=1.0:
+                    return json_response({"error":"fixed_competition_prizes_are_not_reduced_by_activity_score"},400)
+                final=base
                 award_id=await conn.fetchval(
                     """
                     INSERT INTO chronos.prize_awards
@@ -1264,7 +1274,16 @@ async def admin_prizes(request):
             """
         )
         rules=await conn.fetch("SELECT event_kind,place,amount_uah,is_enabled,rule_note FROM chronos.prize_rules ORDER BY event_kind,place")
-        return json_response({"awards":[dict(r) for r in rows],"rules":[dict(r) for r in rules]})
+        bonuses=await conn.fetch(
+            """
+            SELECT a.allocation_id,a.rank_at_lock,a.activity_score,a.activity_coefficient,
+                   a.pool_amount_uah,a.allocation_amount_uah,a.status,u.display_name
+            FROM chronos.season_bonus_allocations a
+            JOIN public.users u ON u.user_id=a.user_id
+            ORDER BY a.rank_at_lock
+            """
+        )
+        return json_response({"awards":[dict(r) for r in rows],"rules":[dict(r) for r in rules],"activity_bonus":[dict(r) for r in bonuses]})
     finally:
         await conn.close()
 
@@ -1554,8 +1573,13 @@ async def update_prize_rule(request):
         note=str(payload.get("rule_note",""))
     except (ValueError,KeyError,TypeError,json.JSONDecodeError):
         return json_response({"error":"invalid_prize_rule"},400)
-    if event_kind not in ("intermediate_final","main_final","legacy") or place<1 or amount<0:
-        return json_response({"error":"invalid_prize_rule_values"},400)
+    fixed_amounts={
+        ("intermediate_final",1):1000,("intermediate_final",2):700,("intermediate_final",3):300,
+        ("main_final",1):3000,("main_final",2):2000,("main_final",3):1000,
+        ("legacy",1):500,
+    }
+    if (event_kind,place) not in fixed_amounts or amount!=fixed_amounts[(event_kind,place)]:
+        return json_response({"error":"prize_amount_is_fixed_by_chronos_rules","expected":fixed_amounts.get((event_kind,place))},400)
     from database import get_connection
     conn=await get_connection()
     try:
@@ -1599,6 +1623,9 @@ def register_admin_routes(app):
     app.router.add_get("/api/chronos/admin/players",admin_players)
     app.router.add_get("/api/chronos/admin/audit",admin_audit)
     app.router.add_get("/api/chronos/admin/prizes",admin_prizes)
+    app.router.add_post("/api/chronos/admin/season-bonus/calculate",calculate_season_activity_bonus)
+    app.router.add_post("/api/chronos/admin/season-bonus/{allocation_id:\\d+}/status",update_activity_bonus_status)
+    app.router.add_post("/api/chronos/admin/economy/reconcile",reconcile_economy_ledger)
     app.router.add_post("/api/chronos/admin/prize-rules",update_prize_rule)
     app.router.add_post("/api/chronos/admin/prizes",create_prize_awards)
     app.router.add_post("/api/chronos/admin/prizes/{award_id:\\d+}/status",update_prize_status)
