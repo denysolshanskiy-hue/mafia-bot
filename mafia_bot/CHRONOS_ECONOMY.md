@@ -247,3 +247,26 @@ This is a pre-season model. It proves that the formulas and planned budgets reco
 Economy v1.0 is stored as DRAFT. The admin interface requires the Activity Score to be approved before economy approval, and requires both before prediction approval. Mini-game XP and game-based CR/XP are gated on economy approval. Store catalogue entries remain disabled until separately enabled.
 
 Apply migration 004 only after reviewing migrations 001–003 and validating the schema in a staging Neon branch. No migration, approval, deployment or season activation is performed merely by adding this model.
+
+
+## 9. Live monitoring and guardrails
+
+The Admin Console's Economy report reads the actual ledger and catalogue, not the forecast table. It shows per-currency:
+- Issued = sum of positive ledger entries.
+- Removed = absolute sum of negative ledger entries.
+- Net Change = Issued − Removed.
+- Holders, average / median positive balance and maximum balance.
+- Sink/Faucet Ratio = Removed / Issued.
+- Active catalogue items, total enabled basket value and completed purchases.
+- Planned / drafted / approved / paid UAH prizes and Activity Bonus.
+
+The app logs the first verified event-detail view per player and event. Reopening the same detail does not farm extra Activity Score. Registration and accepted forecasts are also event-level interactions; the bonus calculator counts distinct event IDs, not raw button clicks.
+
+Guardrails:
+- Season activation is blocked until Activity Score and core Economy are approved. Prediction Exchange may remain DRAFT while its probability model is back-tested.
+- Catalogue prices are editable only while the season is DRAFT and before Economy approval. Once the season is active or the rule set approved, an item may be enabled/disabled but its price cannot be changed mid-season.
+- Reconciliation is a manual admin operation after confirmed imports. It is idempotent and does not alter historical game scores.
+- The virtual ledger never pays UAH. Fixed awards and the Activity Bonus are separate, manually approved cash obligations.
+
+Do not treat Sink/Faucet Ratio as a weekly target. Players may legitimately save for premium items. Use it together with the median balance and purchase conversion: a low ratio alone is not a failure if the season is young or players are saving; a persistently low ratio alongside growing median balances and no purchases indicates that new cosmetic sinks are needed.
+
