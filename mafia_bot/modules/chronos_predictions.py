@@ -8,7 +8,7 @@ import asyncpg
 from aiohttp import web
 
 from modules.chronos_common import (
-    active_season_id, audit, json_response, ledger_balance, notify_user, require_admin, award_ledger
+    active_season_id, audit, json_response, json_value, ledger_balance, notify_user, require_admin, award_ledger
 )
 from modules.chronos_logic import plackett_luce_probabilities
 
@@ -77,7 +77,7 @@ async def list_predictions(request):
         return json_response({
             "balance_ex":await ledger_balance(conn,user_id,"EX"),
             "markets":out,
-            "rules_status":"draft",
+            "rules_status":(settings.get("status","draft") if "settings" in locals() else "draft"),
             "currency_notice":"EX — ігрова валюта без грошової вартості. Її не можна купити, передати або вивести.",
         })
     except asyncpg.UndefinedTableError:
@@ -106,7 +106,8 @@ async def open_prediction_markets(request):
             )
             if not season:
                 return json_response({"error":"season_not_active"},409)
-            settings=season["platform_settings"].get("predictions",{})
+            season_settings=json_value(season["platform_settings"], {}) or {}
+            settings=season_settings.get("predictions",{})
             if settings.get("status")!="approved":
                 return json_response({"error":"prediction_rules_not_approved","message":"Правила прогнозів ще не затверджені."},409)
             event=await conn.fetchrow(
@@ -225,7 +226,8 @@ async def place_bet(request):
                 "SELECT platform_settings FROM chronos.seasons WHERE season_id=$1",
                 market["season_id"],
             )
-            rules=season["platform_settings"].get("predictions",{}) if season else {}
+            season_settings=json_value(season["platform_settings"], {}) if season else {}
+            rules=season_settings.get("predictions",{}) if season_settings else {}
             if rules.get("status")!="approved":
                 return json_response({"error":"prediction_rules_not_approved"},409)
             min_stake=int(rules.get("min_stake",10))
