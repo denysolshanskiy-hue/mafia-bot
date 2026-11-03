@@ -4,7 +4,7 @@ from aiohttp import web
 from aiogram import Bot, Dispatcher, types, F
 from modules.keyboards import admin_menu_keyboard, player_menu_keyboard
 from modules.event_types import detect_event_type
-from modules.chronos_api import register_chronos_routes
+from modules.chronos_api import register_chronos_routes, telegram_auth_middleware
 from aiogram.filters import CommandStart
 from aiogram.types import (
     InlineKeyboardMarkup,
@@ -1491,7 +1491,7 @@ async def handle(request):
 
 async def start_all():
     await init_db()
-    app = web.Application()
+    app = web.Application(middlewares=[telegram_auth_middleware])
     register_chronos_routes(app)
     app.router.add_get('/', handle)
     runner = web.AppRunner(app)
