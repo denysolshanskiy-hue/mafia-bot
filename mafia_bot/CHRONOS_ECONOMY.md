@@ -99,7 +99,7 @@ Examples:
 | 50% | 10 EX | 5 EX |
 | 100% | 5 EX | 5 EX |
 
-A wrong prediction earns zero and costs nothing. A player cannot forecast themselves. A player may make one forecast in each market, up to three forecasts per event (TOP1, TOP2, TOP3). Candidate probabilities and rewards are frozen when the markets open. If the registered event roster changes, the market is voided; no currency is debited or refunded because no stake was taken.
+A wrong prediction earns zero and costs nothing. Any player may forecast even when registered for that evening, but cannot forecast themselves. A player may make one forecast in each market, up to three forecasts per event (TOP1, TOP2, TOP3). Candidate probabilities and rewards are frozen when the markets open. If the registered event roster changes, the market is voided; no currency is debited or refunded because no stake was taken.
 
 Limits:
 - At most 3 forecasts per event.
@@ -123,7 +123,7 @@ Where:
 - minigame_ratio = min(completed_minigames, 5) / 5
 - Activity Coefficient = Activity Score / 100
 
-The app component counts at most one positive verified interaction per distinct season event; repeat actions in the same event do not add points. This cap is 13 because the season has at most 13 scheduled events. Mini-game completions are capped at five. Both are verified server-side and written with unique source keys. The Activity Score is not part of the sporting iMafia ranking.
+The app component counts at most one positive verified interaction per distinct season event; opening an event detail is enough, while repeat views and repeat clicks in the same event do not add points. This cap is 13 because the season has at most 13 scheduled events. Mini-game completions are capped at five. Both are verified server-side and written with unique source keys. The Activity Score is not part of the sporting iMafia ranking.
 
 The separate 500 UAH activity bonus is allocated proportionally among the **initial Top 10 invited to the Main Final who meet the 30% game qualification**. It does not reduce the fixed prizes.
 
@@ -181,13 +181,13 @@ The bonus is calculated only after the season is completed and the Main Final bo
 | Chrome Visor | 260 CR | 168% |
 | Timekeeper Frame | 320 CR | 206% |
 
-A player who only just qualifies can buy at least one entry item. A regular player with 270 CR can afford one mid-range cosmetic or a small combination; an active player has access to premium items. The top price is aspirational but remains reachable over a full season.
+A player who only just qualifies can buy at least one entry item. A regular player with 245 CR can afford two low/mid-range cosmetics; an active player has access to premium items. The top price is aspirational but remains reachable over a full season.
 
 Total one-time CR catalogue sink capacity: **1,580 CR per player**. Inventory uses unique item ownership, so no duplicate purchase loop is created.
 
 A 0/1 knapsack check (each item can be bought once) gives these maximum purchase baskets:
 - Minimum qualifier (155 CR): 1 item, maximum spend 140 CR, 15 CR left.
-- Regular player (270 CR): 2 items, maximum spend 260 CR, 10 CR left.
+- Regular player (245 CR): 2 items, maximum spend 240 CR, 5 CR left.
 - Active Top-10 after Main Final (525 CR): 4 items, maximum spend 520 CR, 5 CR left.
 
 ### EX catalogue
@@ -222,10 +222,10 @@ The deterministic simulator includes different engagement archetypes:
 | Archetype | Games | Attended evenings / eligible | App actions | Mini-games | Forecasts | CR | Expected EX | XP | Activity Score |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | Minimum qualifier | 21 | 5 / 9 | 6 | 3 | 6 | 155 | 30 | 280 | 54.37 |
-| Regular player | 40 | 7 / 9 | 10 | 5 | 18 | 270 | 90 | 490 | 78.76 |
-| Active Top-10 (core) | 69 | 13 / 13 | 15 | 5 | 39 | 475 | 195 | 810 | 100.00 |
-| Top-10 misses one intermediate final but attends Main Final | 71 | 12 / 13 | 15 | 5 | 36 | 475 | 180 | 825 | 93.85 |
-| Active Top-10 including Main Final | 79 | 13 / 13 | 15 | 5 | 39 | 525 | 195 | 910 | 100.00 |
+| Regular player | 35 | 7 / 9 | 10 | 5 | 18 | 245 | 90 | 435 | 78.76 |
+| Active Top-10 before Main Final | 69 | 12 / 12 | 12 | 5 | 36 | 465 | 180 | 795 | 98.85 |
+| Top-10 misses one intermediate final but attends Main Final | 71 | 12 / 13 | 13 | 5 | 36 | 475 | 180 | 825 | 98.85 |
+| Active Top-10 including Main Final | 79 | 13 / 13 | 13 | 5 | 39 | 525 | 195 | 910 | 100.00 |
 
 XP values include the capped mini-game XP above. If the active Top-10 player completes all 12 eligible mini-game sessions instead of five, they gain up to 90 mini-game XP and reach 945 XP including the Main Final games.
 
