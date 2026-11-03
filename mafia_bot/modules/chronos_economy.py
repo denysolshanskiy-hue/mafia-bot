@@ -307,8 +307,8 @@ def simulate_economy() -> dict[str, Any]:
             "ex_catalog": _catalog_affordability(income["EX_expected"], EX_CATALOG),
         }
 
-    # Core season: 69 games in the 690 aggregate participation target.
-    core_maximum_income = player_currency_income(69, 13, 12, 39)
+    # Before Main Final: 69 core games over 12 progression evenings.
+    core_maximum_income = player_currency_income(69, 12, 12, 36)
     # Top-10 player may additionally play 10 Main Final games. They earn CR/XP,
     # but are deliberately excluded from the 690 core synchronization target.
     top10_with_main_final_income = player_currency_income(79, 13, 12, 39)
