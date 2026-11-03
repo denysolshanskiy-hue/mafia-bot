@@ -112,6 +112,50 @@ async def award_ledger(conn, user_id, currency, amount, reason_code, idempotency
     return row is not None
 
 
+async def award_game_and_evening_rewards(conn, season_id, event_id, game_id, user_id, economy):
+    """Issue CR/XP once per confirmed game and once per attended evening."""
+    if (economy or {}).get("status") != "approved":
+        return {"CR":0,"XP":0}
+    cr_game=int((economy or {}).get("cr_per_confirmed_game",5))
+    xp_game=int((economy or {}).get("xp_per_confirmed_game",10))
+    cr_evening=int((economy or {}).get("cr_per_attended_evening",10))
+    xp_evening=int((economy or {}).get("xp_per_attended_evening",5))
+    metadata={"season_id":int(season_id),"event_id":int(event_id),"game_id":int(game_id)}
+    minted={"CR":0,"XP":0}
+    if cr_game:
+        created=await award_ledger(
+            conn,user_id,"CR",cr_game,"game_participation",
+            f"chronos:{season_id}:cr:game:{game_id}:{user_id}",
+            reference_key=str(game_id),metadata=metadata,
+        )
+        minted["CR"]+=cr_game if created else 0
+    if xp_game:
+        created=await award_ledger(
+            conn,user_id,"XP",xp_game,"game_participation",
+            f"chronos:{season_id}:xp:game:{game_id}:{user_id}",
+            reference_key=str(game_id),metadata=metadata,
+        )
+        minted["XP"]+=xp_game if created else 0
+
+    # The evening bonus is keyed by event + user and therefore is granted once,
+    # even if the player appeared in all 5 or 8 games of that evening.
+    if cr_evening:
+        created=await award_ledger(
+            conn,user_id,"CR",cr_evening,"evening_attendance",
+            f"chronos:{season_id}:cr:event:{event_id}:{user_id}",
+            reference_key=str(event_id),metadata=metadata,
+        )
+        minted["CR"]+=cr_evening if created else 0
+    if xp_evening:
+        created=await award_ledger(
+            conn,user_id,"XP",xp_evening,"evening_attendance",
+            f"chronos:{season_id}:xp:event:{event_id}:{user_id}",
+            reference_key=str(event_id),metadata=metadata,
+        )
+        minted["XP"]+=xp_evening if created else 0
+    return minted
+
+
 async def award_achievement(conn, user_id, achievement_code, source_key=None):
     row = await conn.fetchrow(
         "SELECT achievement_id,name,reward_cr,reward_xp FROM chronos.achievement_definitions WHERE achievement_code=$1 AND is_enabled=TRUE",
