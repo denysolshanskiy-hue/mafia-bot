@@ -86,7 +86,7 @@ XP does not buy items and cannot be converted into cash. The current level calcu
 
 A forecast costs zero EX. A correct forecast earns a reward based on the frozen probability of the selected player:
 
-reward_EX = clamp(25, 100, round(5 / probability))
+reward_EX = clamp(5, 100, round(5 / probability))
 
 Examples:
 
@@ -96,6 +96,8 @@ Examples:
 | 10% | 50 EX | 5 EX |
 | 12.5% | 40 EX | 5 EX |
 | 20% | 25 EX | 5 EX |
+| 50% | 10 EX | 5 EX |
+| 100% | 5 EX | 5 EX |
 
 A wrong prediction earns zero and costs nothing. A player cannot forecast themselves. A player may make one forecast in each market, up to three forecasts per event (TOP1, TOP2, TOP3). Candidate probabilities and rewards are frozen when the markets open. If the registered event roster changes, the market is voided; no currency is debited or refunded because no stake was taken.
 
@@ -105,6 +107,7 @@ Limits:
 - Expected EX income at the 5 EX target value: 39 × 5 = 195 EX.
 - Hard EX earning cap: 500 EX per player per season.
 - EX Store opens after six accepted non-void forecasts (normally two events if all three markets are used).
+- The 5 EX reward floor preserves the expected-value curve even for very high-probability candidates. The 100 EX ceiling reduces the expected value of very unlikely candidates below 5 EX, limiting the faucet on long shots.
 
 The candidate probability model is a Plackett–Luce simulation based on confirmed iMafia snapshot statistics. It is a forecast heuristic, not a promise of winning probability. It must be checked against actual outcomes after the season before the model is treated as calibrated.
 
@@ -208,10 +211,10 @@ The deterministic simulator includes different engagement archetypes:
 
 | Archetype | Games | Attended evenings / eligible | App actions | Mini-games | Forecasts | CR | Expected EX | XP | Activity Score |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Minimum qualifier | 21 | 5 / 9 | 6 | 3 | 6 | 155 | 30 | 280 | 53.44 |
-| Regular player | 40 | 7 / 9 | 10 | 5 | 18 | 270 | 90 | 490 | 77.22 |
+| Minimum qualifier | 21 | 5 / 9 | 6 | 3 | 6 | 155 | 30 | 280 | 54.37 |
+| Regular player | 40 | 7 / 9 | 10 | 5 | 18 | 270 | 90 | 490 | 78.76 |
 | Active Top-10 (core) | 69 | 13 / 13 | 15 | 5 | 39 | 475 | 195 | 810 | 100.00 |
-| Top-10 misses one final | 61 | 12 / 13 | 15 | 5 | 36 | 425 | 180 | 725 | 93.85 |
+| Top-10 misses one intermediate final but attends Main Final | 71 | 12 / 13 | 15 | 5 | 36 | 475 | 180 | 825 | 93.85 |
 | Active Top-10 including Main Final | 79 | 13 / 13 | 15 | 5 | 39 | 525 | 195 | 910 | 100.00 |
 
 XP values include the capped mini-game XP above. If the active Top-10 player completes all 12 eligible mini-game sessions instead of five, they gain up to 90 mini-game XP and reach 945 XP including the Main Final games.
