@@ -173,7 +173,7 @@ async def check_player_achievements(conn, season_id, user_id):
         """
         SELECT COUNT(*) FROM chronos.prediction_bets b
         JOIN chronos.prediction_markets m ON m.market_id=b.market_id
-        WHERE m.season_id=$1 AND b.bettor_user_id=$2
+        WHERE m.season_id=$1 AND b.bettor_user_id=$2 AND b.status<>'refunded'
         """,
         season_id,user_id,
     )
