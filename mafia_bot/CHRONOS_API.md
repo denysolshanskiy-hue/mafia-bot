@@ -11,7 +11,7 @@ The Mini App is served by the existing bot aiohttp server. It uses the existing 
 - iMafia ranking snapshots and global synchronization counter (690 game participations).
 - CODE BREAKER and MEMORY server-authoritative mini-games. Session state and answer keys are stored on the server.
 - CR / EX / XP ledger, achievements, collection, catalogue, equipment and player ledger history.
-- Prediction Exchange with frozen odds, duplicate protection, per-evening limits, manual result settlement and refunds if a roster changes.
+- No-stake Prediction Exchange: probability-weighted EX rewards, no penalty for an incorrect forecast, self-prediction protection, per-event limits and automatic voiding when the registered roster changes.
 - In-app notification inbox and category preferences.
 
 ### Admin console
@@ -23,7 +23,7 @@ The Mini App is served by the existing bot aiohttp server. It uses the existing 
 - Attendance closure after the linked bot event is closed.
 - Prediction market creation and settlement / void-refunds.
 - Prize award drafts, approval and manual paid status.
-- Catalog pricing/enablement, controlled ledger corrections, player list and audit log.
+- Catalog pricing/enablement, economy rule approval, idempotent ledger reconciliation, fixed prize validation, 500 UAH Activity Bonus calculation/approval, player list and audit log.
 
 ## Authentication and data ownership
 
@@ -62,6 +62,7 @@ Run these manually in a staging Neon branch first, after confirming the existing
 1. 001_chronos_foundation.sql — schema, draft CHRONOS season and 13 planned slots.
 2. 002_active_registration_unique.sql — partial unique index preventing duplicate active registrations. It intentionally stops when duplicate pairs exist.
 3. 003_chronos_platform.sql — identity, inventory, currency ledger, ranking/game imports, attendance, mini-games, predictions, notifications, prizes and audit structures.
+4. 004_chronos_economy.sql — versioned CR/EX/XP rules, no-stake prediction support, cosmetic prices and the separate 500 UAH Activity Bonus allocation table.
 
 Do not execute database.init_db() as a production migration. It contains a legacy DDL definition and is not a schema migration tool.
 
@@ -80,16 +81,29 @@ For Mini App:
 
 The Docker image installs Tesseract with Ukrainian and English language packs for screenshot OCR. OCR is an assistive draft only; an admin must correct and confirm every import.
 
-## Rules intentionally left as draft
+## CHRONOS economy v1.0
 
-These values are not active season policy until the organizer approves them:
-- Activity Score weights currently prefilled as 80 / 15 / 5.
-- Prediction Exchange limits, house margin, candidate model and EX rewards.
-- Store catalogue prices and which items are enabled.
-- XP progression curve and any real-money activity coefficient/bonus treatment.
-- Prize rules. Existing example amounts are stored disabled; award records require manual drafting and approval.
+The detailed method and worked cohort simulation are documented in CHRONOS_ECONOMY.md. The current rule set is kept in DRAFT until approved in the admin console.
 
-The sporting TOP-10 and 30% participation qualification come from confirmed iMafia/game data, not XP, CR, EX or app usage. The current Operations view displays attendance and draft Activity Score inputs; the final cumulative Activity Score / monetary coefficient calculation still requires rule approval and implementation verification.
+- CR: 5 per confirmed game plus 10 once per attended evening. Spent only on cosmetics.
+- XP: 10 per confirmed game, 5 per attended evening, 20 for each distinct mini-game first clear, and 5 per repeat completion up to 10 repeats. XP is progression-only.
+- EX: free predictions with no stake. A correct prediction earns clamp(5, 100, round(5 / probability)) EX; an incorrect forecast costs zero. Maximum three forecasts per event, six accepted forecasts to open EX Store, and a hard 500 EX seasonal cap.
+- Activity Score: 80% attendance + 15% unique verified event-level app interactions (maximum one per event across 13 possible events) + 5% mini-game completions (maximum five). Only personally invited finals count in a player's attendance denominator.
+- Qualification: ceil(30% × conducted confirmed core games); for the planned 69 core games this is 21 games.
+- Fixed prizes: 6,000 UAH across the three intermediate finals and 6,000 UAH for the Main Final. Fixed place prizes are not reduced by Activity Score.
+- Separate Activity Bonus: 500 UAH split proportionally by Activity Score among the initial Main Final Top-10 who meet qualification, using largest-remainder rounding. The allocation is saved as draft and requires approval.
+- Seasonal cash commitment: 12,500 UAH total, including the separate 500 UAH bonus pool.
+- CR and EX are cosmetic currencies only; XP is non-spendable. None can be purchased for UAH, transferred or withdrawn.
+
+Cosmetic catalogue prices:
+- CR: 80–320 CR across nine unique items.
+- EX: 25–250 EX across eleven unique items.
+- All catalogue items are disabled until separately enabled by an administrator.
+
+Activity Score, economy and prediction rules must be approved in that order. Activity Score is fixed at 80/15/5 in this version; rate changes require a versioned economy update. The simulator assumes both mini-game types are cleared for its standard cohort examples; actual XP depends on which distinct first-clear types a player completes.
+
+The sporting iMafia rank and 30% qualification are not affected by CR, EX, XP, purchases, mini-games or app engagement.
+
 
 ## Checks already run
 
@@ -106,7 +120,7 @@ This is not a live Neon integration test or a rendered Telegram WebView test. Th
 
 1. Review and merge PR #2 first (event type classifier; it remains a draft and requires PAYMENT_CARD_NUMBER in Koyeb).
 2. Merge PR #4 only after PR #2 is on main.
-3. Apply migrations 001, 002 and 003 in staging, verify schema and sample data, then repeat on production only after backup and approval.
+3. Apply migrations 001, 002, 003 and 004 in staging, verify schema and sample data, then repeat on production only after backup and approval.
 4. Configure CHRONOS_WEBAPP_URL, TELEGRAM_INIT_DATA_MAX_AGE, and verify the public HTTPS Mini App launch in Telegram.
 5. Run admin/player acceptance tests and only then decide whether to activate the season.
 
