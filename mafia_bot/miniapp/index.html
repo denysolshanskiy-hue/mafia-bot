@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080d12">
+  <meta name="color-scheme" content="dark">
+  <base href="/miniapp/">
+  <title>CHRONOS — Хранителі часу</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/app.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script defer src="assets/app.js"></script>
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="CHRONOS — на головну" data-nav="home">
+        <span class="brand-mark"><span></span><span></span><span></span></span>
+        <span class="brand-copy"><b>CHRONOS</b><small>ХРАНИТЕЛІ ЧАСУ</small></span>
+      </a>
+      <div class="topbar-right">
+        <span id="connection-state" class="connection"><i></i> З'ЄДНАННЯ</span>
+        <button class="icon-button" id="refresh-button" aria-label="Оновити дані" title="Оновити">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M5.5 9A7 7 0 0 1 18 6l2 1M4 17l2-1a7 7 0 0 0 12.5-3"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main id="app-main">
+      <section class="screen active" id="screen-home" data-screen="home">
+        <div class="eyebrow"><span class="pulse-dot"></span> SEASON INTERFACE <span class="eyebrow-line"></span> <span id="season-state">SYNC STANDBY</span></div>
+        <div class="hero">
+          <div class="hero-grid"></div>
+          <div class="hero-orbit orbit-one"></div>
+          <div class="hero-orbit orbit-two"></div>
+          <div class="hero-content">
+            <div class="hero-kicker">ВХІД У СИСТЕМУ <span>№ 001</span></div>
+            <h1>Час не<br><em>чекає.</em></h1>
+            <p>Кожна гра залишає слід.<br>Кожен вибір змінює хронологію.</p>
+            <button class="primary-button" data-nav="tower">ВІДКРИТИ ВЕЖУ <span>↗</span></button>
+          </div>
+          <div class="hero-visual" aria-hidden="true">
+            <div class="core-ring ring-outer"></div>
+            <div class="core-ring ring-inner"></div>
+            <div class="core-center"><span>CH</span><small>CORE</small></div>
+            <span class="orbit-point point-a"></span><span class="orbit-point point-b"></span>
+            <span class="orbit-label label-a">T-00</span><span class="orbit-label label-b">690</span>
+            <div class="hero-crosshair"></div>
+          </div>
+          <div class="hero-index">C / 26</div>
+        </div>
+
+        <div class="section-heading">
+          <div><div class="eyebrow">PERSONAL ACCESS</div><h2>Твоя зміна</h2></div>
+          <span class="section-code">01 — HOME</span>
+        </div>
+        <div class="welcome-card">
+          <div class="avatar-chip"><span id="avatar-initial">?</span><i></i></div>
+          <div class="welcome-copy">
+            <small>ОПЕРАТОР СИСТЕМИ</small>
+            <strong id="home-name">Гість системи</strong>
+            <span id="home-profile-note">Перевіряємо доступ...</span>
+          </div>
+          <button class="round-arrow" data-nav="profile" aria-label="Відкрити профіль">↗</button>
+        </div>
+
+        <div class="section-heading compact">
+          <div><div class="eyebrow">LIVE OPERATIONS</div><h2>Найближча подія</h2></div>
+          <button class="text-link" data-nav="events">УСІ ПОДІЇ <span>→</span></button>
+        </div>
+        <div id="home-event" class="event-feature">
+          <div class="loading-line"></div><div class="loading-line short"></div>
+        </div>
+
+        <div class="metric-strip">
+          <div class="metric">
+            <span class="metric-icon">⌁</span>
+            <strong>690</strong>
+            <small>SYNC UNITS</small>
+          </div>
+          <div class="metric-divider"></div>
+          <div class="metric">
+            <span class="metric-icon">◈</span>
+            <strong>12</strong>
+            <small>SEASON NIGHTS</small>
+          </div>
+          <div class="metric-divider"></div>
+          <div class="metric">
+            <span class="metric-icon">10</span>
+            <strong>10</strong>
+            <small>CORE FLOORS</small>
+          </div>
+        </div>
+        <p class="footnote">Синхронізація сезону з'явиться після імпорту результатів ігор.</p>
+      </section>
+
+      <section class="screen" id="screen-tower" data-screen="tower">
+        <div class="page-intro">
+          <div class="eyebrow">CHRONOS ARCHITECTURE <span class="eyebrow-line"></span> 10 FLOORS</div>
+          <h1>Вежа<br><em>часу.</em></h1>
+          <p>Десять рівнів однієї хронології. Усі поверхи доступні для перегляду; функції відкриватимуться за умовами сезону.</p>
+        </div>
+        <div class="tower-status">
+          <div class="tower-status-top"><span>GLOBAL SYNC</span><b>690 <small>UNITS</small></b></div>
+          <div class="sync-track"><span></span></div>
+          <div class="tower-status-bottom"><span>СИСТЕМА ОЧІКУЄ РЕЗУЛЬТАТИ ІГОР</span><span>— / 690</span></div>
+        </div>
+        <div class="tower-layout">
+          <div class="tower-spine"><span></span></div>
+          <div id="tower-floors" class="tower-floors"></div>
+        </div>
+        <div class="tower-legend"><span><i class="legend-open"></i> БАЗОВИЙ ОГЛЯД</span><span><i class="legend-locked"></i> УМОВА ВІДКРИТТЯ</span></div>
+      </section>
+
+      <section class="screen" id="screen-events" data-screen="events">
+        <div class="page-intro">
+          <div class="eyebrow">MISSION CONTROL <span class="eyebrow-line"></span> LIVE FEED</div>
+          <h1>Календар<br><em>операцій.</em></h1>
+          <p>Реальні події створюються в Telegram-боті. Тут вони з'являються автоматично.</p>
+        </div>
+        <div class="filter-tabs" role="tablist" aria-label="Типи подій">
+          <button class="filter-tab active" data-filter="all">УСІ <span id="event-count">0</span></button>
+          <button class="filter-tab" data-filter="live">ВІДКРИТІ</button>
+          <button class="filter-tab" data-filter="planned">СКОРО</button>
+        </div>
+        <div id="events-list" class="events-list">
+          <div class="empty-state"><span class="empty-symbol">⌁</span><b>Завантажуємо календар</b><small>Синхронізація з ботом...</small></div>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-profile" data-screen="profile">
+        <div class="page-intro">
+          <div class="eyebrow">IDENTITY CENTER <span class="eyebrow-line"></span> PLAYER ID</div>
+          <h1>Твоя<br><em>ідентичність.</em></h1>
+          <p>Профіль CHRONOS пов'язаний з твоїм Telegram-акаунтом та ігровим ніком у KMC.</p>
+        </div>
+        <div class="profile-card">
+          <div class="profile-card-top"><span>IDENTITY RECORD</span><span class="record-live"><i></i> LINKED</span></div>
+          <div class="profile-avatar">
+            <div class="avatar-halo"></div>
+            <div class="avatar-person"><span></span><i></i></div>
+            <div class="avatar-scan"></div>
+          </div>
+          <div class="profile-name" id="profile-name">Гість системи</div>
+          <div class="profile-subtitle" id="profile-telegram">TELEGRAM CONNECTION</div>
+          <div class="profile-divider"></div>
+          <div class="profile-data">
+            <div><small>СТАТУС</small><b id="profile-role">INITIATE</b></div>
+            <div><small>СЕЗОН</small><b>CHRONOS</b></div>
+            <div><small>РІВЕНЬ</small><b>01 <span>—</span></b></div>
+          </div>
+        </div>
+        <div class="notice-card">
+          <span class="notice-mark">i</span>
+          <div><b>Синхронізація профілю</b><p>Нік і реєстрація керуються через Telegram-бот. Кастомізація аватара та досвід будуть підключені окремими модулями.</p></div>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Основна навігація">
+      <button class="nav-item active" data-nav="home"><span class="nav-icon">⌂</span><small>ГОЛОВНА</small></button>
+      <button class="nav-item" data-nav="tower"><span class="nav-icon">▤</span><small>ВЕЖА</small></button>
+      <button class="nav-item nav-center" data-nav="events"><span class="nav-icon">⌁</span><small>ПОДІЇ</small></button>
+      <button class="nav-item" data-nav="profile"><span class="nav-icon">◉</span><small>ПРОФІЛЬ</small></button>
+    </nav>
+  </div>
+
+  <div class="modal-backdrop" id="modal-backdrop" aria-hidden="true">
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-handle"></div>
+      <div class="modal-header"><span class="eyebrow" id="modal-kicker">EVENT DETAIL</span><button id="modal-close" class="icon-button" aria-label="Закрити">×</button></div>
+      <div id="modal-content"></div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
