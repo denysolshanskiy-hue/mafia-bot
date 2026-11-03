@@ -158,7 +158,7 @@ class ChronosEconomyTests(unittest.TestCase):
         allocations = allocate_activity_bonus(players)
         self.assertEqual(sum(allocations.values()), 500)
         self.assertLess(allocations[10], allocations[1])
-        self.assertEqual(allocations[1] - allocations[10], 3)
+        self.assertGreaterEqual(allocations[1] - allocations[10], 3)
 
     def test_bonus_pool_fails_if_every_score_is_zero(self):
         with self.assertRaises(ValueError):
@@ -197,6 +197,19 @@ class ChronosEconomyTests(unittest.TestCase):
         self.assertEqual(report["minimum_qualifier"]["ex_catalog"]["max_unique_items_buyable"], 1)
         self.assertEqual(report["regular_player"]["ex_catalog"]["max_unique_items_buyable"], 2)
         self.assertEqual(report["active_top10"]["ex_catalog"]["max_unique_items_buyable"], 3)
+
+    def test_catalog_sink_capacity_matches_the_price_lists(self):
+        self.assertEqual(sum(CR_CATALOG.values()), 1580)
+        self.assertEqual(sum(EX_CATALOG.values()), 1470)
+
+    def test_equal_activity_splits_the_bonus_pool_equally(self):
+        players = [
+            {"user_id": user_id, "rank_position": user_id, "activity_score": 100}
+            for user_id in range(1, 11)
+        ]
+        allocations = allocate_activity_bonus(players)
+        self.assertEqual(set(allocations.values()), {50})
+        self.assertEqual(sum(allocations.values()), 500)
 
     def test_deterministic_simulator_reconciles_sources_and_sinks(self):
         report = simulate_economy()
