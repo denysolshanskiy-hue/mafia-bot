@@ -113,7 +113,7 @@ async def store_catalog(request):
             """
             SELECT COUNT(*) FROM chronos.prediction_bets b
             JOIN chronos.prediction_markets m ON m.market_id=b.market_id
-            WHERE m.season_id=$1 AND b.bettor_user_id=$2
+            WHERE m.season_id=$1 AND b.bettor_user_id=$2 AND b.status<>'refunded'
             """,
             season_id,user_id,
         ) if season_id else 0
@@ -395,7 +395,13 @@ async def notifications(request):
             user_id,limit,
         )
         unread = await conn.fetchval(
-            "SELECT COUNT(*) FROM chronos.notifications WHERE user_id=$1 AND read_at IS NULL",
+            """
+            SELECT COUNT(*) FROM chronos.notifications n
+            WHERE n.user_id=$1 AND n.read_at IS NULL
+              AND n.category NOT IN (
+                SELECT category FROM chronos.notification_preferences WHERE user_id=$1 AND muted=TRUE
+              )
+            """,
             user_id,
         )
         prefs=await conn.fetch("SELECT category,muted FROM chronos.notification_preferences WHERE user_id=$1",user_id)
