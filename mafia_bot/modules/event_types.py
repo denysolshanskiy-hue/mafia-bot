@@ -53,7 +53,7 @@ def detect_event_type(title: str) -> str:
     "CHRONOS — MAFIA UNDERGROUND" remain CHRONOS events.
     Existing UNDERGROUND and SCHOOL matching is preserved.
     """
-    normalized = re.sub(r"[^\\w]+", " ", (title or "").casefold(), flags=re.UNICODE)
+    normalized = re.sub(r"[^\w]+", " ", (title or "").casefold(), flags=re.UNICODE)
     normalized = " ".join(normalized.split())
 
     if any(marker in normalized for marker in CHRONOS_MARKERS):
