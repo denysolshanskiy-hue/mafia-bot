@@ -11,7 +11,7 @@ from aiohttp import web
 from modules.chronos_common import (
     audit, award_game_and_evening_rewards, check_player_achievements, json_response, json_value, ledger_balance, notify_user, require_admin, award_ledger
 )
-from modules.chronos_economy import allocate_activity_bonus, calculate_activity_score, qualification_games_required
+from modules.chronos_economy import allocate_activity_bonus, calculate_activity_score, qualification_games_required, season_prize_budget, simulate_economy
 
 
 def _user_id_from_row(row):
@@ -1084,6 +1084,159 @@ async def update_activity_bonus_status(request):
         await conn.close()
 
 
+
+
+async def admin_economy_report(request):
+    """Return live currency flows, sinks, price index, cash commitments and scenario model."""
+    from database import get_connection
+    conn=await get_connection()
+    try:
+        error=await require_admin(request,conn)
+        if error:
+            return error
+        season=await conn.fetchrow(
+            """
+            SELECT season_id,season_code,status,platform_settings
+            FROM chronos.seasons ORDER BY season_id DESC LIMIT 1
+            """
+        )
+        if not season:
+            return json_response({"error":"season_not_found"},404)
+        platform=json_value(season["platform_settings"],{}) or {}
+        economy=platform.get("economy",{})
+        predictions=platform.get("predictions",{})
+        activity=platform.get("activity_score",{})
+
+        flow_rows=await conn.fetch(
+            """
+            SELECT currency,
+                   COALESCE(SUM(amount) FILTER(WHERE amount>0),0) AS issued,
+                   COALESCE(-SUM(amount) FILTER(WHERE amount<0),0) AS removed,
+                   COALESCE(SUM(amount),0) AS net_change,
+                   COUNT(*) FILTER(WHERE amount>0) AS credit_entries,
+                   COUNT(*) FILTER(WHERE amount<0) AS debit_entries
+            FROM chronos.ledger
+            GROUP BY currency ORDER BY currency
+            """
+        )
+        balance_rows=await conn.fetch(
+            """
+            WITH player_balances AS (
+              SELECT user_id,currency,SUM(amount) AS balance
+              FROM chronos.ledger GROUP BY user_id,currency
+            )
+            SELECT currency,
+                   COUNT(*) FILTER(WHERE balance>0) AS holders,
+                   COALESCE(AVG(balance) FILTER(WHERE balance>0),0) AS average_positive_balance,
+                   COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP(ORDER BY balance) FILTER(WHERE balance>0),0) AS median_positive_balance,
+                   COALESCE(MAX(balance),0) AS max_balance
+            FROM player_balances GROUP BY currency
+            """
+        )
+        flows={row["currency"]:dict(row) for row in flow_rows}
+        balances={row["currency"]:dict(row) for row in balance_rows}
+        currencies={}
+        for currency in ("CR","EX","XP"):
+            flow=flows.get(currency,{})
+            balance=balances.get(currency,{})
+            issued=int(flow.get("issued",0) or 0)
+            removed=int(flow.get("removed",0) or 0)
+            currencies[currency]={
+                "issued":issued,
+                "removed":removed,
+                "net_change":int(flow.get("net_change",0) or 0),
+                "holders":int(balance.get("holders",0) or 0),
+                "average_positive_balance":float(balance.get("average_positive_balance",0) or 0),
+                "median_positive_balance":float(balance.get("median_positive_balance",0) or 0),
+                "max_balance":int(balance.get("max_balance",0) or 0),
+                "sink_to_faucet_ratio":round(removed/issued,4) if issued else None,
+                "credit_entries":int(flow.get("credit_entries",0) or 0),
+                "debit_entries":int(flow.get("debit_entries",0) or 0),
+            }
+
+        catalog_rows=await conn.fetch(
+            """
+            SELECT currency,COUNT(*) FILTER(WHERE is_enabled=TRUE) AS enabled_items,
+                   COALESCE(SUM(price) FILTER(WHERE is_enabled=TRUE),0) AS enabled_basket_price,
+                   COUNT(*) FILTER(WHERE is_enabled=FALSE) AS disabled_items
+            FROM chronos.catalog_items GROUP BY currency
+            """
+        )
+        catalog={row["currency"]:dict(row) for row in catalog_rows}
+        purchase_rows=await conn.fetch(
+            """
+            SELECT currency,COUNT(*) AS purchases,COALESCE(-SUM(amount),0) AS total_spent
+            FROM chronos.ledger
+            WHERE reason_code='store_purchase' AND amount<0
+            GROUP BY currency
+            """
+        )
+        purchases={row["currency"]:dict(row) for row in purchase_rows}
+
+        bonus=await conn.fetchrow(
+            """
+            SELECT COUNT(*) AS allocations,
+                   COALESCE(SUM(allocation_amount_uah),0) AS allocated,
+                   COALESCE(SUM(allocation_amount_uah) FILTER(WHERE status='approved'),0) AS approved,
+                   COALESCE(SUM(allocation_amount_uah) FILTER(WHERE status='paid'),0) AS paid
+            FROM chronos.season_bonus_allocations WHERE season_id=$1
+            """,
+            season["season_id"],
+        )
+        fixed=await conn.fetchrow(
+            """
+            SELECT COALESCE(SUM(final_amount_uah),0) AS drafted,
+                   COALESCE(SUM(final_amount_uah) FILTER(WHERE status='approved'),0) AS approved,
+                   COALESCE(SUM(final_amount_uah) FILTER(WHERE status='paid'),0) AS paid
+            FROM chronos.prize_awards WHERE season_id=$1
+            """,
+            season["season_id"],
+        )
+        planned_prizes=season_prize_budget(
+            activity_bonus=int(economy.get("season_activity_bonus_uah",500))
+        )
+        return json_response({
+            "season":{"season_code":season["season_code"],"status":season["status"]},
+            "rules":{
+                "version":economy.get("version","1.0"),
+                "economy_status":economy.get("status","draft"),
+                "activity_status":activity.get("status","draft"),
+                "prediction_status":predictions.get("status","draft"),
+                "currency_policy":economy.get("currency_policy",{
+                    "CR":"earned soft currency for cosmetics only",
+                    "EX":"earned no-loss forecast rewards for cosmetics only",
+                    "XP":"non-spendable progression only",
+                    "no_purchase_transfer_or_cashout":True,
+                    "carry_balances_between_seasons":True,
+                }),
+            },
+            "currencies":currencies,
+            "catalog":catalog,
+            "purchases":purchases,
+            "cash_prizes":{
+                "planned":planned_prizes,
+                "fixed_awards_drafted":int(fixed["drafted"] or 0),
+                "fixed_awards_approved":int(fixed["approved"] or 0),
+                "fixed_awards_paid":int(fixed["paid"] or 0),
+                "activity_bonus_pool":int(economy.get("season_activity_bonus_uah",500)),
+                "activity_bonus_allocations":int(bonus["allocations"] or 0),
+                "activity_bonus_allocated":int(bonus["allocated"] or 0),
+                "activity_bonus_approved":int(bonus["approved"] or 0),
+                "activity_bonus_paid":int(bonus["paid"] or 0),
+            },
+            "scenario_model":simulate_economy(),
+            "warnings":[
+                "CR/EX balances carry across seasons. Publish new cosmetic inventory regularly; owned catalog items are one-time purchases.",
+                "The sink-to-faucet ratio is a live diagnostic, not a target to force by removing earned rewards. Review it after a full season of purchases.",
+                "XP is progression-only and intentionally has no currency sink.",
+                "The UAH 500 activity bonus is a separate fixed cash pool, never converted to CR/EX and never deducted from fixed final prizes.",
+            ],
+        })
+    except asyncpg.UndefinedTableError:
+        return json_response({"error":"database_not_ready"},503)
+    finally:
+        await conn.close()
+
 async def reconcile_economy_ledger(request):
     """Backfill missed CR/XP grants safely after the economy rules are approved."""
     from modules.chronos_games import _award_minigame_xp
@@ -1718,6 +1871,7 @@ def register_admin_routes(app):
     app.router.add_get("/api/chronos/admin/prizes",admin_prizes)
     app.router.add_post("/api/chronos/admin/season-bonus/calculate",calculate_season_activity_bonus)
     app.router.add_post("/api/chronos/admin/season-bonus/{allocation_id:\\d+}/status",update_activity_bonus_status)
+    app.router.add_get("/api/chronos/admin/economy/report",admin_economy_report)
     app.router.add_post("/api/chronos/admin/economy/reconcile",reconcile_economy_ledger)
     app.router.add_post("/api/chronos/admin/prize-rules",update_prize_rule)
     app.router.add_post("/api/chronos/admin/prizes",create_prize_awards)
