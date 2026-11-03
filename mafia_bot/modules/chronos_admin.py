@@ -694,10 +694,17 @@ async def _invite_next_rank(conn,slot_id,season_id):
         SELECT rp.user_id,rp.rank_position
         FROM chronos.ranking_players rp
         WHERE rp.snapshot_id=$1
+          AND (SELECT COUNT(*)
+               FROM chronos.game_players gp
+               JOIN chronos.games g ON g.game_id=gp.game_id
+               WHERE gp.user_id=rp.user_id AND g.season_id=$3
+                 AND g.status='confirmed' AND g.counts_for_sync=TRUE)
+              >= GREATEST(1,CEIL((SELECT COUNT(*) FROM chronos.games
+                 WHERE season_id=$3 AND status='confirmed' AND counts_for_sync=TRUE)*0.30))
           AND NOT EXISTS(SELECT 1 FROM chronos.final_invitations fi WHERE fi.slot_id=$2 AND fi.user_id=rp.user_id)
         ORDER BY rp.rank_position LIMIT 1
         """,
-        snapshot["snapshot_id"],slot_id,
+        snapshot["snapshot_id"],slot_id,season_id,
     )
     if not next_player:
         return
