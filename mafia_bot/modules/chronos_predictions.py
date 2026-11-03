@@ -10,6 +10,7 @@ from aiohttp import web
 from modules.chronos_common import (
     active_season_id, audit, check_player_achievements, json_response, json_value, ledger_balance, notify_user, require_admin, award_ledger
 )
+from modules.chronos_economy import prediction_reward_ex
 from modules.chronos_logic import plackett_luce_probabilities
 
 
@@ -52,16 +53,17 @@ async def list_predictions(request):
         for market in markets:
             candidates=await conn.fetch(
                 """
-                SELECT c.user_id,u.display_name,c.probability,c.odds
+                SELECT c.user_id,u.display_name,c.probability,c.odds,c.reward_ex
                 FROM chronos.prediction_candidates c
                 JOIN public.users u ON u.user_id=c.user_id
-                WHERE c.market_id=$1 ORDER BY c.odds DESC,u.display_name
+                WHERE c.market_id=$1 AND c.user_id<>$2
+                ORDER BY c.odds DESC,u.display_name
                 """,
-                market["market_id"],
+                market["market_id"],user_id,
             )
             mine=await conn.fetchrow(
                 """
-                SELECT bet_id,candidate_user_id,stake,odds,potential_return,status
+                SELECT bet_id,candidate_user_id,odds,potential_return AS reward_ex,status
                 FROM chronos.prediction_bets
                 WHERE market_id=$1 AND bettor_user_id=$2
                 """,
@@ -83,7 +85,8 @@ async def list_predictions(request):
             "balance_ex":await ledger_balance(conn,user_id,"EX"),
             "markets":out,
             "rules_status":rules_status,
-            "currency_notice":"EX — ігрова валюта без грошової вартості. Її не можна купити, передати або вивести.",
+            "currency_notice":"EX — лише косметична ігрова валюта. Прогноз безкоштовний: за помилку немає штрафу, за правильний прогноз нараховується 25–100 EX. Себе обирати не можна.",
+            "rules_notice":"Очікувана винагорода за один прогноз близько 5 EX; фактична залежить від імовірності кандидата. Ліміт заробітку — 500 EX за сезон.",
         })
     except asyncpg.UndefinedTableError:
         return json_response({"error":"database_not_ready"},503)
@@ -113,8 +116,9 @@ async def open_prediction_markets(request):
                 return json_response({"error":"season_not_active"},409)
             season_settings=json_value(season["platform_settings"], {}) or {}
             settings=season_settings.get("predictions",{})
-            if settings.get("status")!="approved":
-                return json_response({"error":"prediction_rules_not_approved","message":"Правила прогнозів ще не затверджені."},409)
+            economy_settings=season_settings.get("economy",{})
+            if settings.get("status")!="approved" or economy_settings.get("status")!="approved":
+                return json_response({"error":"economy_rules_not_approved","message":"Економіка та правила прогнозів ще не затверджені."},409)
             event=await conn.fetchrow(
                 """
                 SELECT event_id,title,event_date,event_time FROM public.events
@@ -163,7 +167,7 @@ async def open_prediction_markets(request):
                 [stats_by_id[user_id] for user_id in player_ids],
                 simulations=12000,
                 seed=int(event_id),
-                house_margin=float(settings.get("house_margin",0.05)),
+                house_margin=0.0,
             )
             existing_markets=await conn.fetchval(
                 "SELECT COUNT(*) FROM chronos.prediction_markets WHERE bot_event_id=$1",
@@ -189,12 +193,19 @@ async def open_prediction_markets(request):
                     data=odds_data.get(place,{}).get(str(candidate_id))
                     if not data:
                         continue
+                    reward_ex=prediction_reward_ex(
+                        data["probability"],
+                        expected_reward=int(settings.get("expected_reward_ex",5)),
+                        minimum=int(settings.get("min_reward_ex",25)),
+                        maximum=int(settings.get("max_reward_ex",100)),
+                    )
                     await conn.execute(
                         """
-                        INSERT INTO chronos.prediction_candidates(market_id,user_id,probability,odds)
-                        VALUES($1,$2,$3,$4)
+                        INSERT INTO chronos.prediction_candidates
+                          (market_id,user_id,probability,odds,reward_ex)
+                        VALUES($1,$2,$3,$4,$5)
                         """,
-                        market["market_id"],candidate_id,data["probability"],data["odds"],
+                        market["market_id"],candidate_id,data["probability"],data["odds"],reward_ex,
                     )
                 created.append({"market_id":market["market_id"],"market_type":market_type})
             await audit(conn,actor_id,"prediction_markets_opened","event",event_id,{"markets":created,"closes_at":closes_at.isoformat()})
@@ -234,26 +245,25 @@ async def _void_market_if_roster_changed(conn, market):
             "UPDATE chronos.prediction_bets SET status='refunded',settled_at=NOW() WHERE bet_id=$1",
             bet["bet_id"],
         )
-        await award_ledger(
-            conn,bet["bettor_user_id"],"EX",bet["stake"],"prediction_refund",
-            f"prediction:refund:{bet['bet_id']}",str(bet["bet_id"]),
-        )
         await notify_user(
-            conn,bet["bettor_user_id"],"predictions","Ринок скасовано",
-            "Склад вечора змінився після відкриття ринку. Ставку повернено на EX.",
+            conn,bet["bettor_user_id"],"predictions","Прогноз анульовано",
+            "Склад вечора змінився після відкриття ринку. EX не списувалися, штрафу немає.",
         )
     return True
 
 
 async def place_bet(request):
+    """Submit a free forecast. No EX is debited; only correct forecasts earn EX."""
     user_id=request["telegram_user"]["id"]
     market_id=int(request.match_info["market_id"])
     try:
         payload=await request.json()
         candidate_id=int(payload["candidate_user_id"])
-        stake=int(payload["stake"])
     except (ValueError,KeyError,TypeError,json.JSONDecodeError):
-        return json_response({"error":"invalid_bet_payload"},400)
+        return json_response({"error":"candidate_user_id_required"},400)
+    if candidate_id==user_id:
+        return json_response({"error":"self_prediction_not_allowed"},403)
+
     from database import get_connection
     conn=await get_connection()
     try:
@@ -274,84 +284,76 @@ async def place_bet(request):
                     await conn.execute("UPDATE chronos.prediction_markets SET status='locked' WHERE market_id=$1",market_id)
                 return json_response({"error":"market_closed"},409)
             if await _void_market_if_roster_changed(conn,market):
-                return json_response({"error":"roster_changed_market_voided","message":"Склад змінився. Ринок скасовано, ставки повернуто."},409)
+                return json_response({
+                    "error":"roster_changed_market_voided",
+                    "message":"Склад вечора змінився. Прогноз анульовано без втрати EX.",
+                },409)
+
             season=await conn.fetchrow(
                 "SELECT platform_settings FROM chronos.seasons WHERE season_id=$1",
                 market["season_id"],
             )
-            season_settings=json_value(season["platform_settings"], {}) if season else {}
-            rules=season_settings.get("predictions",{}) if season_settings else {}
-            if rules.get("status")!="approved":
-                return json_response({"error":"prediction_rules_not_approved"},409)
-            min_stake=int(rules.get("min_stake",10))
-            max_stake=int(rules.get("max_stake",200))
-            max_evening=int(rules.get("max_per_evening",500))
-            max_bets=int(rules.get("max_bets_per_evening",3))
-            if stake<min_stake or stake>max_stake:
-                return json_response({"error":"stake_out_of_range","min":min_stake,"max":max_stake},400)
-            if not await conn.fetchval(
+            season_settings=json_value(season["platform_settings"],{}) if season else {}
+            rules=(season_settings or {}).get("predictions",{})
+            economy=(season_settings or {}).get("economy",{})
+            if rules.get("status")!="approved" or economy.get("status")!="approved":
+                return json_response({"error":"economy_rules_not_approved"},409)
+
+            candidate=await conn.fetchrow(
                 """
-                SELECT EXISTS(SELECT 1 FROM chronos.prediction_candidates WHERE market_id=$1 AND user_id=$2)
+                SELECT probability,odds,reward_ex FROM chronos.prediction_candidates
+                WHERE market_id=$1 AND user_id=$2
                 """,
                 market_id,candidate_id,
-            ):
+            )
+            if not candidate:
                 return json_response({"error":"candidate_not_available"},404)
-            duplicate_bet=await conn.fetchval(
+            duplicate=await conn.fetchval(
                 "SELECT EXISTS(SELECT 1 FROM chronos.prediction_bets WHERE market_id=$1 AND bettor_user_id=$2)",
                 market_id,user_id,
             )
-            if duplicate_bet:
-                return json_response({"error":"already_bet_on_this_market"},409)
-            playing=await conn.fetchval(
-                "SELECT EXISTS(SELECT 1 FROM public.registrations WHERE event_id=$1 AND user_id=$2 AND status='active')",
-                market["bot_event_id"],user_id,
-            )
-            if playing:
-                return json_response({"error":"registered_players_cannot_bet"},403)
-            existing_bets=await conn.fetchrow(
+            if duplicate:
+                return json_response({"error":"already_predicted_on_this_market"},409)
+            count=await conn.fetchval(
                 """
-                SELECT COUNT(*) AS count,COALESCE(SUM(b.stake),0) AS total
-                FROM chronos.prediction_bets b
+                SELECT COUNT(*) FROM chronos.prediction_bets b
                 JOIN chronos.prediction_markets m ON m.market_id=b.market_id
-                WHERE m.bot_event_id=$1 AND b.bettor_user_id=$2
+                WHERE m.bot_event_id=$1 AND b.bettor_user_id=$2 AND b.status<>'refunded'
                 """,
                 market["bot_event_id"],user_id,
             )
-            if int(existing_bets["count"])>=max_bets:
-                return json_response({"error":"evening_bet_count_limit","limit":max_bets},409)
-            if int(existing_bets["total"])+stake>max_evening:
-                return json_response({"error":"evening_stake_limit","limit":max_evening},409)
-            balance=await ledger_balance(conn,user_id,"EX")
-            if balance<stake:
-                return json_response({"error":"insufficient_ex","balance":balance},409)
-            odds=await conn.fetchval(
-                "SELECT odds FROM chronos.prediction_candidates WHERE market_id=$1 AND user_id=$2",
-                market_id,candidate_id,
-            )
-            potential_return=int((Decimal(stake)*Decimal(odds)).quantize(Decimal("1"),rounding=ROUND_HALF_UP))
+            max_per_event=int(rules.get("max_predictions_per_event",3))
+            if int(count or 0)>=max_per_event:
+                return json_response({"error":"event_forecast_limit","limit":max_per_event},409)
+
             bet=await conn.fetchrow(
                 """
                 INSERT INTO chronos.prediction_bets
                   (market_id,bettor_user_id,candidate_user_id,stake,odds,potential_return)
-                VALUES($1,$2,$3,$4,$5,$6)
+                VALUES($1,$2,$3,0,$4,$5)
                 RETURNING bet_id
                 """,
-                market_id,user_id,candidate_id,stake,odds,potential_return,
-            )
-            await award_ledger(
-                conn,user_id,"EX",-stake,"prediction_stake",
-                f"prediction:stake:{bet['bet_id']}",str(bet["bet_id"]),
+                market_id,user_id,candidate_id,candidate["odds"],candidate["reward_ex"],
             )
             await check_player_achievements(conn,market["season_id"],user_id)
             await conn.execute(
                 """
-                INSERT INTO chronos.activity_events(season_id,user_id,action_code,score_value,source_key,verified,metadata)
-                VALUES($1,$2,'prediction_placed',1,$3,TRUE,$4::jsonb)
+                INSERT INTO chronos.activity_events
+                  (season_id,user_id,action_code,score_value,source_key,verified,metadata)
+                VALUES($1,$2,'prediction_placed',1,$3,$4,$5::jsonb)
                 ON CONFLICT(source_key) DO NOTHING
                 """,
-                market["season_id"],user_id,f"prediction:{bet['bet_id']}",json.dumps({"market_id":market_id}),
+                market["season_id"],user_id,f"prediction:{bet['bet_id']}",True,
+                json.dumps({"market_id":market_id,"event_id":market["bot_event_id"]}),
             )
-        return json_response({"accepted":True,"bet_id":bet["bet_id"],"odds":float(odds),"potential_return":potential_return},201)
+        return json_response({
+            "accepted":True,
+            "bet_id":bet["bet_id"],
+            "probability":float(candidate["probability"]),
+            "estimated_reward_ex":int(candidate["reward_ex"]),
+            "stake_ex":0,
+            "loss_on_wrong_prediction":0,
+        },201)
     except asyncpg.UndefinedTableError:
         return json_response({"error":"database_not_ready"},503)
     finally:
@@ -391,24 +393,69 @@ async def settle_market(request):
                 )
                 if not candidate:
                     return json_response({"error":"winner_not_a_candidate"},400)
+
+            season=await conn.fetchrow(
+                "SELECT platform_settings FROM chronos.seasons WHERE season_id=$1",
+                market["season_id"],
+            )
+            settings=json_value(season["platform_settings"],{}) if season else {}
+            prediction_rules=(settings or {}).get("predictions",{})
+            ex_cap=int(prediction_rules.get("ex_season_cap",500))
             bets=await conn.fetch(
                 "SELECT * FROM chronos.prediction_bets WHERE market_id=$1 AND status='pending' FOR UPDATE",
                 market_id,
             )
+            settlements=[]
             for bet in bets:
                 if result=="void":
                     await conn.execute(
                         "UPDATE chronos.prediction_bets SET status='refunded',settled_at=NOW() WHERE bet_id=$1",
                         bet["bet_id"],
                     )
-                    await award_ledger(conn,bet["bettor_user_id"],"EX",bet["stake"],"prediction_refund",f"prediction:refund:{bet['bet_id']}",str(bet["bet_id"]))
-                    await notify_user(conn,bet["bettor_user_id"],"predictions","Ринок скасовано","Ставку повернено на баланс EX.")
+                    await notify_user(
+                        conn,bet["bettor_user_id"],"predictions","Прогноз анульовано",
+                        "Склад учасників змінився. Прогноз закрито без списання чи повернення EX.",
+                    )
+                    settlements.append({"bet_id":bet["bet_id"],"status":"refunded","reward_ex":0})
                 elif bet["candidate_user_id"]==winner:
-                    await conn.execute("UPDATE chronos.prediction_bets SET status='won',settled_at=NOW() WHERE bet_id=$1",bet["bet_id"])
-                    await award_ledger(conn,bet["bettor_user_id"],"EX",bet["potential_return"],"prediction_win",f"prediction:payout:{bet['bet_id']}",str(bet["bet_id"]))
-                    await notify_user(conn,bet["bettor_user_id"],"predictions","Прогноз влучив!",f"На баланс зараховано {bet['potential_return']} EX.")
+                    already_earned=await conn.fetchval(
+                        """
+                        SELECT COALESCE(SUM(amount),0) FROM chronos.ledger
+                        WHERE user_id=$1 AND currency='EX' AND reason_code='prediction_win'
+                          AND metadata->>'season_id'=$2
+                        """,
+                        bet["bettor_user_id"],str(market["season_id"]),
+                    )
+                    reward=min(
+                        int(bet["potential_return"]),
+                        max(0,ex_cap-int(already_earned or 0)),
+                    )
+                    await conn.execute(
+                        "UPDATE chronos.prediction_bets SET status='won',settled_at=NOW() WHERE bet_id=$1",
+                        bet["bet_id"],
+                    )
+                    if reward:
+                        await award_ledger(
+                            conn,bet["bettor_user_id"],"EX",reward,"prediction_win",
+                            f"prediction:payout:{bet['bet_id']}",str(bet["bet_id"]),
+                            metadata={"season_id":market["season_id"],"market_id":market_id,"bet_id":bet["bet_id"]},
+                        )
+                    await notify_user(
+                        conn,bet["bettor_user_id"],"predictions","Прогноз влучив!",
+                        f"Нараховано {reward} EX. Неправильний прогноз не списує валюту.",
+                    )
+                    settlements.append({"bet_id":bet["bet_id"],"status":"won","reward_ex":reward})
                 else:
-                    await conn.execute("UPDATE chronos.prediction_bets SET status='lost',settled_at=NOW() WHERE bet_id=$1",bet["bet_id"])
+                    await conn.execute(
+                        "UPDATE chronos.prediction_bets SET status='lost',settled_at=NOW() WHERE bet_id=$1",
+                        bet["bet_id"],
+                    )
+                    await notify_user(
+                        conn,bet["bettor_user_id"],"predictions","Прогноз не справдився",
+                        "EX не списано. Наступний прогноз можна зробити на іншому ринку.",
+                    )
+                    settlements.append({"bet_id":bet["bet_id"],"status":"lost","reward_ex":0})
+
             await conn.execute(
                 """
                 UPDATE chronos.prediction_markets
@@ -417,8 +464,15 @@ async def settle_market(request):
                 """,
                 market_id,"void" if result=="void" else "settled",winner,
             )
-            await audit(conn,actor_id,"prediction_market_settled","market",market_id,{"result":result,"winner":winner})
-        return json_response({"settled":True,"result":result,"winning_user_id":winner})
+            await audit(
+                conn,actor_id,"prediction_market_settled","market",market_id,
+                {"result":result,"winner":winner,"settlements":settlements},
+            )
+        return json_response({
+            "settled":True,"result":result,"winning_user_id":winner,
+            "settlements":settlements,
+            "no_stakes":True,
+        })
     except asyncpg.UndefinedTableError:
         return json_response({"error":"database_not_ready"},503)
     finally:
