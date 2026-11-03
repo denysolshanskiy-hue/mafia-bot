@@ -7,7 +7,7 @@ import asyncpg
 from aiohttp import web
 
 from modules.chronos_common import (
-    active_season_id, audit, json_response, json_value, ledger_balance, require_admin
+    active_season_id, audit, json_response, json_value, ledger_balance, require_admin, check_player_achievements
 )
 from modules.chronos_logic import AVATAR_BASES, level_for_xp
 
@@ -108,11 +108,23 @@ async def store_catalog(request):
             """,
             user_id,
         )
+        season_id=await active_season_id(conn)
+        accepted_bets=await conn.fetchval(
+            """
+            SELECT COUNT(*) FROM chronos.prediction_bets b
+            JOIN chronos.prediction_markets m ON m.market_id=b.market_id
+            WHERE m.season_id=$1 AND b.bettor_user_id=$2
+            """,
+            season_id,user_id,
+        ) if season_id else 0
+        unlocked=int(accepted_bets or 0)>=6
         return json_response({
             "balances": {
                 "CR": await ledger_balance(conn,user_id,"CR"),
                 "EX": await ledger_balance(conn,user_id,"EX"),
             },
+            "ex_store_unlocked":unlocked,
+            "accepted_bets":int(accepted_bets or 0),
             "items": [dict(row) for row in items],
         })
     except asyncpg.UndefinedTableError:
@@ -140,6 +152,18 @@ async def buy_item(request):
             )
             if already:
                 return json_response({"error":"already_owned"},409)
+            if item["currency"]=="EX":
+                season_id=await active_season_id(conn)
+                accepted_bets=await conn.fetchval(
+                    """
+                    SELECT COUNT(*) FROM chronos.prediction_bets b
+                    JOIN chronos.prediction_markets m ON m.market_id=b.market_id
+                    WHERE m.season_id=$1 AND b.bettor_user_id=$2
+                    """,
+                    season_id,user_id,
+                ) if season_id else 0
+                if int(accepted_bets or 0)<6:
+                    return json_response({"error":"ex_store_locked","accepted_bets":int(accepted_bets or 0),"required_bets":6},403)
             balance = await ledger_balance(conn,user_id,item["currency"])
             if balance < item["price"]:
                 return json_response({"error":"insufficient_funds","balance":balance},409)
@@ -199,6 +223,116 @@ async def equip_item(request):
         await conn.close()
 
 
+async def update_appearance(request):
+    user_id=request["telegram_user"]["id"]
+    try:
+        payload=await request.json()
+        title=payload.get("title")
+        badges=payload.get("badges",[])
+    except (ValueError,json.JSONDecodeError):
+        return json_response({"error":"invalid_json"},400)
+    if not isinstance(badges,list) or len(badges)>2:
+        return json_response({"error":"maximum_two_badges"},400)
+    codes=[str(value) for value in badges]
+    if len(set(codes))!=len(codes):
+        return json_response({"error":"duplicate_badges"},400)
+    if title is not None and not isinstance(title,str):
+        return json_response({"error":"invalid_title"},400)
+    from database import get_connection
+    conn=await get_connection()
+    try:
+        earned=await conn.fetch(
+            """
+            SELECT a.achievement_code,a.name
+            FROM chronos.user_achievements ua
+            JOIN chronos.achievement_definitions a ON a.achievement_id=ua.achievement_id
+            WHERE ua.user_id=$1 AND a.is_enabled=TRUE
+            """,
+            user_id,
+        )
+        by_code={row["achievement_code"]:row["name"] for row in earned}
+        if title and title not in by_code:
+            return json_response({"error":"title_not_earned"},403)
+        if any(code not in by_code for code in codes):
+            return json_response({"error":"badge_not_earned"},403)
+        await conn.execute(
+            """
+            UPDATE chronos.profiles
+            SET active_title=$2,active_badge_1=$3,active_badge_2=$4,updated_at=NOW()
+            WHERE user_id=$1
+            """,
+            user_id,title,codes[0] if codes else None,codes[1] if len(codes)>1 else None,
+        )
+        return json_response({"saved":True,"title":title,"badges":codes})
+    finally:
+        await conn.close()
+
+
+async def collection(request):
+    user_id=request["telegram_user"]["id"]
+    from database import get_connection
+    conn=await get_connection()
+    try:
+        items=await conn.fetch(
+            """
+            SELECT c.item_code,c.name,c.description,c.currency,c.equip_slot,c.rarity,c.visual_key,i.acquired_at,
+                   (e.item_id IS NOT NULL) AS equipped
+            FROM chronos.inventory i
+            JOIN chronos.catalog_items c ON c.item_id=i.item_id
+            LEFT JOIN chronos.equipment e ON e.user_id=i.user_id AND e.item_id=i.item_id
+            WHERE i.user_id=$1 ORDER BY i.acquired_at DESC
+            """,
+            user_id,
+        )
+        return json_response({"items":[dict(row) for row in items]})
+    finally:
+        await conn.close()
+
+
+async def notification_preferences(request):
+    user_id=request["telegram_user"]["id"]
+    categories=("finals","season","rewards","predictions","events","system")
+    from database import get_connection
+    conn=await get_connection()
+    try:
+        rows=await conn.fetch(
+            "SELECT category,muted FROM chronos.notification_preferences WHERE user_id=$1",
+            user_id,
+        )
+        saved={row["category"]:row["muted"] for row in rows}
+        return json_response({"preferences":{category:bool(saved.get(category,False)) for category in categories}})
+    finally:
+        await conn.close()
+
+
+async def save_notification_preferences(request):
+    user_id=request["telegram_user"]["id"]
+    categories=("finals","season","rewards","predictions","events","system")
+    try:
+        payload=await request.json()
+        preferences=payload.get("preferences")
+    except (ValueError,json.JSONDecodeError):
+        return json_response({"error":"invalid_json"},400)
+    if not isinstance(preferences,dict) or any(key not in categories or not isinstance(value,bool) for key,value in preferences.items()):
+        return json_response({"error":"invalid_preferences"},400)
+    from database import get_connection
+    conn=await get_connection()
+    try:
+        async with conn.transaction():
+            for category,muted in preferences.items():
+                await conn.execute(
+                    """
+                    INSERT INTO chronos.notification_preferences(user_id,category,muted)
+                    VALUES($1,$2,$3)
+                    ON CONFLICT(user_id,category) DO UPDATE SET muted=EXCLUDED.muted,updated_at=NOW()
+                    """,
+                    user_id,category,muted,
+                )
+        return json_response({"saved":True})
+    finally:
+        await conn.close()
+
+
 async def achievements(request):
     user_id = request["telegram_user"]["id"]
     from database import get_connection
@@ -234,7 +368,7 @@ async def notifications(request):
             """
             SELECT notification_id,category,title,body,action_type,action_payload,read_at,created_at
             FROM chronos.notifications WHERE user_id=$1
-            ORDER BY created_at DESC LIMIT $2
+            AND category NOT IN (SELECT category FROM chronos.notification_preferences WHERE user_id=$1 AND muted=TRUE)\n            ORDER BY created_at DESC LIMIT $2
             """,
             user_id,limit,
         )
@@ -242,7 +376,8 @@ async def notifications(request):
             "SELECT COUNT(*) FROM chronos.notifications WHERE user_id=$1 AND read_at IS NULL",
             user_id,
         )
-        return json_response({"unread_count":unread,"items":[dict(row) for row in rows]})
+        prefs=await conn.fetch("SELECT category,muted FROM chronos.notification_preferences WHERE user_id=$1",user_id)
+        return json_response({"unread_count":unread,"items":[dict(row) for row in rows],"preferences":{row["category"]:row["muted"] for row in prefs}})
     finally:
         await conn.close()
 
@@ -453,6 +588,10 @@ async def rankings(request):
 def register_identity_routes(app):
     app.router.add_get("/api/chronos/identity", get_identity)
     app.router.add_post("/api/chronos/identity/avatar", update_avatar)
+    app.router.add_post("/api/chronos/identity/appearance", update_appearance)
+    app.router.add_get("/api/chronos/collection", collection)
+    app.router.add_get("/api/chronos/notifications/preferences", notification_preferences)
+    app.router.add_post("/api/chronos/notifications/preferences", save_notification_preferences)
     app.router.add_get("/api/chronos/store", store_catalog)
     app.router.add_post("/api/chronos/store/{item_id:\\d+}/buy", buy_item)
     app.router.add_post("/api/chronos/store/{item_id:\\d+}/equip", equip_item)
