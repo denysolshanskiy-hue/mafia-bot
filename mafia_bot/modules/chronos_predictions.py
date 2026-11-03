@@ -160,9 +160,18 @@ async def open_prediction_markets(request):
                 snapshot["snapshot_id"],player_ids,
             )
             stats_by_id={row["user_id"]:dict(row) for row in stats}
-            missing=[row["display_name"] for row in roster if row["user_id"] not in stats_by_id]
-            if missing:
-                return json_response({"error":"incomplete_player_statistics","missing_players":missing},409)
+            missing=[row for row in roster if row["user_id"] not in stats_by_id]
+            for player in missing:
+                # The probability model replaces this empty row with the
+                # roster median. A newcomer is not automatically ranked last.
+                stats_by_id[player["user_id"]] = {
+                    "user_id":player["user_id"],
+                    "rank_position":None,
+                    "points":0,
+                    "games_played":0,
+                    "wins":0,
+                    "bonus_points":0,
+                }
             odds_data=plackett_luce_probabilities(
                 [stats_by_id[user_id] for user_id in player_ids],
                 simulations=12000,
@@ -208,8 +217,16 @@ async def open_prediction_markets(request):
                         market["market_id"],candidate_id,data["probability"],data["odds"],reward_ex,
                     )
                 created.append({"market_id":market["market_id"],"market_type":market_type})
-            await audit(conn,actor_id,"prediction_markets_opened","event",event_id,{"markets":created,"closes_at":closes_at.isoformat()})
-        return json_response({"opened":created,"closes_at":closes_at.isoformat()},201)
+            await audit(conn,actor_id,"prediction_markets_opened","event",event_id,{
+                "markets":created,
+                "closes_at":closes_at.isoformat(),
+                "neutral_fallback_candidates":len(missing),
+            })
+        return json_response({
+            "opened":created,
+            "closes_at":closes_at.isoformat(),
+            "neutral_fallback_candidates":len(missing),
+        },201)
     except asyncpg.UndefinedTableError:
         return json_response({"error":"database_not_ready"},503)
     finally:
