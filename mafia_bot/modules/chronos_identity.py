@@ -274,7 +274,7 @@ async def operations(request):
     try:
         season = await conn.fetchrow(
             """
-            SELECT season_id,target_sync_units,platform_settings
+            SELECT season_id,status,target_sync_units,platform_settings
             FROM chronos.seasons WHERE status IN ('active','paused','draft')
             ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'paused' THEN 1 ELSE 2 END,season_id DESC LIMIT 1
             """
@@ -365,7 +365,7 @@ async def operations(request):
         attendance_pct = round(100*attendance_done/attendance_total,1) if attendance_total else 0.0
         qualifies = int(played_games or 0) >= math.ceil(0.3*int(conducted_games or 0)) if conducted_games else False
         return json_response({
-            "season":{"status":settings.get("status","draft")},
+            "season":{"status":season["status"]},
             "participation":{
                 "games_played":int(played_games or 0),
                 "games_conducted":int(conducted_games or 0),
