@@ -52,7 +52,7 @@ For modeling:
 | EX | Prediction reward currency | Correct free predictions only | EX cosmetics |
 | XP | Progression and level display | Confirmed games, attended evenings, capped mini-game completions | No spending; progression only |
 
-No exchange rate exists between CR, EX, XP and UAH. There is no currency conversion, player-to-player market, paid booster, transfer or cashout.
+No exchange rate exists between CR, EX, XP and UAH. There is no currency conversion, player-to-player market, paid booster, transfer or cashout. CR, EX and XP balances carry forward between seasons; earning caps and mini-game repeat limits are season-scoped, while the six-forecast EX Store unlock is a one-time lifetime milestone. To prevent multi-season stockpiling from exhausting the catalogue, new cosmetic sinks must be added in each future season.
 
 ## 4. Income formulas
 
@@ -106,7 +106,7 @@ Limits:
 - 39 possible forecasts across 13 season events.
 - Expected EX income at the 5 EX target value: 39 × 5 = 195 EX.
 - Hard EX earning cap: 500 EX per player per season.
-- EX Store opens after six accepted non-void forecasts (normally two events if all three markets are used).
+- EX Store opens permanently after six accepted non-void forecasts across the player's CHRONOS history (normally two events if all three markets are used).
 - The 5 EX reward floor preserves the expected-value curve even for very high-probability candidates. The 100 EX ceiling reduces the expected value of very unlikely candidates below 5 EX, limiting the faucet on long shots.
 
 The candidate probability model is a Plackett–Luce simulation based on confirmed iMafia snapshot statistics. It is a forecast heuristic, not a promise of winning probability. It must be checked against actual outcomes after the season before the model is treated as calibrated.
@@ -222,7 +222,7 @@ XP values include the capped mini-game XP above. If the active Top-10 player com
 ### Does the economy reconcile?
 
 - **No free conversion loop:** CR, EX and XP cannot be exchanged with each other or UAH.
-- **Faucets are capped/observable:** game and attendance grants use idempotency keys; mini-game repeats are capped; EX has a season cap.
+- **Faucets are capped/observable:** game and attendance grants use idempotency keys; mini-game repeats are capped; EX has a 500-per-season cap. Wallet balances carry forward; future seasons must add new cosmetic sinks to absorb accumulated balances.
 - **Sinks are real:** cosmetic purchases debit the same ledger that receives grants, and inventory prevents duplicate purchases.
 - **Minimum progress is meaningful:** the minimum qualifier has 155 CR and can afford an 80 CR entry item. Six forecasts have an expected value of about 30 EX, enough for the 25 EX entry item.
 - **Active progress is aspirational:** a full core Top-10 player earns 475 CR and can buy a 320 CR premium item; playing all Main Final games raises the ceiling to 525 CR.
