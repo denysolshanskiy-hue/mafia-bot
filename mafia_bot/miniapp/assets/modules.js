@@ -218,7 +218,7 @@
             ' · нагорода за влучання: ' + money(mine.reward_ex) + ' EX. За помилку EX не списуються.</p></div></div>'
           : (open
             ? '<div class="form-field"><label>ОБЕРИ ГРАВЦЯ · СЕБЕ ОБРАТИ НЕ МОЖНА</label><select data-bet-player="' + m.market_id + '">' + candidates + '</select></div>' +
-              '<p class="muted-note">Безкоштовний прогноз. За правильну відповідь — 25–100 EX за ймовірністю; за неправильну — 0 втрат.</p>' +
+              '<p class="muted-note">Безкоштовний прогноз. За правильну відповідь — 5–100 EX за ймовірністю; за неправильну — 0 втрат.</p>' +
               '<button class="secondary-button" data-place-bet="' + m.market_id + '">ЗРОБИТИ ПРОГНОЗ</button>'
             : '<p class="muted-note">Ринок закритий. Результат буде встановлений організатором після вечора.</p>')) +
         '</article>';
