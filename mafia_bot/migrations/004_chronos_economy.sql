@@ -71,7 +71,7 @@ SET platform_settings =
         '{
           "status":"draft",
           "expected_reward_ex":5,
-          "min_reward_ex":25,
+          "min_reward_ex":5,
           "max_reward_ex":100,
           "max_predictions_per_event":3,
           "ex_season_cap":500,
