@@ -62,11 +62,11 @@ CR = 5 × confirmed_games + 10 × attended_evenings
 
 The 5 CR per game rewards the actual game participation. The separate 10 CR evening reward encourages showing up, but is issued only once even if the player played five or eight games that night.
 
-A Top-10 player who plays all 69 core games and attends all 13 possible evenings earns:
+A Top-10 player who plays all 69 core games across the 12 progression evenings earns:
 
-69 × 5 + 13 × 10 = 475 CR
+69 × 5 + 12 × 10 = 465 CR
 
-If that player also plays all 10 Main Final games:
+If that player also attends and plays all 10 Main Final games on the separate 13th evening:
 
 79 × 5 + 13 × 10 = 525 CR
 
@@ -235,7 +235,7 @@ XP values include the capped mini-game XP above. If the active Top-10 player com
 - **Faucets are capped/observable:** game and attendance grants use idempotency keys; mini-game repeats are capped; EX has a 500-per-season cap. Wallet balances carry forward; future seasons must add new cosmetic sinks to absorb accumulated balances.
 - **Sinks are real:** cosmetic purchases debit the same ledger that receives grants, and inventory prevents duplicate purchases.
 - **Minimum progress is meaningful:** the minimum qualifier has 155 CR and can afford an 80 CR entry item. Six forecasts have an expected value of about 30 EX, enough for the 25 EX entry item.
-- **Active progress is aspirational:** a full core Top-10 player earns 475 CR and can buy a 320 CR premium item; playing all Main Final games raises the ceiling to 525 CR.
+- **Active progress is aspirational:** a full core Top-10 player earns 465 CR and can buy a 320 CR premium item; playing all Main Final games raises the ceiling to 525 CR.
 - **Prize budget balances:** 6,000 UAH intermediate finals + 6,000 UAH Main Final + 500 UAH activity bonus = exactly 12,500 UAH.
 - **Bonus allocations reconcile:** largest-remainder rounding guarantees the exact pool total, with no fractional kopecks or extra UAH created.
 - **Competitive fairness is preserved:** currency, mini-games and cosmetics do not affect iMafia ranking or fixed place prizes.
