@@ -28,7 +28,9 @@ jobs:
         run: python -m compileall -q mafia_bot
 
       - name: Check Mini App JavaScript syntax
-        run: node --check mafia_bot/miniapp/assets/app.js
+        run: |
+          node --check mafia_bot/miniapp/assets/app.js
+          node --check mafia_bot/miniapp/assets/modules.js
 
       - name: Run unit tests
         run: python -m unittest discover -s mafia_bot/tests -v
@@ -49,6 +51,13 @@ jobs:
               "/api/chronos/events",
               "/api/chronos/events/{event_id}",
               "/api/chronos/events/{event_id}/register",
+              "/api/chronos/events/{event_id}/cancel",
+              "/api/chronos/identity",
+              "/api/chronos/store",
+              "/api/chronos/games",
+              "/api/chronos/predictions",
+              "/api/chronos/admin/overview",
+              "/api/chronos/admin/imports/upload",
               "/miniapp",
               "/miniapp/",
               "/miniapp/assets",
@@ -60,8 +69,20 @@ jobs:
 
           from pathlib import Path
           miniapp_dir = Path("mafia_bot/miniapp")
-          for asset in ("index.html", "assets/app.css", "assets/app.js"):
+          for asset in ("index.html", "assets/app.css", "assets/app.js", "assets/modules.js"):
               if not (miniapp_dir / asset).is_file():
                   raise SystemExit(f"Missing Mini App asset: {asset}")
-          print("CHRONOS API and Mini App routes/assets verified")
+          from modules.chronos_identity import register_identity_routes
+          from modules.chronos_games import register_game_routes
+          from modules.chronos_predictions import register_prediction_routes
+          from modules.chronos_admin import register_admin_routes
+          register_identity_routes(app)
+          register_game_routes(app)
+          register_prediction_routes(app)
+          register_admin_routes(app)
+          registered = {resource.canonical for resource in app.router.resources()}
+          missing = expected - registered
+          if missing:
+              raise SystemExit(f"Missing module routes: {sorted(missing)}")
+          print("CHRONOS API, player/admin routes and Mini App assets verified")
           PY
