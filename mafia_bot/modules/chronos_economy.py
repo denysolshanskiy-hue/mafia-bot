@@ -102,14 +102,34 @@ def player_currency_income(
     prediction_expected_reward: int = 5,
     prediction_season_cap: int = 500,
     minigame_first_clear_types: int | None = None,
+    economy_settings: dict[str, Any] | None = None,
 ) -> dict[str, int]:
-    """Calculate season income; forecast EX is an expected value, not a guarantee."""
+    """Calculate season income; forecast EX is an expected value, not a guarantee.
+
+    Rates come from the same versioned economy settings used by the ledger
+    reconciler. Explicit prediction arguments remain available for scenario tests.
+    """
+    settings = dict(DEFAULT_ECONOMY)
+    if economy_settings:
+        settings.update(economy_settings)
+
     games = max(0, int(confirmed_games))
     evenings = max(0, int(attended_evenings))
     predictions = max(0, int(predictions_submitted))
-    cr = games * 5 + evenings * 10
-    xp = games * 10 + evenings * 5 + minigame_xp_reward(
-        completed_minigames, first_clear_types=minigame_first_clear_types
+    cr = (
+        games * max(0, int(settings["cr_per_confirmed_game"]))
+        + evenings * max(0, int(settings["cr_per_attended_evening"]))
+    )
+    xp = (
+        games * max(0, int(settings["xp_per_confirmed_game"]))
+        + evenings * max(0, int(settings["xp_per_attended_evening"]))
+        + minigame_xp_reward(
+            completed_minigames,
+            first_clear_types=minigame_first_clear_types,
+            first_clear_xp=int(settings["minigame_first_clear_xp"]),
+            repeat_xp=int(settings["minigame_repeat_xp"]),
+            repeat_cap=int(settings["minigame_repeat_cap"]),
+        )
     )
     ex_expected = min(
         max(0, int(prediction_season_cap)),
