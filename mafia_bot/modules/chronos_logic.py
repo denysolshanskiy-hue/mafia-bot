@@ -50,13 +50,62 @@ def plackett_luce_probabilities(
             return [0.5 for _ in values]
         return [(value - low) / (high - low) for value in values]
 
-    ppg = [float(p.get("points", 0)) / max(1, int(p.get("games_played", 0))) for p in players]
-    bonus = [float(p.get("bonus_points", 0)) for p in players]
-    win_rate = [
-        int(p.get("wins", 0)) / max(1, int(p.get("games_played", 0)))
-        for p in players
+    def safe_int(value: Any, default: int = 0) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    def safe_float(value: Any, default: float = 0.0) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    def median_or(values: list[float], fallback: float) -> float:
+        if not values:
+            return fallback
+        ordered = sorted(values)
+        middle = len(ordered) // 2
+        if len(ordered) % 2:
+            return ordered[middle]
+        return (ordered[middle - 1] + ordered[middle]) / 2
+
+    games = [max(0, safe_int(player.get("games_played", 0))) for player in players]
+    known_indexes = [index for index, count in enumerate(games) if count > 0]
+
+    ppg = [
+        safe_float(player.get("points", 0)) / max(1, games[index])
+        for index, player in enumerate(players)
     ]
-    rank_signal = [1 / max(1, int(p.get("rank_position", 9999))) for p in players]
+    bonus = [safe_float(player.get("bonus_points", 0)) for player in players]
+    win_rate = [
+        max(0, safe_int(player.get("wins", 0))) / max(1, games[index])
+        for index, player in enumerate(players)
+    ]
+
+    # A newcomer must not be treated as a zero-skill player. Use the median
+    # of candidates with history as a neutral prior for every missing feature.
+    ppg_prior = median_or([ppg[index] for index in known_indexes], 0.0)
+    bonus_prior = median_or([bonus[index] for index in known_indexes], 0.0)
+    win_rate_prior = median_or([win_rate[index] for index in known_indexes], 0.0)
+
+    rank_values: list[float | None] = []
+    for index, player in enumerate(players):
+        rank = safe_int(player.get("rank_position"), 0)
+        rank_values.append(1 / rank if rank > 0 and games[index] > 0 else None)
+    rank_prior = median_or([value for value in rank_values if value is not None], 0.5)
+
+    for index, count in enumerate(games):
+        if count == 0:
+            ppg[index] = ppg_prior
+            bonus[index] = bonus_prior
+            win_rate[index] = win_rate_prior
+            rank_values[index] = rank_prior
+        elif rank_values[index] is None:
+            rank_values[index] = rank_prior
+
+    rank_signal = [float(value) for value in rank_values]
 
     components = list(zip(normalize(ppg), normalize(bonus), normalize(win_rate), normalize(rank_signal)))
     weights = [
