@@ -30,7 +30,7 @@ DEFAULT_ECONOMY = {
     "activity_score": {
         "status": "draft",
         "weights": {"attendance": 80, "app": 15, "minigame": 5},
-        "app_actions_cap": 15,
+        "app_actions_cap": 13,
         "minigame_completions_cap": 5,
     },
     "season_activity_bonus_uah": 500,
@@ -132,7 +132,7 @@ def calculate_activity_score(
     verified_app_actions: int,
     completed_minigames: int,
     weights: dict[str, int] | None = None,
-    app_actions_cap: int = 15,
+    app_actions_cap: int = 13,
     minigame_completions_cap: int = 5,
 ) -> dict[str, float]:
     """Cumulative 80/15/5 score; only invited finals enter the attendance denominator."""
