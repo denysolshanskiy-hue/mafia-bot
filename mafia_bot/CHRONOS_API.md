@@ -71,3 +71,14 @@ Pause registrations without deleting data by changing the status to `paused`. Pl
 ## Current scope
 
 This PR adds the backend API only. The Mini App's visual frontend, launch button/menu entry, and admin-side event-slot mapping are separate next steps.
+
+
+## Mini App launch
+
+The visual Mini App is served from `/miniapp` on the same aiohttp server as the bot. Set the Koyeb environment variable:
+
+```text
+CHRONOS_WEBAPP_URL=https://YOUR-PUBLIC-HOST/miniapp
+```
+
+Use the real public HTTPS domain assigned to the Koyeb service. The CHRONOS launch button appears in the admin/player Telegram reply keyboard only when this value is a valid HTTPS URL. Without it, existing menus remain unchanged.
