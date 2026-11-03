@@ -35,17 +35,17 @@ jobs:
       - name: Run unit tests
         run: python -m unittest discover -s mafia_bot/tests -v
 
-      - name: Verify aiohttp route registration
+      - name: Verify aiohttp route registration and economy migration
         env:
           PYTHONPATH: mafia_bot
         run: |
           python - <<'PY'
           from aiohttp import web
           from modules.chronos_api import register_chronos_routes, telegram_auth_middleware
+          from pathlib import Path
 
           app = web.Application(middlewares=[telegram_auth_middleware])
           register_chronos_routes(app)
-
           expected = {
               "/api/chronos/me",
               "/api/chronos/events",
@@ -53,11 +53,21 @@ jobs:
               "/api/chronos/events/{event_id}/register",
               "/api/chronos/events/{event_id}/cancel",
               "/api/chronos/identity",
+              "/api/chronos/identity/avatar",
+              "/api/chronos/identity/appearance",
               "/api/chronos/store",
+              "/api/chronos/store/{item_id}/buy",
+              "/api/chronos/store/{item_id}/equip",
+              "/api/chronos/operations",
+              "/api/chronos/rankings",
               "/api/chronos/games",
+              "/api/chronos/games/{game_code}",
               "/api/chronos/predictions",
+              "/api/chronos/predictions/markets/open",
               "/api/chronos/admin/overview",
               "/api/chronos/admin/imports/upload",
+              "/api/chronos/admin/season-bonus/calculate",
+              "/api/chronos/admin/economy/reconcile",
               "/miniapp",
               "/miniapp/",
               "/miniapp/assets",
@@ -67,22 +77,17 @@ jobs:
           if missing:
               raise SystemExit(f"Missing routes: {sorted(missing)}")
 
-          from pathlib import Path
           miniapp_dir = Path("mafia_bot/miniapp")
           for asset in ("index.html", "assets/app.css", "assets/app.js", "assets/modules.js"):
               if not (miniapp_dir / asset).is_file():
                   raise SystemExit(f"Missing Mini App asset: {asset}")
-          from modules.chronos_identity import register_identity_routes
-          from modules.chronos_games import register_game_routes
-          from modules.chronos_predictions import register_prediction_routes
-          from modules.chronos_admin import register_admin_routes
-          register_identity_routes(app)
-          register_game_routes(app)
-          register_prediction_routes(app)
-          register_admin_routes(app)
-          registered = {resource.canonical for resource in app.router.resources()}
-          missing = expected - registered
-          if missing:
-              raise SystemExit(f"Missing module routes: {sorted(missing)}")
-          print("CHRONOS API, player/admin routes and Mini App assets verified")
+          for migration in (
+              "001_chronos_foundation.sql",
+              "002_active_registration_unique.sql",
+              "003_chronos_platform.sql",
+              "004_chronos_economy.sql",
+          ):
+              if not (Path("mafia_bot/migrations") / migration).is_file():
+                  raise SystemExit(f"Missing migration: {migration}")
+          print("CHRONOS player/admin routes, Mini App assets and 4 migrations verified")
           PY
