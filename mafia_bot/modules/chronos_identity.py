@@ -154,6 +154,16 @@ async def buy_item(request):
             )
             if already:
                 return json_response({"error":"already_owned"},409)
+            season=await conn.fetchrow(
+                "SELECT platform_settings FROM chronos.seasons ORDER BY season_id DESC LIMIT 1"
+            )
+            platform=json_value(season["platform_settings"],{}) if season else {}
+            economy=(platform or {}).get("economy",{})
+            predictions=(platform or {}).get("predictions",{})
+            if economy.get("status")!="approved":
+                return json_response({"error":"economy_not_approved"},409)
+            if item["currency"]=="EX" and predictions.get("status")!="approved":
+                return json_response({"error":"prediction_rules_not_approved"},409)
             if item["currency"]=="EX":
                 # The EX Store unlock is permanent after six accepted non-void forecasts.
                 required_forecasts=6
