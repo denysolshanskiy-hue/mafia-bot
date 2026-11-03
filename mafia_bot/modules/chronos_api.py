@@ -385,3 +385,13 @@ def register_chronos_routes(app):
         API_PREFIX + "/events/{event_id:\\d+}/register",
         register_for_event,
     )
+
+    from modules.chronos_identity import register_identity_routes
+    from modules.chronos_games import register_game_routes
+    from modules.chronos_predictions import register_prediction_routes
+    from modules.chronos_admin import register_admin_routes
+
+    register_identity_routes(app)
+    register_game_routes(app)
+    register_prediction_routes(app)
+    register_admin_routes(app)
