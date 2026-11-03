@@ -74,13 +74,22 @@ def _decimal(value: Any) -> Decimal:
 
 def minigame_xp_reward(
     completed_sessions: int,
+    first_clear_types: int | None = None,
     first_clear_xp: int = 20,
     repeat_xp: int = 5,
     repeat_cap: int = 10,
 ) -> int:
-    """Two first-clears (one per game type), then a season-wide repeat cap."""
+    """First clear is paid once for each of the two distinct mini-game types.
+
+    If first_clear_types is omitted, the simulator assumes the player has
+    completed both types whenever there are at least two sessions. Callers with
+    actual data should pass the number of distinct first clears (0, 1 or 2).
+    """
     count = max(0, int(completed_sessions))
-    first_clears = min(2, count)
+    if first_clear_types is None:
+        first_clears = min(2, count)
+    else:
+        first_clears = min(2, count, max(0, int(first_clear_types)))
     repeats = min(max(0, count - first_clears), max(0, int(repeat_cap)))
     return first_clears * int(first_clear_xp) + repeats * int(repeat_xp)
 
@@ -92,13 +101,16 @@ def player_currency_income(
     predictions_submitted: int = 0,
     prediction_expected_reward: int = 5,
     prediction_season_cap: int = 500,
+    minigame_first_clear_types: int | None = None,
 ) -> dict[str, int]:
     """Calculate season income; forecast EX is an expected value, not a guarantee."""
     games = max(0, int(confirmed_games))
     evenings = max(0, int(attended_evenings))
     predictions = max(0, int(predictions_submitted))
     cr = games * 5 + evenings * 10
-    xp = games * 10 + evenings * 5 + minigame_xp_reward(completed_minigames)
+    xp = games * 10 + evenings * 5 + minigame_xp_reward(
+        completed_minigames, first_clear_types=minigame_first_clear_types
+    )
     ex_expected = min(
         max(0, int(prediction_season_cap)),
         predictions * max(0, int(prediction_expected_reward)),
@@ -255,7 +267,7 @@ def simulate_economy() -> dict[str, Any]:
             "app_actions": 15, "minigames": 5, "predictions": 39,
         },
         "top10_skips_one_final": {
-            "games": 61, "attended": 12, "eligible": 13,
+            "games": 71, "attended": 12, "eligible": 13,
             "app_actions": 15, "minigames": 5, "predictions": 36,
         },
     }
