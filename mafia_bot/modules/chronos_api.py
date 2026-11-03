@@ -2,6 +2,7 @@
 
 import json
 import os
+from pathlib import Path
 
 import asyncpg
 from aiohttp import web
@@ -18,6 +19,7 @@ except ModuleNotFoundError:
 
 
 API_PREFIX = "/api/chronos"
+MINIAPP_DIR = Path(__file__).resolve().parents[1] / "miniapp"
 
 
 def _json(data, status=200):
@@ -355,8 +357,27 @@ async def register_for_event(request):
         await conn.close()
 
 
+async def miniapp_index(request):
+    """Serve the CHRONOS Telegram Mini App shell."""
+    index_file = MINIAPP_DIR / "index.html"
+    if not index_file.is_file():
+        raise web.HTTPServiceUnavailable(text="CHRONOS Mini App assets are not installed.")
+    return web.FileResponse(
+        index_file,
+        headers={"Cache-Control": "no-cache"},
+    )
+
+
 def register_chronos_routes(app):
-    """Mount authenticated API routes on the bot's existing aiohttp application."""
+    """Mount authenticated API routes and the static Mini App on the bot server."""
+    app.router.add_get("/miniapp", miniapp_index)
+    app.router.add_get("/miniapp/", miniapp_index)
+    app.router.add_static(
+        "/miniapp/assets/",
+        str(MINIAPP_DIR / "assets"),
+        name="chronos-miniapp-assets",
+        show_index=False,
+    )
     app.router.add_get(API_PREFIX + "/me", get_me)
     app.router.add_get(API_PREFIX + "/events", list_events)
     app.router.add_get(API_PREFIX + "/events/{event_id:\\d+}", get_event)
