@@ -112,7 +112,8 @@ Limits:
 The candidate probability model is a Plackett–Luce simulation based on a confirmed iMafia ranking snapshot. It is a forecast heuristic, not a promise of winning probability.
 
 **Pilot model policy (three first evenings):**
-- Keep the existing feature weights fixed during the first three CHRONOS evenings: points/game 40%, total bonus points 20%, win rate 20%, and inverse current rank 20%. The single historical check below is not enough evidence to tune weights.
+- Keep the existing feature weights fixed during the first three CHRONOS evenings: base points/game 40%, net bonus points/game 20%, win rate 20%, and inverse current rank 20%. The single historical check below is not enough evidence to tune weights.
+- Feature definitions match the implementation: base points/game = (total points − bonus points) / games played; net bonus points/game = bonus points / games played; win rate = wins / games played; rank signal = 1 / rank position. The 10-game prior shrinks each per-game rate toward the median of the registered roster, reducing noise from short histories. This avoids counting iMafia's included bonus component twice and avoids rewarding a player merely for having more games.
 - If a registered player has no row in the latest snapshot, the market opener adds an empty cold-start row. The model replaces missing/zero-history features with the median of the known candidates in that roster. A newcomer is not assigned zero skill or automatically placed last.
 - If no candidates in the roster have prior games, the feature values are equal and the model produces an approximately uniform forecast.
 - Candidate probabilities and rewards remain frozen when markets open. Model changes apply only to future markets; never recalculate a forecast using post-event data.
