@@ -119,10 +119,16 @@
           <h1>Вежа<br><em>часу.</em></h1>
           <p>Десять рівнів однієї хронології. Усі поверхи доступні для перегляду; функції відкриватимуться за умовами сезону.</p>
         </div>
+        <div class="milestone-strip" id="milestone-strip">
+          <span data-milestone="25">25% <small>INITIALIZATION</small></span>
+          <span data-milestone="50">50% <small>STABILITY</small></span>
+          <span data-milestone="75">75% <small>OVERDRIVE</small></span>
+          <span data-milestone="100">100% <small>FINAL</small></span>
+        </div>
         <div class="tower-status">
           <div class="tower-status-top"><span>GLOBAL SYNC</span><b>690 <small>UNITS</small></b></div>
-          <div class="sync-track"><span></span></div>
-          <div class="tower-status-bottom"><span>СИСТЕМА ОЧІКУЄ РЕЗУЛЬТАТИ ІГОР</span><span>— / 690</span></div>
+          <div class="sync-track"><span id="sync-meter"></span></div>
+          <div class="tower-status-bottom"><span id="sync-status-label">СИСТЕМА ОЧІКУЄ РЕЗУЛЬТАТИ ІГОР</span><span id="sync-percent">0%</span></div>
         </div>
         <div class="tower-layout">
           <div class="tower-spine"><span></span></div>
@@ -161,6 +167,7 @@
             <div class="avatar-scan"></div>
           </div>
           <div class="profile-name" id="profile-name">Гість системи</div>
+          <div class="profile-subtitle" id="profile-title"></div>
           <div class="profile-subtitle" id="profile-telegram">TELEGRAM CONNECTION</div>
           <div class="profile-divider"></div>
           <div class="profile-data">
