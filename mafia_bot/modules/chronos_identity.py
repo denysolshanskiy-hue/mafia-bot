@@ -109,23 +109,15 @@ async def store_catalog(request):
             """,
             user_id,
         )
-        season_id=await active_season_id(conn)
-        platform_settings=json_value(
-            await conn.fetchval(
-                "SELECT platform_settings FROM chronos.seasons WHERE season_id=$1",
-                season_id,
-            ),{}
-        ) if season_id else {}
-        prediction_rules=(platform_settings or {}).get("predictions",{})
-        required_forecasts=int(prediction_rules.get("store_unlock_after_predictions",6))
+        # Store access is a lifetime milestone; currency balances carry across seasons.
+        required_forecasts=6
         accepted_forecasts=await conn.fetchval(
             """
-            SELECT COUNT(*) FROM chronos.prediction_bets b
-            JOIN chronos.prediction_markets m ON m.market_id=b.market_id
-            WHERE m.season_id=$1 AND b.bettor_user_id=$2 AND b.status<>'refunded'
+            SELECT COUNT(*) FROM chronos.prediction_bets
+            WHERE bettor_user_id=$1 AND status<>'refunded'
             """,
-            season_id,user_id,
-        ) if season_id else 0
+            user_id,
+        )
         unlocked=int(accepted_forecasts or 0)>=required_forecasts
         return json_response({
             "balances": {
@@ -163,21 +155,15 @@ async def buy_item(request):
             if already:
                 return json_response({"error":"already_owned"},409)
             if item["currency"]=="EX":
-                season_id=await active_season_id(conn)
+                # The EX Store unlock is permanent after six accepted non-void forecasts.
+                required_forecasts=6
                 accepted_bets=await conn.fetchval(
                     """
-                    SELECT COUNT(*) FROM chronos.prediction_bets b
-                    JOIN chronos.prediction_markets m ON m.market_id=b.market_id
-                    WHERE m.season_id=$1 AND b.bettor_user_id=$2 AND b.status<>'refunded'
+                    SELECT COUNT(*) FROM chronos.prediction_bets
+                    WHERE bettor_user_id=$1 AND status<>'refunded'
                     """,
-                    season_id,user_id,
-                ) if season_id else 0
-                required_forecasts=6
-                if season_id:
-                    platform=json_value(await conn.fetchval(
-                        "SELECT platform_settings FROM chronos.seasons WHERE season_id=$1",season_id
-                    ),{}) or {}
-                    required_forecasts=int(platform.get("predictions",{}).get("store_unlock_after_predictions",6))
+                    user_id,
+                )
                 if int(accepted_bets or 0)<required_forecasts:
                     return json_response({"error":"ex_store_locked","accepted_forecasts":int(accepted_bets or 0),"required_forecasts":required_forecasts},403)
             balance = await ledger_balance(conn,user_id,item["currency"])
