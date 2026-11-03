@@ -196,23 +196,30 @@
     const target = $("#prediction-markets");
     if (!target) return;
     if (!data.markets.length) {
-      target.innerHTML = '<div class="empty-state"><span class="empty-symbol">◈</span><b>Відкритих ринків поки немає</b><small>Організатор відкриє прогнози після імпорту підтвердженого рейтингу та затвердження правил.</small></div>';
+      target.innerHTML = '<div class="empty-state"><span class="empty-symbol">◈</span><b>Відкритих ринків поки немає</b><small>Організатор відкриє прогнози після імпорту підтвердженого рейтингу та затвердження економіки.</small></div>';
       return;
     }
     target.innerHTML = data.markets.map((m) => {
       const open = m.status === "open";
       const mine = m.my_bet;
       const candidates = m.candidates.map((p) =>
-        '<option value="' + p.user_id + '">' + esc(p.display_name) + ' · x' + Number(p.odds).toFixed(2) + '</option>'
+        '<option value="' + p.user_id + '">' + esc(p.display_name) +
+        ' · ' + (Number(p.probability) * 100).toFixed(1) + '%' +
+        ' · +' + Number(p.reward_ex) + ' EX</option>'
       ).join("");
       return '<article class="panel-card">' +
         '<div class="panel-top"><span class="panel-code">' + esc(m.market_type) + ' · EVENT #' + m.event_id + '</span><span class="status-chip ' + (open ? "" : "locked") + '">' + (open ? "OPEN" : "LOCKED") + '</span></div>' +
         '<h3>' + esc(m.event_title) + '</h3>' +
         '<p>' + esc(fmtDate(m.event_date)) + ' · ' + esc(fmtTime(m.event_time)) + ' · закриття: ' + esc(m.closes_at ? new Date(m.closes_at).toLocaleString("uk-UA") : "—") + '</p>' +
         (mine
-          ? '<div class="notice-card"><span class="notice-mark">✓</span><div><b>Твій прогноз прийнято</b><p>Ставка ' + money(mine.stake) + ' EX · x' + Number(mine.odds).toFixed(2) + ' · потенційне повернення ' + money(mine.potential_return) + ' EX</p></div></div>'
+          ? '<div class="notice-card"><span class="notice-mark">' + (mine.status === "won" ? "✓" : mine.status === "lost" ? "×" : "◈") + '</span><div><b>' +
+            (mine.status === "won" ? "Прогноз справдився" : mine.status === "lost" ? "Прогноз не справдився" : mine.status === "refunded" ? "Прогноз анульовано" : "Твій прогноз прийнято") +
+            '</b><p>' + esc((m.candidates.find(p => Number(p.user_id) === Number(mine.candidate_user_id)) || {}).display_name || "Обраний гравець") +
+            ' · нагорода за влучання: ' + money(mine.reward_ex) + ' EX. За помилку EX не списуються.</p></div></div>'
           : (open
-            ? '<div class="form-field"><label>ОБЕРИ ГРАВЦЯ</label><select data-bet-player="' + m.market_id + '">' + candidates + '</select></div><div class="form-field"><label>СТАВКА EX (10–200)</label><input class="inline-input" type="number" min="10" max="200" value="10" data-bet-stake="' + m.market_id + '"></div><button class="secondary-button" data-place-bet="' + m.market_id + '">ПІДТВЕРДИТИ ПРОГНОЗ</button>'
+            ? '<div class="form-field"><label>ОБЕРИ ГРАВЦЯ · СЕБЕ ОБРАТИ НЕ МОЖНА</label><select data-bet-player="' + m.market_id + '">' + candidates + '</select></div>' +
+              '<p class="muted-note">Безкоштовний прогноз. За правильну відповідь — 25–100 EX за ймовірністю; за неправильну — 0 втрат.</p>' +
+              '<button class="secondary-button" data-place-bet="' + m.market_id + '">ЗРОБИТИ ПРОГНОЗ</button>'
             : '<p class="muted-note">Ринок закритий. Результат буде встановлений організатором після вечора.</p>')) +
         '</article>';
     }).join("");
@@ -220,14 +227,13 @@
 
   async function placePrediction(marketId) {
     const player = $('[data-bet-player="' + marketId + '"]');
-    const stake = $('[data-bet-stake="' + marketId + '"]');
-    if (!player || !stake) return;
+    if (!player) return;
     try {
       await api("/predictions/markets/" + marketId + "/bet", {
         method: "POST",
-        body: { candidate_user_id: Number(player.value), stake: Number(stake.value) }
+        body: { candidate_user_id: Number(player.value) }
       });
-      toast("Прогноз прийнято.");
+      toast("Безкоштовний прогноз прийнято.");
       await loadMarket();
     } catch (error) { toast(error.message); }
   }
@@ -546,21 +552,25 @@
     const settings = s.platform_settings || {};
     const pred = settings.predictions || {};
     const activity = settings.activity_score || {};
+    const economy = settings.economy || {};
     $("#admin-content").innerHTML =
       '<div class="admin-row"><div class="panel-top"><span class="panel-code">SEASON STATE</span><span class="status-chip pending">' + esc(String(s.status || "draft").toUpperCase()) + '</span></div>' +
-        '<p>Сезон наразі не запускається автоматично. Змінювати статус можна лише окремою явною дією адміністратора.</p>' +
+        '<p>Статус сезону не вмикається автоматично. Економіка і правила мають бути затверджені до активації.</p>' +
         '<div class="admin-inline"><select id="admin-season-status" class="inline-input"><option value="draft">DRAFT</option><option value="active">ACTIVE</option><option value="paused">PAUSED</option><option value="completed">COMPLETED</option></select><button class="secondary-button" data-admin-action="season-status">ЗБЕРЕГТИ СТАТУС</button></div></div>' +
-      '<div class="admin-row"><div class="panel-code">ACTIVITY SCORE · PROPOSAL</div><p>Ваги відвідування / застосунок / мініігри. Усі суми повинні дорівнювати 100. Статус за замовчуванням — DRAFT.</p>' +
-        '<div class="admin-inline"><input class="inline-input" id="weight-attendance" type="number" value="' + Number((activity.weights || {}).attendance || 80) + '" placeholder="Attendance"><input class="inline-input" id="weight-app" type="number" value="' + Number((activity.weights || {}).app || 15) + '" placeholder="App"><input class="inline-input" id="weight-minigame" type="number" value="' + Number((activity.weights || {}).minigame || 5) + '" placeholder="Minigame"></div>' +
-        '<div class="admin-inline"><select id="activity-status" class="inline-input"><option value="draft">DRAFT</option><option value="approved">APPROVED</option></select><button class="secondary-button" data-admin-action="save-activity-settings">ЗБЕРЕГТИ ВАГИ</button></div></div>' +
-      '<div class="admin-row"><div class="panel-code">PREDICTION RULES · PROPOSAL</div><p>Правила залишаються DRAFT, доки не будуть явно затверджені. EX не має грошової вартості.</p>' +
-        '<div class="form-field"><label>СТАТУС ПРАВИЛ</label><select id="prediction-status" class="inline-input"><option value="draft">DRAFT</option><option value="approved">APPROVED</option></select></div>' +
-        '<div class="admin-inline"><input id="pred-min" class="inline-input" type="number" value="' + Number(pred.min_stake || 10) + '" placeholder="Min"><input id="pred-max" class="inline-input" type="number" value="' + Number(pred.max_stake || 200) + '" placeholder="Max"></div>' +
-        '<div class="admin-inline"><input id="pred-evening" class="inline-input" type="number" value="' + Number(pred.max_per_evening || 500) + '" placeholder="Evening cap"><input id="pred-count" class="inline-input" type="number" value="' + Number(pred.max_bets_per_evening || 3) + '" placeholder="Bets max"></div>' +
-        '<div class="admin-inline"><input id="pred-margin" class="inline-input" type="number" step="0.01" min="0" max="0.49" value="' + Number(pred.house_margin || 0.05) + '" placeholder="Margin"><button class="secondary-button" data-admin-action="save-prediction-settings">ЗБЕРЕГТИ ПРАВИЛА</button></div></div>' +
-      '<div class="admin-row"><div class="panel-code">IMPORTANT OPERATIONS</div><p>Імпорт iMafia, прив’язка календаря, запрошення, фінансові правила та зміни балансу записуються в Audit Log. Не запускай сезон до перевірки всіх правил.</p></div>';
+      '<div class="admin-row"><div class="panel-top"><span class="panel-code">ACTIVITY SCORE · 100 POINTS</span><span class="status-chip pending">' + esc(String(activity.status || "draft").toUpperCase()) + '</span></div>' +
+        '<p><b>80%</b> — відвідування; <b>15%</b> — верифіковані дії в Mini App (ліміт 15); <b>5%</b> — завершення мініігор (ліміт 5). Для фіналів у знаменник потрапляють тільки персональні запрошення. Відмова/no-show зменшує бал; не запрошений гравець не отримує штрафу.</p>' +
+        '<div class="admin-inline"><select id="activity-status" class="inline-input"><option value="draft">DRAFT</option><option value="approved">APPROVED</option></select><button class="secondary-button" data-admin-action="save-activity-settings">ЗБЕРЕГТИ СТАТУС</button></div></div>' +
+      '<div class="admin-row"><div class="panel-top"><span class="panel-code">CLOSED ECONOMY · V1.0</span><span class="status-chip pending">' + esc(String(economy.status || "draft").toUpperCase()) + '</span></div>' +
+        '<p><b>CR:</b> +5 за підтверджену гру, +10 за вечір. <b>XP:</b> +10 за гру, +5 за вечір; мінігра +20 за перше проходження кожного типу та +5 за повтор, до 10 повторів за сезон.</p>' +
+        '<p>CR/EX можна витрачати тільки на косметику. XP не витрачається. Немає купівлі, передачі або виведення валюти. Призові 12 000 грн — окремі фіксовані виплати; активність їх не зменшує. Сезонний бонус 500 грн розподіляється окремо за коефіцієнтом.</p>' +
+        '<div class="admin-inline"><select id="economy-status" class="inline-input"><option value="draft">DRAFT</option><option value="approved">APPROVED</option></select><button class="secondary-button" data-admin-action="save-economy-settings">ЗАТВЕРДИТИ ЕКОНОМІКУ</button></div></div>' +
+      '<div class="admin-row"><div class="panel-top"><span class="panel-code">PREDICTION EXCHANGE · NO STAKES</span><span class="status-chip pending">' + esc(String(pred.status || "draft").toUpperCase()) + '</span></div>' +
+        '<p>Безкоштовно до 3 прогнозів на вечір. Себе обирати не можна. За правильний прогноз: очікувана винагорода 5 EX, розрахунок 5 / імовірність, межі 25–100 EX. За помилку — 0 втрат. Ліміт заробітку: 500 EX за сезон. EX Store відкривається після 6 прийнятих прогнозів.</p>' +
+        '<div class="admin-inline"><select id="prediction-status" class="inline-input"><option value="draft">DRAFT</option><option value="approved">APPROVED</option></select><button class="secondary-button" data-admin-action="save-prediction-settings">ЗБЕРЕГТИ СТАТУС</button></div></div>' +
+      '<div class="admin-row"><div class="panel-code">ECONOMIC CONTROL</div><p>Після затвердження правил використовуй «RECONCILE LEDGER» лише для повторного безпечного нарахування за вже імпортованими іграми. Ключі ідемпотентності не дадуть зарахувати CR/XP двічі.</p><button class="secondary-button" data-admin-action="reconcile-economy">RECONCILE LEDGER</button></div>';
     $("#admin-season-status").value = s.status || "draft";
     $("#activity-status").value = activity.status || "draft";
+    $("#economy-status").value = economy.status || "draft";
     $("#prediction-status").value = pred.status || "draft";
   }
 
@@ -751,15 +761,25 @@
   async function loadAdminPrizes() {
     const data = await api("/admin/prizes");
     $("#admin-content").innerHTML =
-      '<div class="admin-row"><div class="panel-code">DRAFT PRIZE AWARDS</div><p>Створи чернетку результатів. Коефіцієнт вводиться після перевірки Activity Score; гроші тут не переказуються автоматично.</p>' +
+      '<div class="admin-row"><div class="panel-code">FIXED FINAL PRIZES</div><p>Суми призових не множаться на Activity Coefficient. Для створення виплати правило місця має бути ввімкнене; фактична виплата не виконується ботом.</p>' +
       '<div class="form-field"><label>SLOT ID</label><input id="prize-slot-id" class="inline-input" type="number"></div>' +
-      '<div class="form-field"><label>EVENT TYPE</label><select id="prize-event-kind" class="inline-input"><option value="intermediate_final">INTERMEDIATE FINAL</option><option value="main_final">MAIN FINAL</option><option value="legacy">CHRONOS LEGACY</option></select></div>' +
+      '<div class="form-field"><label>EVENT TYPE</label><select id="prize-event-kind" class="inline-input"><option value="intermediate_final">INTERMEDIATE FINAL</option><option value="main_final">MAIN FINAL</option></select></div>' +
       '<textarea id="prize-awards-json" class="form-field import-text" spellcheck="false">' + esc(JSON.stringify({ awards: [{ user_id: 0, place: 1, base_amount_uah: 1000, activity_coefficient: 1.0 }] }, null, 2)) + '</textarea>' +
-      '<button class="secondary-button" data-admin-action="draft-prizes">СТВОРИТИ ЧЕРНЕТКУ</button></div>' +
-      '<div class="section-heading compact"><div><div class="eyebrow">AWARDS</div><h2>Призи</h2></div></div>' +
+      '<button class="secondary-button" data-admin-action="draft-prizes">СТВОРИТИ ЧЕРНЕТКУ ФІКСОВАНОГО ПРИЗУ</button></div>' +
+      '<div class="admin-row"><div class="panel-top"><span class="panel-code">ACTIVITY BONUS · 500 UAH POOL</span><span class="status-chip pending">DRAFT UNTIL APPROVED</span></div>' +
+      '<p>Пул розподіляється пропорційно Activity Score між початковим TOP-10 головного фіналу, який виконав 30% кваліфікацію. Відмова від запрошеного фіналу лишається пропущеним вечором і зменшує коефіцієнт. Не запрошені гравці до бонусного пулу не входять.</p>' +
+      '<button class="secondary-button" data-admin-action="calculate-activity-bonus">РОЗРАХУВАТИ РОЗПОДІЛ 500 ГРН</button></div>' +
+      '<div class="section-heading compact"><div><div class="eyebrow">ACTIVITY BONUS ALLOCATIONS</div><h2>Бонус активності</h2></div></div>' +
+      (data.activity_bonus || []).map((a) =>
+        '<div class="admin-row"><div class="panel-top"><span class="panel-code">#' + a.rank_at_lock + ' · ' + Number(a.activity_score).toFixed(2) + ' PTS</span><span class="status-chip ' + (a.status === "draft" ? "pending" : "") + '">' + esc(a.status.toUpperCase()) + '</span></div>' +
+        '<h3>' + esc(a.display_name) + '</h3><p>Коефіцієнт ' + Number(a.activity_coefficient).toFixed(4) + ' · частка ' + money(a.allocation_amount_uah) + ' / ' + money(a.pool_amount_uah) + ' грн</p>' +
+        (a.status === "draft" ? '<button class="secondary-button" data-bonus-status="' + a.allocation_id + '" data-status="approved">ЗАТВЕРДИТИ</button>' : a.status === "approved" ? '<button class="secondary-button" data-bonus-status="' + a.allocation_id + '" data-status="paid">ПОЗНАЧИТИ ОПЛАЧЕНИМ</button>' : '') +
+        '</div>'
+      ).join("") +
+      '<div class="section-heading compact"><div><div class="eyebrow">PLACE AWARDS</div><h2>Фінальні призові</h2></div></div>' +
       (data.awards || []).map((a) =>
         '<div class="admin-row"><div class="panel-top"><span class="panel-code">' + esc(a.event_kind) + ' · #' + a.place + '</span><span class="status-chip ' + (a.status === "draft" ? "pending" : "") + '">' + esc(a.status) + '</span></div>' +
-        '<h3>' + esc(a.display_name) + '</h3><p>' + money(a.base_amount_uah) + ' грн × ' + Number(a.activity_coefficient).toFixed(2) + ' = ' + money(a.final_amount_uah) + ' грн</p>' +
+        '<h3>' + esc(a.display_name) + '</h3><p>Фіксована сума: ' + money(a.base_amount_uah) + ' грн · до виплати: ' + money(a.final_amount_uah) + ' грн</p>' +
         (a.status === "draft" ? '<button class="secondary-button" data-prize-status="' + a.award_id + '" data-status="approved">ЗАТВЕРДИТИ</button>' : a.status === "approved" ? '<button class="secondary-button" data-prize-status="' + a.award_id + '" data-status="paid">ПОЗНАЧИТИ ОПЛАЧЕНИМ</button>' : '') +
         '</div>'
       ).join("") +
