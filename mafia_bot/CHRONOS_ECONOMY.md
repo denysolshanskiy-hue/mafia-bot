@@ -185,6 +185,11 @@ A player who only just qualifies can buy at least one entry item. A regular play
 
 Total one-time CR catalogue sink capacity: **1,580 CR per player**. Inventory uses unique item ownership, so no duplicate purchase loop is created.
 
+A 0/1 knapsack check (each item can be bought once) gives these maximum purchase baskets:
+- Minimum qualifier (155 CR): 1 item, maximum spend 140 CR, 15 CR left.
+- Regular player (270 CR): 2 items, maximum spend 260 CR, 10 CR left.
+- Active Top-10 after Main Final (525 CR): 4 items, maximum spend 520 CR, 5 CR left.
+
 ### EX catalogue
 
 | Item | Price |
@@ -202,6 +207,11 @@ Total one-time CR catalogue sink capacity: **1,580 CR per player**. Inventory us
 | The Whale | 250 EX |
 
 Total one-time EX catalogue sink capacity: **1,470 EX per player**. The expected full-season EX income of 195 EX supports several entry/mid-tier items, while the 500 EX cap and higher prices leave premium goals for unusually successful forecasters. EX is a cosmetic reward; it does not affect mafia results or cash prizes.
+
+The same unique-item basket check gives:
+- Minimum qualifier (30 expected EX): 1 item, 25 EX spent, 5 EX left.
+- Regular player (90 expected EX): 2 items, 80 EX spent, 10 EX left.
+- Active Top-10 (195 expected EX): 3 items, 195 EX spent.
 
 All items remain disabled until catalogue prices and visual assets are approved by the organizer.
 
