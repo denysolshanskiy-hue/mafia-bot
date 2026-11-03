@@ -580,10 +580,19 @@ async def generate_invitations(request):
                 return json_response({"error":"confirmed_ranking_snapshot_required"},409)
             top=await conn.fetch(
                 """
-                SELECT user_id,rank_position FROM chronos.ranking_players
-                WHERE snapshot_id=$1 ORDER BY rank_position LIMIT 10
+                SELECT rp.user_id,rp.rank_position
+                FROM chronos.ranking_players rp
+                WHERE rp.snapshot_id=$1
+                  AND (SELECT COUNT(*)
+                       FROM chronos.game_players gp
+                       JOIN chronos.games g ON g.game_id=gp.game_id
+                       WHERE gp.user_id=rp.user_id AND g.season_id=$2
+                         AND g.status='confirmed' AND g.counts_for_sync=TRUE)
+                      >= GREATEST(1,CEIL((SELECT COUNT(*) FROM chronos.games
+                         WHERE season_id=$2 AND status='confirmed' AND counts_for_sync=TRUE)*0.30))
+                ORDER BY rp.rank_position LIMIT 10
                 """,
-                snapshot["snapshot_id"],
+                snapshot["snapshot_id"],slot["season_id"],
             )
             if len(top)<10:
                 return json_response({"error":"top10_not_complete"},409)
@@ -645,6 +654,11 @@ async def respond_invitation(request):
                     "UPDATE chronos.final_invitations SET status='no_response' WHERE invitation_id=$1",
                     invitation_id,
                 )
+                await conn.execute(
+                    "UPDATE chronos.attendance SET status='no_response' WHERE slot_id=$1 AND user_id=$2",
+                    invitation["slot_id"],user_id,
+                )
+                await _invite_next_rank(conn,invitation["slot_id"],invitation["season_id"])
                 return json_response({"error":"invitation_expired"},409)
             await conn.execute(
                 "UPDATE chronos.final_invitations SET status=$2,responded_at=NOW() WHERE invitation_id=$1",
@@ -730,7 +744,19 @@ async def process_expired_invitations(request):
                 affected.add((row["slot_id"],row["season_id"]))
                 changed+=1
             for slot_id,season_id in affected:
-                await _invite_next_rank(conn,slot_id,season_id)
+                # Refill all expired places in rank order; stop when the top-10 is full or no candidates remain.
+                for _ in range(10):
+                    active_count=await conn.fetchval(
+                        "SELECT COUNT(*) FROM chronos.final_invitations WHERE slot_id=$1 AND status IN ('pending','accepted')",
+                        slot_id,
+                    )
+                    if int(active_count or 0)>=10:
+                        break
+                    before=await conn.fetchval("SELECT COUNT(*) FROM chronos.final_invitations WHERE slot_id=$1",slot_id)
+                    await _invite_next_rank(conn,slot_id,season_id)
+                    after=await conn.fetchval("SELECT COUNT(*) FROM chronos.final_invitations WHERE slot_id=$1",slot_id)
+                    if int(after or 0)==int(before or 0):
+                        break
             if changed:
                 await audit(conn,actor_id,"expired_invitations_processed","season",None,{"count":changed})
         return json_response({"processed":changed})
@@ -971,6 +997,59 @@ async def admin_update_settings(request):
 
 
 
+
+
+async def close_slot_attendance(request):
+    actor_id=request["telegram_user"]["id"]
+    slot_id=int(request.match_info["slot_id"])
+    from database import get_connection
+    conn=await get_connection()
+    try:
+        error=await require_admin(request,conn)
+        if error:
+            return error
+        slot=await conn.fetchrow(
+            "SELECT season_id,bot_event_id,title FROM chronos.event_slots WHERE slot_id=$1",
+            slot_id,
+        )
+        if not slot or not slot["bot_event_id"]:
+            return json_response({"error":"linked_event_required"},409)
+        event_status=await conn.fetchval("SELECT status FROM public.events WHERE event_id=$1",slot["bot_event_id"])
+        if event_status!="closed":
+            return json_response({"error":"bot_event_must_be_closed_first"},409)
+        async with conn.transaction():
+            updated=await conn.execute(
+                """
+                UPDATE chronos.attendance a
+                SET status='no_show',marked_by=$2,marked_at=NOW()
+                WHERE a.slot_id=$1 AND a.invited=TRUE AND a.status='pending'
+                  AND NOT EXISTS(
+                    SELECT 1 FROM chronos.games g
+                    JOIN chronos.game_players gp ON gp.game_id=g.game_id
+                    WHERE g.bot_event_id=(SELECT bot_event_id FROM chronos.event_slots WHERE slot_id=$1)
+                      AND g.status='confirmed' AND gp.user_id=a.user_id
+                  )
+                """,
+                slot_id,actor_id,
+            )
+            await conn.execute(
+                """
+                UPDATE chronos.final_invitations fi
+                SET status='no_show'
+                WHERE fi.slot_id=$1 AND fi.status='accepted'
+                  AND NOT EXISTS(
+                    SELECT 1 FROM chronos.games g
+                    JOIN chronos.game_players gp ON gp.game_id=g.game_id
+                    WHERE g.bot_event_id=$2 AND g.status='confirmed' AND gp.user_id=fi.user_id
+                  )
+                """,
+                slot_id,slot["bot_event_id"],
+            )
+            await audit(conn,actor_id,"slot_attendance_closed","event_slot",slot_id,{})
+        return json_response({"closed":True,"updates":updated})
+    finally:
+        await conn.close()
+
 async def update_planned_slot(request):
     actor_id=request["telegram_user"]["id"]
     slot_id=int(request.match_info["slot_id"])
@@ -1112,6 +1191,7 @@ def register_admin_routes(app):
     app.router.add_post("/api/chronos/admin/season/status",set_season_status)
     app.router.add_post("/api/chronos/admin/slots/{slot_id:\\d+}/link",link_slot_to_bot_event)
     app.router.add_post("/api/chronos/admin/slots/{slot_id:\\d+}/invitations",generate_invitations)
+    app.router.add_post("/api/chronos/admin/slots/{slot_id:\\d+}/close-attendance",close_slot_attendance)
     app.router.add_post("/api/chronos/admin/invitations/process-expired",process_expired_invitations)
     app.router.add_post("/api/chronos/operations/invitations/{invitation_id:\\d+}/respond",respond_invitation)
 
