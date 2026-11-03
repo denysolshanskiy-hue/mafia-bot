@@ -1523,16 +1523,18 @@ async def admin_update_catalog_item(request):
         if not item:
             return json_response({"error":"catalog_item_not_found"},404)
         season=await conn.fetchrow(
-            "SELECT platform_settings FROM chronos.seasons ORDER BY season_id DESC LIMIT 1",
+            "SELECT status,platform_settings FROM chronos.seasons ORDER BY season_id DESC LIMIT 1",
         )
         settings=json_value(season["platform_settings"],{}) if season else {}
         economy=(settings or {}).get("economy",{})
         predictions=(settings or {}).get("predictions",{})
-        if economy.get("status")=="approved" and price!=int(item["price"]):
+        if price!=int(item["price"]) and (
+            economy.get("status")=="approved" or season["status"]!="draft"
+        ):
             return json_response({
-                "error":"catalogue_prices_locked_for_approved_economy",
+                "error":"catalogue_prices_locked",
                 "current_price":int(item["price"]),
-                "message":"Зміна ціни потребує нової версії економіки та міграції.",
+                "message":"Ціни можна змінювати лише у DRAFT сезону до затвердження економіки.",
             },409)
         if enabled:
             if economy.get("status")!="approved":
@@ -1766,10 +1768,19 @@ async def set_season_status(request):
         if error:
             return error
         async with conn.transaction():
-            season=await conn.fetchrow("SELECT season_id,status FROM chronos.seasons ORDER BY season_id DESC LIMIT 1 FOR UPDATE")
+            season=await conn.fetchrow("SELECT season_id,status,platform_settings FROM chronos.seasons ORDER BY season_id DESC LIMIT 1 FOR UPDATE")
             if not season:
                 return json_response({"error":"season_not_found"},404)
             if status=="active":
+                platform=json_value(season["platform_settings"],{}) or {}
+                activity=platform.get("activity_score",{})
+                economy=platform.get("economy",{})
+                if activity.get("status")!="approved" or economy.get("status")!="approved":
+                    return json_response({
+                        "error":"activity_and_economy_must_be_approved",
+                        "message":"Перед активацією сезону затвердь Activity Score та базову економіку."
+                    },409)
+                # Prediction Exchange may remain DRAFT until its probability model is back-tested.
                 # Prevent two CHRONOS seasons from being active simultaneously.
                 await conn.execute("UPDATE chronos.seasons SET status='paused',updated_at=NOW() WHERE status='active' AND season_id<>$1",season["season_id"])
             await conn.execute("UPDATE chronos.seasons SET status=$2,updated_at=NOW() WHERE season_id=$1",season["season_id"],status)
