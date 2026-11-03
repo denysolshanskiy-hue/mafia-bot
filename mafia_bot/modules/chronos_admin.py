@@ -9,7 +9,7 @@ import asyncpg
 from aiohttp import web
 
 from modules.chronos_common import (
-    audit, json_response, json_value, ledger_balance, notify_user, require_admin, award_ledger
+    audit, check_player_achievements, json_response, json_value, ledger_balance, notify_user, require_admin, award_ledger
 )
 
 
@@ -472,6 +472,16 @@ async def confirm_import(request):
                     """,
                     import_id,event["slot_id"],
                 )
+                participants=await conn.fetch(
+                    """
+                    SELECT DISTINCT gp.user_id FROM chronos.game_players gp
+                    JOIN chronos.games g ON g.game_id=gp.game_id
+                    WHERE g.source_import_id=$1
+                    """,
+                    import_id,
+                )
+                for participant in participants:
+                    await check_player_achievements(conn,batch["season_id"],participant["user_id"])
                 summary={"games":inserted_games,"counts_for_sync":counts_for_sync}
             await conn.execute(
                 """
