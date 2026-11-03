@@ -969,7 +969,7 @@ async def calculate_season_activity_bonus(request):
                     verified_app_actions=app_actions,
                     completed_minigames=minigames,
                     weights=activity_rules.get("weights",{"attendance":80,"app":15,"minigame":5}),
-                    app_actions_cap=int(activity_rules.get("app_actions_cap",15)),
+                    app_actions_cap=int(activity_rules.get("app_actions_cap",13)),
                     minigame_completions_cap=int(activity_rules.get("minigame_completions_cap",5)),
                 )
                 participants.append({
@@ -1376,7 +1376,7 @@ async def admin_update_settings(request):
         settings=json_value(season["platform_settings"],{}) or {}
         settings.setdefault("activity_score",{
             "status":"draft","weights":{"attendance":80,"app":15,"minigame":5},
-            "app_actions_cap":15,"minigame_completions_cap":5,
+            "app_actions_cap":13,"minigame_completions_cap":5,
         })
         settings.setdefault("predictions",{
             "status":"draft","expected_reward_ex":5,"min_reward_ex":25,"max_reward_ex":100,
@@ -1400,7 +1400,7 @@ async def admin_update_settings(request):
             settings["activity_score"].update({
                 "status":value["status"],
                 "weights":fixed,
-                "app_actions_cap":15,
+                "app_actions_cap":13,
                 "minigame_completions_cap":5,
             })
 
