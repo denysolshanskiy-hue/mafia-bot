@@ -535,9 +535,10 @@ async def operations(request):
         )
         app_actions = await conn.fetchval(
             """
-            SELECT COALESCE(SUM(GREATEST(score_value,0)),0)
+            SELECT COUNT(DISTINCT metadata->>'event_id')
             FROM chronos.activity_events
             WHERE season_id=$1 AND user_id=$2 AND verified=TRUE
+              AND score_value>0 AND metadata ? 'event_id'
             """,
             season_id,user_id,
         )
@@ -554,7 +555,7 @@ async def operations(request):
             verified_app_actions=int(app_actions or 0),
             completed_minigames=int(mini_game_count or 0),
             weights=weights.get("weights",{"attendance":80,"app":15,"minigame":5}),
-            app_actions_cap=int(weights.get("app_actions_cap",15)),
+            app_actions_cap=int(weights.get("app_actions_cap",13)),
             minigame_completions_cap=int(weights.get("minigame_completions_cap",5)),
         )
         return json_response({
