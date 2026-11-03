@@ -88,4 +88,50 @@ COMMENT ON COLUMN chronos.event_slots.bot_event_id IS
 COMMENT ON COLUMN chronos.event_slots.status IS
     'Planning state only; actual event active/closed state is read from public.events.';
 
+-- Seed a draft season and its 13 planned slots.
+-- The first 12 are the season progression evenings (9 regular + 3 intermediate finals).
+-- CHRONOS FINAL is a separate, post-100% event and does not add to the 690 sync target.
+INSERT INTO chronos.seasons (season_code, title, status, target_sync_units)
+VALUES ('CHRONOS', 'ХРАНИТЕЛІ ЧАСУ / CHRONOS', 'draft', 690)
+ON CONFLICT (season_code) DO NOTHING;
+
+WITH season AS (
+    SELECT season_id FROM chronos.seasons WHERE season_code = 'CHRONOS'
+),
+planned_slots AS (
+    SELECT
+        season_id,
+        'REG-' || LPAD(n::text, 2, '0') AS slot_code,
+        n::smallint AS sequence_no,
+        'regular'::text AS slot_type,
+        'Регулярний вечір #' || n AS title
+    FROM season
+    CROSS JOIN GENERATE_SERIES(1, 9) AS n
+
+    UNION ALL
+
+    SELECT
+        season_id,
+        'IF-' || LPAD(n::text, 2, '0'),
+        (9 + n)::smallint,
+        'intermediate_final'::text,
+        'Проміжний фінал #' || n
+    FROM season
+    CROSS JOIN GENERATE_SERIES(1, 3) AS n
+
+    UNION ALL
+
+    SELECT
+        season_id,
+        'MAIN-FINAL',
+        13::smallint,
+        'main_final'::text,
+        'CHRONOS FINAL'
+    FROM season
+)
+INSERT INTO chronos.event_slots (season_id, slot_code, sequence_no, slot_type, title)
+SELECT season_id, slot_code, sequence_no, slot_type, title
+FROM planned_slots
+ON CONFLICT (season_id, slot_code) DO NOTHING;
+
 COMMIT;
