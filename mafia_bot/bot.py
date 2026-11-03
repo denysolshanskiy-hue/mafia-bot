@@ -3,6 +3,7 @@ import os
 from aiohttp import web
 from aiogram import Bot, Dispatcher, types, F
 from modules.keyboards import admin_menu_keyboard, player_menu_keyboard
+from modules.event_types import detect_event_type
 from aiogram.filters import CommandStart
 from aiogram.types import (
     InlineKeyboardMarkup,
@@ -386,13 +387,7 @@ async def create_event_title(message: types.Message, state: FSMContext):
 
     # ================= EVENT TYPE =================
 
-    event_type = "classic"
-
-    if "UNDERGROUND" in title.upper():
-        event_type = "underground"
-
-    elif "ШКОЛ" in title.upper():
-        event_type = "school"
+    event_type = detect_event_type(title)
 
     # ==============================================
 
@@ -896,6 +891,12 @@ async def invite_ignore(callback: types.CallbackQuery):
 # ================== PAY FOR GAMES ==================
 @dp.message(F.text == "💳 Оплатити ігри")
 async def send_payment_info(message: types.Message):
+    payment_card_number = os.getenv("PAYMENT_CARD_NUMBER", "").strip()
+    payment_card_text = (
+        f"`{payment_card_number}`"
+        if payment_card_number
+        else "Тимчасово недоступно. Зверніться до адміністратора."
+    )
     payment_text = (
         "💳 **Оплата ігрових вечорів**\n\n"
         "Kremenchuk Mafia Club\n\n"
@@ -907,7 +908,7 @@ async def send_payment_info(message: types.Message):
         "🎲 **Звичайний вечір:**\n"
         "50 грн/гра або 250 грн/вечір\n\n"
         "💳 **Номер картки:**\n"
-        "`4441111070738616`\n\n"
+        f"{payment_card_text}\n\n"
         "Після оплати натисніть кнопку 👇"
     )
     await message.answer(payment_text, parse_mode="Markdown", reply_markup=payment_keyboard())
