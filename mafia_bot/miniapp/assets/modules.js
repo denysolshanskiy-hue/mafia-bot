@@ -397,8 +397,9 @@
         '<div class="operation-stat"><small>ВІДВІДУВАННЯ</small><b>' + Number(a.percent || 0).toFixed(1) + '%</b><span>' + Number(a.attended || 0) + ' / ' + Number(a.eligible_evenings || 0) + ' вечорів</span></div>' +
         '<div class="operation-stat"><small>SIMULATIONS</small><b>' + Number(d.mini_games_completed || 0) + '</b><span>верифікованих завершень</span></div>' +
       '</div>' +
-      '<div class="panel-card"><div class="panel-top"><span class="panel-code">ACTIVITY SCORE</span><span class="status-chip pending">' + esc(String(d.activity_score_status || "draft").toUpperCase()) + '</span></div>' +
-        '<p>Ваги наразі є чернеткою: відвідування ' + (w.attendance || 80) + '% · активність застосунку ' + (w.app || 15) + '% · мініігри ' + (w.minigame || 5) + '%. Поки правило не затверджене, підсумковий бал не нараховується.</p></div>' +
+      '<div class="panel-card"><div class="panel-top"><span class="panel-code">ACTIVITY SCORE · PREVIEW</span><span class="status-chip pending">' + esc(String(d.activity_score_status || "draft").toUpperCase()) + '</span></div>' +
+        '<div class="operation-grid"><div class="operation-stat"><small>ПОТОЧНИЙ БАЛ</small><b>' + Number((d.activity_score || {}).activity_score || 0).toFixed(2) + '</b><span>із 100</span></div><div class="operation-stat"><small>КОЕФІЦІЄНТ</small><b>' + Number(d.activity_coefficient || 0).toFixed(4) + '</b><span>бал / 100</span></div></div>' +
+        '<p>Попередній розрахунок: відвідування ' + (w.attendance || 80) + '% · унікальна взаємодія з подією ' + (w.app || 15) + '% · мініігри ' + (w.minigame || 5) + '%. Це попередній бал, доки адміністратор не затвердить правило.</p></div>' +
       '<div class="section-heading compact"><div><div class="eyebrow">FINAL INVITATIONS</div><h2>Запрошення</h2></div></div>' +
       ((d.invitations || []).length ? d.invitations.map((i) =>
         '<div class="invitation-row"><strong>' + esc(i.slot_title) + ' · #' + i.rank_at_invite + '</strong><small>' + esc(i.status.toUpperCase()) + ' · DEADLINE ' + esc(new Date(i.deadline_at).toLocaleString("uk-UA")) + '</small>' +
