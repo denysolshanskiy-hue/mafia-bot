@@ -1359,16 +1359,31 @@ async def admin_update_catalog_item(request):
         if error:
             return error
         item=await conn.fetchrow(
+            "SELECT item_id,item_code,currency FROM chronos.catalog_items WHERE item_id=$1",
+            item_id,
+        )
+        if not item:
+            return json_response({"error":"catalog_item_not_found"},404)
+        if enabled:
+            season=await conn.fetchrow(
+                "SELECT platform_settings FROM chronos.seasons ORDER BY season_id DESC LIMIT 1",
+            )
+            settings=json_value(season["platform_settings"],{}) if season else {}
+            economy=(settings or {}).get("economy",{})
+            predictions=(settings or {}).get("predictions",{})
+            if economy.get("status")!="approved":
+                return json_response({"error":"economy_not_approved"},409)
+            if item["currency"]=="EX" and predictions.get("status")!="approved":
+                return json_response({"error":"prediction_rules_not_approved"},409)
+        updated=await conn.fetchrow(
             """
             UPDATE chronos.catalog_items SET price=$2,is_enabled=$3,is_proposed=NOT $3
             WHERE item_id=$1 RETURNING item_code,name,price,currency,is_enabled
             """,
             item_id,price,enabled,
         )
-        if not item:
-            return json_response({"error":"catalog_item_not_found"},404)
-        await audit(conn,actor_id,"catalog_item_updated","catalog_item",item_id,dict(item))
-        return json_response(dict(item))
+        await audit(conn,actor_id,"catalog_item_updated","catalog_item",item_id,dict(updated))
+        return json_response(dict(updated))
     finally:
         await conn.close()
 
