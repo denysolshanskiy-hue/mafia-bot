@@ -59,7 +59,7 @@ SET platform_settings =
           '{
             "status":"draft",
             "weights":{"attendance":80,"app":15,"minigame":5},
-            "app_actions_cap":15,
+            "app_actions_cap":13,
             "minigame_completions_cap":5,
             "attendance_scope":"regular_evenings_plus_invitations_only"
           }'::jsonb,
