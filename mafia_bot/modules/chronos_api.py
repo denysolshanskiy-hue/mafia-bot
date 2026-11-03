@@ -102,8 +102,8 @@ async def list_events(request):
             """
             SELECT season_id, season_code, title, status, target_sync_units
             FROM chronos.seasons
-            WHERE status IN ('active', 'paused')
-            ORDER BY CASE WHEN status = 'active' THEN 0 ELSE 1 END, season_id DESC
+            WHERE status IN ('draft', 'active', 'paused')
+            ORDER BY CASE WHEN status = 'active' THEN 0 WHEN status = 'paused' THEN 1 ELSE 2 END, season_id DESC
             LIMIT 1
             """
         )
