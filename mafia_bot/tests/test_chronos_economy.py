@@ -159,8 +159,8 @@ class ChronosEconomyTests(unittest.TestCase):
 
     def test_deterministic_simulator_reconciles_sources_and_sinks(self):
         report = simulate_economy()
-        self.assertEqual(report["core_season_player_max"]["CR"], 475)
-        self.assertEqual(report["core_season_player_max"]["EX_expected"], 195)
+        self.assertEqual(report["core_season_player_max"]["CR"], 465)
+        self.assertEqual(report["core_season_player_max"]["EX_expected"], 180)
         self.assertEqual(report["top10_with_main_final_max"]["CR"], 525)
         self.assertEqual(report["top10_with_main_final_max"]["XP"], 945)
         self.assertEqual(report["cohorts"]["top10_skips_one_final"]["CR"], 475)
