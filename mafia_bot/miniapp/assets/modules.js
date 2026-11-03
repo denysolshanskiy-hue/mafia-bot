@@ -785,7 +785,8 @@
       ).join("") +
       '<div class="section-heading compact"><div><div class="eyebrow">PRIZE RULES</div><h2>Правила фонду</h2></div></div>' +
       (data.rules || []).map((r) =>
-        '<div class="admin-row"><div class="panel-top"><span class="panel-code">' + esc(r.event_kind) + ' · PLACE ' + r.place + '</span><span class="status-chip">' + (r.is_enabled ? "ACTIVE" : "DRAFT") + '</span></div><p>' + money(r.amount_uah) + ' грн · ' + esc(r.rule_note) + '</p></div>'
+        '<div class="admin-row"><div class="panel-top"><span class="panel-code">' + esc(r.event_kind) + ' · PLACE ' + r.place + '</span><span class="status-chip">' + (r.is_enabled ? "ACTIVE" : "DRAFT") + '</span></div><p>' + money(r.amount_uah) + ' грн · ' + esc(r.rule_note) + '</p>' +
+        '<button class="secondary-button" data-prize-rule-toggle="' + esc(r.event_kind) + '" data-place="' + r.place + '" data-amount="' + r.amount_uah + '" data-enabled="' + (r.is_enabled ? "1" : "0") + '">' + (r.is_enabled ? "ВИМКНУТИ ПРАВИЛО" : "УВІМКНУТИ ПРАВИЛО") + '</button></div>'
       ).join("");
   }
 
@@ -796,6 +797,26 @@
     try {
       await api("/admin/prizes", { method: "POST", body: { slot_id: Number($("#prize-slot-id").value), event_kind: $("#prize-event-kind").value, awards: awards } });
       toast("Чернетку призів створено.");
+      await loadAdminPrizes();
+    } catch (error) { toast(error.message); }
+  }
+
+  async function togglePrizeRule(eventKind, place, amount, enabled) {
+    const note = eventKind === "legacy"
+      ? "Окремий бонусний пул Activity Score 500 грн; не зменшує фіксовані призові."
+      : "Фіксована сума призу CHRONOS; не зменшується Activity Coefficient.";
+    try {
+      await api("/admin/prize-rules", {
+        method: "POST",
+        body: {
+          event_kind: eventKind,
+          place: Number(place),
+          amount_uah: Number(amount),
+          is_enabled: !enabled,
+          rule_note: note
+        }
+      });
+      toast(!enabled ? "Правило призів увімкнено." : "Правило призів вимкнено.");
       await loadAdminPrizes();
     } catch (error) { toast(error.message); }
   }
@@ -1049,6 +1070,13 @@
 
     const prize = event.target.closest("[data-prize-status]");
     if (prize) return prizeStatus(prize.dataset.prizeStatus, prize.dataset.status);
+    const prizeRule = event.target.closest("[data-prize-rule-toggle]");
+    if (prizeRule) return togglePrizeRule(
+      prizeRule.dataset.prizeRuleToggle,
+      prizeRule.dataset.place,
+      prizeRule.dataset.amount,
+      prizeRule.dataset.enabled === "1"
+    );
     const bonus = event.target.closest("[data-bonus-status]");
     if (bonus) return updateActivityBonusStatus(bonus.dataset.bonusStatus, bonus.dataset.status);
 
