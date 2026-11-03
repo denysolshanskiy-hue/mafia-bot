@@ -200,6 +200,17 @@ def allocate_activity_bonus(
     return allocations
 
 
+def qualification_games_required(conducted_games: int, participation_ratio: float = 0.30) -> int:
+    """Minimum distinct core games a player must appear in to qualify."""
+    import math
+
+    games = max(0, int(conducted_games))
+    ratio = _decimal(participation_ratio)
+    if ratio < 0 or ratio > 1:
+        raise ValueError("participation_ratio must be between 0 and 1")
+    return int(math.ceil(Decimal(games) * ratio))
+
+
 def season_prize_budget(
     intermediate_count: int = INTERMEDIATE_FINALS,
     activity_bonus: int = ACTIVITY_BONUS_POOL_UAH,
