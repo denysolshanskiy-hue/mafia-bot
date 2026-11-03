@@ -874,24 +874,39 @@
         await api("/admin/season/status", { method: "POST", body: payload });
       } else if (kind === "save-activity-settings") {
         payload = { activity_score: { status: $("#activity-status").value, weights: {
-          attendance: Number($("#weight-attendance").value),
-          app: Number($("#weight-app").value),
-          minigame: Number($("#weight-minigame").value)
+          attendance: 80, app: 15, minigame: 5
         } } };
         await api("/admin/settings", { method: "POST", body: payload });
-      } else if (kind === "save-prediction-settings") {
-        payload = { predictions: {
-          status: $("#prediction-status").value,
-          min_stake: Number($("#pred-min").value),
-          max_stake: Number($("#pred-max").value),
-          max_per_evening: Number($("#pred-evening").value),
-          max_bets_per_evening: Number($("#pred-count").value),
-          house_margin: Number($("#pred-margin").value)
-        } };
+      } else if (kind === "save-economy-settings") {
+        payload = { economy: { status: $("#economy-status").value } };
         await api("/admin/settings", { method: "POST", body: payload });
+      } else if (kind === "save-prediction-settings") {
+        payload = { predictions: { status: $("#prediction-status").value } };
+        await api("/admin/settings", { method: "POST", body: payload });
+      } else if (kind === "reconcile-economy") {
+        const result = await api("/admin/economy/reconcile", { method: "POST", body: {} });
+        toast("Нарахування звірено: +" + money(result.currency_minted.CR) + " CR, +" + money(result.currency_minted.XP) + " XP.");
+        await loadAdminOverview();
+        return;
       }
       toast("Налаштування збережено.");
       await loadAdminOverview();
+    } catch (error) { toast(error.message); }
+  }
+
+  async function calculateActivityBonus() {
+    try {
+      const result = await api("/admin/season-bonus/calculate", { method: "POST", body: {} });
+      toast("Розраховано " + result.eligible_players + " учасників; розподілено " + money(result.distributed_uah) + " грн.");
+      await loadAdminPrizes();
+    } catch (error) { toast(error.message); }
+  }
+
+  async function updateActivityBonusStatus(id, status) {
+    try {
+      await api("/admin/season-bonus/" + id + "/status", { method: "POST", body: { status: status } });
+      toast("Статус бонусу змінено.");
+      await loadAdminPrizes();
     } catch (error) { toast(error.message); }
   }
 
@@ -1021,7 +1036,8 @@
       if (action === "open-markets") return openMarkets();
       if (action === "draft-prizes") return draftPrizes();
       if (action === "ledger-adjust") return adjustLedger();
-      if (action === "save-activity-settings" || action === "save-prediction-settings" || action === "season-status") return saveAdminSettings(action);
+      if (action === "save-activity-settings" || action === "save-economy-settings" || action === "save-prediction-settings" || action === "season-status" || action === "reconcile-economy") return saveAdminSettings(action);
+      if (action === "calculate-activity-bonus") return calculateActivityBonus();
       if (action === "search-players") return loadAdminPlayers();
       if (action === "save-import-review") return saveImportReview();
       if (action === "confirm-import") return confirmImport();
@@ -1033,6 +1049,8 @@
 
     const prize = event.target.closest("[data-prize-status]");
     if (prize) return prizeStatus(prize.dataset.prizeStatus, prize.dataset.status);
+    const bonus = event.target.closest("[data-bonus-status]");
+    if (bonus) return updateActivityBonusStatus(bonus.dataset.bonusStatus, bonus.dataset.status);
 
     const appearance = event.target.closest("#save-appearance");
     if (appearance) return saveAppearance();
