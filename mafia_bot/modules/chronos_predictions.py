@@ -489,7 +489,7 @@ async def admin_markets(request):
         rows=await conn.fetch(
             """
             SELECT m.market_id,m.bot_event_id,m.market_type,m.status,m.closes_at,e.title,
-                   COUNT(b.bet_id) AS bets,COALESCE(SUM(b.stake),0) AS total_stake
+                   COUNT(b.bet_id) AS forecasts
             FROM chronos.prediction_markets m
             JOIN public.events e ON e.event_id=m.bot_event_id
             LEFT JOIN chronos.prediction_bets b ON b.market_id=m.market_id
