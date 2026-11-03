@@ -165,6 +165,12 @@ async def open_prediction_markets(request):
                 seed=int(event_id),
                 house_margin=float(settings.get("house_margin",0.05)),
             )
+            existing_markets=await conn.fetchval(
+                "SELECT COUNT(*) FROM chronos.prediction_markets WHERE bot_event_id=$1",
+                event_id,
+            )
+            if int(existing_markets or 0)>0:
+                return json_response({"error":"markets_already_created","existing_count":int(existing_markets or 0)},409)
             created=[]
             for place,market_type in ((1,"TOP1"),(2,"TOP2"),(3,"TOP3")):
                 market=await conn.fetchrow(
