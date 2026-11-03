@@ -112,6 +112,15 @@ async def list_events(request):
         if not season:
             return _json({"season": None, "events": [], "planned_slots": []})
 
+        sync_units = await conn.fetchval(
+            """
+            SELECT COUNT(*)
+            FROM chronos.game_players gp
+            JOIN chronos.games g ON g.game_id=gp.game_id
+            WHERE g.season_id=$1 AND g.status='confirmed' AND g.counts_for_sync=TRUE
+            """,
+            season["season_id"],
+        )
         events = await conn.fetch(
             """
             SELECT
@@ -167,6 +176,8 @@ async def list_events(request):
                 "title": season["title"],
                 "status": season["status"],
                 "target_sync_units": season["target_sync_units"],
+                "sync_units": int(sync_units or 0),
+                "sync_percent": min(100, round(100*int(sync_units or 0)/max(1,season["target_sync_units"]),1)),
             },
             "events": [
                 {
