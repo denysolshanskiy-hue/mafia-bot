@@ -682,13 +682,15 @@
     try {
       const result = await api("/admin/imports/" + S.currentImport.import_id + "/review", { method: "POST", body: payload });
       adminMessage($("#import-confirm-result"), "Чернетку збережено. Рядків: " + result.rows, true);
-    } catch (error) { adminMessage($("#import-confirm-result"), error.message, false); }
+      return true;
+    } catch (error) { adminMessage($("#import-confirm-result"), error.message, false); return false; }
   }
 
   async function confirmImport() {
     if (!S.currentImport) return;
     try {
-      await saveImportReview();
+      const saved = await saveImportReview();
+      if (!saved) return;
       const result = await api("/admin/imports/" + S.currentImport.import_id + "/confirm", { method: "POST", body: {} });
       adminMessage($("#import-confirm-result"), "Імпорт підтверджено: " + JSON.stringify(result), true);
       await loadAdminImports();
@@ -965,8 +967,8 @@
     const adminTab = event.target.closest("[data-admin-tab]");
     if (adminTab) return loadAdminTab(adminTab.dataset.adminTab);
 
-    const saveSlot = event.target.closest("[data-save-slot]");
-    if (saveSlot) return saveSlot(saveSlot.dataset.saveSlot);
+    const saveSlotButton = event.target.closest("[data-save-slot]");
+    if (saveSlotButton) return saveSlot(saveSlotButton.dataset.saveSlot);
 
     const link = event.target.closest("[data-link-slot]");
     if (link) return linkSlot(link.dataset.linkSlot);
