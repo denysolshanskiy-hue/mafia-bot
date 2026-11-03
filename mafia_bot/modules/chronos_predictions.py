@@ -402,7 +402,12 @@ async def settle_market(request):
             prediction_rules=(settings or {}).get("predictions",{})
             ex_cap=int(prediction_rules.get("ex_season_cap",500))
             bets=await conn.fetch(
-                "SELECT * FROM chronos.prediction_bets WHERE market_id=$1 AND status='pending' FOR UPDATE",
+                """
+                SELECT * FROM chronos.prediction_bets
+                WHERE market_id=$1 AND status='pending'
+                ORDER BY bettor_user_id
+                FOR UPDATE
+                """,
                 market_id,
             )
             settlements=[]
@@ -418,6 +423,11 @@ async def settle_market(request):
                     )
                     settlements.append({"bet_id":bet["bet_id"],"status":"refunded","reward_ex":0})
                 elif bet["candidate_user_id"]==winner:
+                    # Serialize EX season-cap checks across concurrent market settlements.
+                    await conn.fetchval(
+                        "SELECT user_id FROM public.users WHERE user_id=$1 FOR UPDATE",
+                        bet["bettor_user_id"],
+                    )
                     already_earned=await conn.fetchval(
                         """
                         SELECT COALESCE(SUM(amount),0) FROM chronos.ledger
