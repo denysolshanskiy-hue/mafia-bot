@@ -31,10 +31,12 @@ def plackett_luce_probabilities(
     seed: int = 1,
     house_margin: float = 0.05,
 ) -> dict[int, dict[str, float]]:
-    """Estimate exact placement probabilities from a ranking snapshot.
+    """Estimate placement probabilities with a Plackett–Luce simulation.
 
     The score blends points/game, bonus points, win rate and current rank.
-    The result is a model estimate, not a guarantee. Odds are frozen by the
+    Candidates with no confirmed games receive neutral median features from
+    candidates with history instead of being assigned zero skill. The result
+    is a provisional model estimate, not a guarantee. Odds are frozen by the
     caller when the market is opened.
     """
     if len(players) < 2:
