@@ -4,6 +4,7 @@ from aiohttp import web
 from aiogram import Bot, Dispatcher, types, F
 from modules.keyboards import admin_menu_keyboard, player_menu_keyboard
 from modules.event_types import detect_event_type
+from modules.chronos_api import register_chronos_routes
 from aiogram.filters import CommandStart
 from aiogram.types import (
     InlineKeyboardMarkup,
@@ -678,14 +679,20 @@ async def invite_join(
             return
 
         # 4️⃣ Запис
-        await conn.execute(
+        inserted_registration = await conn.fetchval(
             """
             INSERT INTO registrations (event_id, user_id, status)
             VALUES ($1, $2, 'active')
+            ON CONFLICT DO NOTHING
+            RETURNING registration_id
             """,
             event_id,
             user_id
         )
+
+        if inserted_registration is None:
+            await callback.answer("Ви вже записані на цей івент", show_alert=True)
+            return
 
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer("Ви записані!")
@@ -1485,6 +1492,7 @@ async def handle(request):
 async def start_all():
     await init_db()
     app = web.Application()
+    register_chronos_routes(app)
     app.router.add_get('/', handle)
     runner = web.AppRunner(app)
     await runner.setup()
