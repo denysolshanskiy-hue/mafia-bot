@@ -9,7 +9,7 @@ import asyncpg
 from aiohttp import web
 
 from modules.chronos_common import (
-    audit, json_response, ledger_balance, notify_user, require_admin, award_ledger
+    audit, json_response, json_value, ledger_balance, notify_user, require_admin, award_ledger
 )
 
 
@@ -51,7 +51,7 @@ async def admin_overview(request):
         return json_response({
             "season":{"season_code":season["season_code"],"title":season["title"],"status":season["status"],
                       "target_sync_units":season["target_sync_units"],
-                      "platform_settings":season["platform_settings"]},
+                      "platform_settings":json_value(season["platform_settings"], {})},
             "progress":{"games":int(stats["confirmed_games"] or 0),"sync_units":int(stats["sync_units"] or 0),
                         "percent":round(100*int(stats["sync_units"] or 0)/max(1,season["target_sync_units"]),1),
                         "players":int(stats["active_players"] or 0)},
@@ -924,7 +924,7 @@ async def admin_update_settings(request):
         )
         if not season:
             return json_response({"error":"season_not_found"},404)
-        settings=season["platform_settings"]
+        settings=json_value(season["platform_settings"], {}) or {}
         if "predictions" in payload:
             p=payload["predictions"]
             if not isinstance(p,dict):
