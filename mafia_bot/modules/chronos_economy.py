@@ -238,12 +238,28 @@ def season_prize_budget(
     }
 
 
-def _catalog_affordability(balance: int, prices: dict[str, int]) -> dict[str, int]:
+def _catalog_affordability(balance: int, prices: dict[str, int]) -> dict[str, Any]:
     affordable = [price for price in prices.values() if price <= balance]
+    # 0/1 knapsack: unique item codes can only be purchased once.
+    dp: list[tuple[int, int, tuple[str, ...]]] = [(0, 0, ()) for _ in range(max(0, balance) + 1)]
+    for code, price in prices.items():
+        if price < 0:
+            continue
+        for available in range(max(0, balance), price - 1, -1):
+            previous = dp[available - price]
+            candidate = (previous[0] + 1, previous[1] + price, previous[2] + (code,))
+            current = dp[available]
+            if candidate[0] > current[0] or (candidate[0] == current[0] and candidate[1] > current[1]):
+                dp[available] = candidate
+    best = dp[max(0, balance)]
     return {
         "minimum_item_price": min(prices.values()),
-        "maximum_affordable_price": max(affordable) if affordable else 0,
-        "number_of_items_affordable": len(affordable),
+        "maximum_individually_affordable_price": max(affordable) if affordable else 0,
+        "items_individually_affordable": len(affordable),
+        "max_unique_items_buyable": best[0],
+        "max_unique_items_spend": best[1],
+        "remaining_after_max_item_count": max(0, balance - best[1]),
+        "max_item_count_bundle": list(best[2]),
     }
 
 
