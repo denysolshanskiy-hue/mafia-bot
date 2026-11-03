@@ -222,9 +222,9 @@ The deterministic simulator includes different engagement archetypes:
 | Archetype | Games | Attended evenings / eligible | App actions | Mini-games | Forecasts | CR | Expected EX | XP | Activity Score |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | Minimum qualifier | 21 | 5 / 9 | 6 | 3 | 6 | 155 | 30 | 280 | 54.37 |
-| Regular player | 35 | 7 / 9 | 10 | 5 | 18 | 245 | 90 | 435 | 78.76 |
-| Active Top-10 before Main Final | 69 | 12 / 12 | 12 | 5 | 36 | 465 | 180 | 795 | 98.85 |
-| Top-10 misses one intermediate final but attends Main Final | 71 | 12 / 13 | 13 | 5 | 36 | 475 | 180 | 825 | 98.85 |
+| Regular player | 35 | 7 / 9 | 10 | 5 | 18 | 245 | 90 | 440 | 78.76 |
+| Active Top-10 before Main Final | 69 | 12 / 12 | 12 | 5 | 36 | 465 | 180 | 805 | 98.85 |
+| Top-10 misses one intermediate final but attends Main Final | 71 | 12 / 13 | 13 | 5 | 36 | 475 | 180 | 825 | 93.85 |
 | Active Top-10 including Main Final | 79 | 13 / 13 | 13 | 5 | 39 | 525 | 195 | 910 | 100.00 |
 
 XP values include the capped mini-game XP above. If the active Top-10 player completes all 12 eligible mini-game sessions instead of five, they gain up to 90 mini-game XP and reach 945 XP including the Main Final games.
