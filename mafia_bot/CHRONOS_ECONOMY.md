@@ -211,7 +211,7 @@ Total one-time EX catalogue sink capacity: **1,470 EX per player**. The expected
 The same unique-item basket check gives:
 - Minimum qualifier (30 expected EX): 1 item, 25 EX spent, 5 EX left.
 - Regular player (90 expected EX): 2 items, 80 EX spent, 10 EX left.
-- Active Top-10 (195 expected EX): 3 items, 195 EX spent.
+- Active Top-10 before Main Final (180 expected EX): 3 items, 175 EX spent; after Main Final (195 expected EX): 3 items, 195 EX spent.
 
 All items remain disabled until catalogue prices and visual assets are approved by the organizer.
 
