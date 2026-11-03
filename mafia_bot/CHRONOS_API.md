@@ -12,6 +12,7 @@ The Mini App is served by the existing bot aiohttp server. It uses the existing 
 - CODE BREAKER and MEMORY server-authoritative mini-games. Session state and answer keys are stored on the server.
 - CR / EX / XP ledger, achievements, collection, catalogue, equipment and player ledger history.
 - No-stake Prediction Exchange: probability-weighted EX rewards, no penalty for an incorrect forecast, self-prediction protection, per-event limits, automatic roster-change voiding, and neutral median-based handling for registered newcomers missing from the ranking snapshot.
+- Market opening still requires an active season, approved Activity Score/Economy/Prediction rules, and at least one confirmed ranking snapshot. Missing candidate rows within that snapshot are handled neutrally; the absence of any snapshot still blocks opening.
 - In-app notification inbox and category preferences.
 
 ### Admin console
