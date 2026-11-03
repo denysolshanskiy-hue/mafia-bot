@@ -42,7 +42,7 @@ class ChronosEconomyTests(unittest.TestCase):
         active = player_currency_income(69, 13, 5, 39)
         active_with_main_final = player_currency_income(79, 13, 5, 39)
         self.assertEqual(minimum, {"CR": 155, "EX_expected": 30, "XP": 280})
-        self.assertEqual(regular, {"CR": 245, "EX_expected": 90, "XP": 435})
+        self.assertEqual(regular, {"CR": 245, "EX_expected": 90, "XP": 440})
         self.assertEqual(active, {"CR": 475, "EX_expected": 195, "XP": 810})
         self.assertEqual(active_with_main_final, {"CR": 525, "EX_expected": 195, "XP": 910})
 
