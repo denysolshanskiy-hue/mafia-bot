@@ -85,7 +85,7 @@ async def list_predictions(request):
             "balance_ex":await ledger_balance(conn,user_id,"EX"),
             "markets":out,
             "rules_status":rules_status,
-            "currency_notice":"EX — лише косметична ігрова валюта. Прогноз безкоштовний: за помилку немає штрафу, за правильний прогноз нараховується 25–100 EX. Себе обирати не можна.",
+            "currency_notice":"EX — лише косметична ігрова валюта. Прогноз безкоштовний: за помилку немає штрафу, за правильний прогноз нараховується 5–100 EX. Себе обирати не можна.",
             "rules_notice":"Очікувана винагорода за один прогноз близько 5 EX; фактична залежить від імовірності кандидата. Ліміт заробітку — 500 EX за сезон.",
         })
     except asyncpg.UndefinedTableError:
