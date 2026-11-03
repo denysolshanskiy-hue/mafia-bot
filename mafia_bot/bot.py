@@ -1504,7 +1504,7 @@ async def handle(request):
 
 async def start_all():
     await init_db()
-    app = web.Application(middlewares=[telegram_auth_middleware])
+    app = web.Application(middlewares=[telegram_auth_middleware], client_max_size=9 * 1024 * 1024)
     register_chronos_routes(app)
     app.router.add_get('/', handle)
     runner = web.AppRunner(app)
