@@ -1,20 +1,38 @@
 import unittest
 
-from modules.chronos_economy import (
-    ACTIVITY_BONUS_POOL_UAH,
-    CR_CATALOG,
-    EX_CATALOG,
-    INTERMEDIATE_FINAL_PRIZES,
-    MAIN_FINAL_PRIZES,
-    allocate_activity_bonus,
-    calculate_activity_score,
-    minigame_xp_reward,
-    player_currency_income,
-    prediction_reward_ex,
-    qualification_games_required,
-    season_prize_budget,
-    simulate_economy,
-)
+try:
+    from modules.chronos_economy import (
+        ACTIVITY_BONUS_POOL_UAH,
+        CR_CATALOG,
+        EX_CATALOG,
+        INTERMEDIATE_FINAL_PRIZES,
+        MAIN_FINAL_PRIZES,
+        allocate_activity_bonus,
+        calculate_activity_score,
+        minigame_xp_reward,
+        player_currency_income,
+        prediction_reward_ex,
+        qualification_games_required,
+        season_prize_budget,
+        simulate_economy,
+    )
+except ModuleNotFoundError:
+    from mafia_bot.modules.chronos_economy import (
+        ACTIVITY_BONUS_POOL_UAH,
+        CR_CATALOG,
+        EX_CATALOG,
+        INTERMEDIATE_FINAL_PRIZES,
+        MAIN_FINAL_PRIZES,
+        allocate_activity_bonus,
+        calculate_activity_score,
+        minigame_xp_reward,
+        player_currency_income,
+        prediction_reward_ex,
+        qualification_games_required,
+        season_prize_budget,
+        simulate_economy,
+    )
+
 
 
 class ChronosEconomyTests(unittest.TestCase):
@@ -22,9 +40,11 @@ class ChronosEconomyTests(unittest.TestCase):
         minimum = player_currency_income(21, 5, 3, 6)
         regular = player_currency_income(40, 7, 5, 18)
         active = player_currency_income(69, 13, 5, 39)
+        active_with_main_final = player_currency_income(79, 13, 5, 39)
         self.assertEqual(minimum, {"CR": 155, "EX_expected": 30, "XP": 280})
         self.assertEqual(regular, {"CR": 270, "EX_expected": 90, "XP": 490})
         self.assertEqual(active, {"CR": 475, "EX_expected": 195, "XP": 810})
+        self.assertEqual(active_with_main_final, {"CR": 525, "EX_expected": 195, "XP": 910})
 
     def test_minigame_xp_is_capped(self):
         self.assertEqual(minigame_xp_reward(0), 0)
@@ -121,8 +141,10 @@ class ChronosEconomyTests(unittest.TestCase):
 
     def test_deterministic_simulator_reconciles_sources_and_sinks(self):
         report = simulate_economy()
-        self.assertEqual(report["full_season_player_max"]["CR"], 475)
-        self.assertEqual(report["full_season_player_max"]["EX_expected"], 195)
+        self.assertEqual(report["core_season_player_max"]["CR"], 475)
+        self.assertEqual(report["core_season_player_max"]["EX_expected"], 195)
+        self.assertEqual(report["top10_with_main_final_max"]["CR"], 525)
+        self.assertEqual(report["top10_with_main_final_max"]["XP"], 945)
         self.assertEqual(report["prize_budget"]["total_commitment"], 12500)
         self.assertEqual(report["cr_catalog_total_sink_capacity"], sum(CR_CATALOG.values()))
         self.assertEqual(report["ex_catalog_total_sink_capacity"], sum(EX_CATALOG.values()))
