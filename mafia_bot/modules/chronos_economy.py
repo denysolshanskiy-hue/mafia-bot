@@ -271,20 +271,20 @@ def simulate_economy() -> dict[str, Any]:
             "app_actions": 6, "minigames": 3, "predictions": 6,
         },
         "regular_player": {
-            "games": 40, "attended": 7, "eligible": 9,
+            "games": 35, "attended": 7, "eligible": 9,
             "app_actions": 10, "minigames": 5, "predictions": 18,
         },
         "active_top10": {
-            "games": 69, "attended": 13, "eligible": 13,
-            "app_actions": 15, "minigames": 5, "predictions": 39,
+            "games": 69, "attended": 12, "eligible": 12,
+            "app_actions": 12, "minigames": 5, "predictions": 36,
         },
         "active_top10_with_main_final": {
             "games": 79, "attended": 13, "eligible": 13,
-            "app_actions": 15, "minigames": 5, "predictions": 39,
+            "app_actions": 13, "minigames": 5, "predictions": 39,
         },
         "top10_skips_one_final": {
             "games": 71, "attended": 12, "eligible": 13,
-            "app_actions": 15, "minigames": 5, "predictions": 36,
+            "app_actions": 13, "minigames": 5, "predictions": 36,
         },
     }
     report: dict[str, Any] = {}
