@@ -35,7 +35,44 @@ except ModuleNotFoundError:
 
 
 
+try:
+    from modules.chronos_logic import plackett_luce_probabilities
+except ModuleNotFoundError:
+    from mafia_bot.modules.chronos_logic import plackett_luce_probabilities
+
+
 class ChronosEconomyTests(unittest.TestCase):
+    def test_prediction_model_gives_newcomers_neutral_roster_prior(self):
+        players = [
+            {
+                "user_id": 1, "rank_position": 1, "points": 80,
+                "games_played": 40, "wins": 24, "bonus_points": 12,
+            },
+            {
+                "user_id": 2, "rank_position": 20, "points": 40,
+                "games_played": 40, "wins": 16, "bonus_points": 4,
+            },
+            {
+                "user_id": 3, "rank_position": None, "points": 0,
+                "games_played": 0, "wins": 0, "bonus_points": 0,
+            },
+        ]
+        probabilities = plackett_luce_probabilities(
+            players, simulations=12000, seed=20261025, house_margin=0,
+        )
+        newcomer_top1 = probabilities[1]["3"]["probability"]
+        weaker_top1 = probabilities[1]["2"]["probability"]
+        stronger_top1 = probabilities[1]["1"]["probability"]
+
+        self.assertGreater(newcomer_top1, weaker_top1)
+        self.assertLess(newcomer_top1, stronger_top1)
+        for place in (1, 2, 3):
+            self.assertAlmostEqual(
+                sum(row["probability"] for row in probabilities[place].values()),
+                1.0,
+                delta=0.01,
+            )
+
     def test_currency_sources_for_player_archetypes(self):
         minimum = player_currency_income(21, 5, 3, 6)
         regular = player_currency_income(35, 7, 5, 18)
