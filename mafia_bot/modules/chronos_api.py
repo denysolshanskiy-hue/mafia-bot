@@ -357,7 +357,6 @@ async def register_for_event(request):
 
 def register_chronos_routes(app):
     """Mount authenticated API routes on the bot's existing aiohttp application."""
-    app.middlewares.append(telegram_auth_middleware)
     app.router.add_get(API_PREFIX + "/me", get_me)
     app.router.add_get(API_PREFIX + "/events", list_events)
     app.router.add_get(API_PREFIX + "/events/{event_id:\\d+}", get_event)
