@@ -830,13 +830,51 @@
     } catch (error) { toast(error.message); }
   }
 
+  function renderEconomyReport(report) {
+    const currencies = report.currencies || {};
+    const card = (code, title, color) => {
+      const v = currencies[code] || {};
+      const ratio = v.sink_to_faucet_ratio === null || v.sink_to_faucet_ratio === undefined
+        ? "—"
+        : (Number(v.sink_to_faucet_ratio) * 100).toFixed(1) + "%";
+      return '<div class="admin-stat"><small>' + title + ' · ISSUE / SPEND</small>' +
+        '<b>' + money(v.issued) + ' / ' + money(v.removed) + '</b>' +
+        '<span>Net ' + money(v.net_change) + ' · holders ' + money(v.holders) + '</span>' +
+        '<span>median ' + money(v.median_positive_balance) + ' · sink/faucet ' + ratio + '</span></div>';
+    };
+    const cash = report.cash_prizes || {};
+    const planned = cash.planned || {};
+    const catalog = report.catalog || {};
+    const crCat = catalog.CR || {};
+    const exCat = catalog.EX || {};
+    const purchases = report.purchases || {};
+    return '<div class="section-heading compact"><div><div class="eyebrow">LIVE ECONOMY · LEDGER</div><h2>Фактичні потоки</h2></div></div>' +
+      '<div class="admin-overview">' +
+        card("CR", "CR", "cyan") + card("EX", "EX", "violet") + card("XP", "XP", "gold") +
+      '</div>' +
+      '<div class="admin-row"><div class="panel-top"><span class="panel-code">COSMETIC SINKS</span><span class="status-chip">ONE-TIME ITEMS</span></div>' +
+        '<p>CR: ' + Number(crCat.enabled_items || 0) + ' активних предметів · кошик ' + money(crCat.enabled_basket_price) + ' CR · покупки ' + money((purchases.CR || {}).total_spent) + ' CR.</p>' +
+        '<p>EX: ' + Number(exCat.enabled_items || 0) + ' активних предметів · кошик ' + money(exCat.enabled_basket_price) + ' EX · покупки ' + money((purchases.EX || {}).total_spent) + ' EX.</p>' +
+        '<p>Сумарна місткість каталогу за унікальними цінами: ' + money(report.scenario_model.cr_catalog_total_sink_capacity) + ' CR та ' + money(report.scenario_model.ex_catalog_total_sink_capacity) + ' EX. Це не прогноз витрат, а максимально доступний стік за поточним каталогом.</p></div>' +
+      '<div class="admin-row"><div class="panel-top"><span class="panel-code">UAH · FIXED COMMITMENT</span><span class="status-chip">NO CURRENCY CONVERSION</span></div>' +
+        '<p>Проміжні фінали: ' + money(planned.intermediate_finals) + ' грн · Main Final: ' + money(planned.main_final) + ' грн · окремий бонус: ' + money(planned.activity_bonus) + ' грн.</p>' +
+        '<h3>Усього бюджет сезону: ' + money(planned.total_commitment) + ' грн</h3>' +
+        '<p>Фактичні призові: drafted ' + money(cash.fixed_awards_drafted) + ' · approved ' + money(cash.fixed_awards_approved) + ' · paid ' + money(cash.fixed_awards_paid) + ' грн.</p>' +
+        '<p>Бонус: розраховано ' + Number(cash.activity_bonus_allocations || 0) + ' гравців · виділено ' + money(cash.activity_bonus_allocated) + ' / ' + money(cash.activity_bonus_pool) + ' грн · paid ' + money(cash.activity_bonus_paid) + ' грн.</p></div>' +
+      '<div class="admin-row"><div class="panel-code">MODEL ASSUMPTIONS</div><p>CR/EX — косметичні валюти; XP — progression only. Немає купівлі, переказу чи cash-out. Баланси переносяться між сезонами, тому каталог потрібно поповнювати новими унікальними косметичними предметами, не створюючи pay-to-win переваг.</p></div>';
+  }
+
   async function loadAdminEconomy() {
-    const data = await api("/store");
-    $("#admin-content").innerHTML =
-      '<div class="admin-row"><div class="panel-code">LEDGER CORRECTION</div><p>Корекції CR/XP — лише з причиною та унікальним ключем. EX можна позитивно коригувати лише як явне виправлення; купівлі/передачі EX немає.</p>' +
+    const [data, report] = await Promise.all([
+      api("/store"),
+      api("/admin/economy/report")
+    ]);
+    const html = renderEconomyReport(report) +
+      '<div class="section-heading compact"><div><div class="eyebrow">LEDGER CONTROL</div><h2>Корекції</h2></div></div>' +
+      '<div class="admin-row"><div class="panel-code">MANUAL CORRECTION</div><p>Корекції CR/XP — лише з причиною та унікальним ключем. EX можна позитивно коригувати лише як явне виправлення; купівлі та передачі EX немає.</p>' +
       '<div class="form-field"><label>PLAYER USER ID</label><input id="adjust-user" class="inline-input" type="number"></div>' +
       '<div class="admin-inline"><select id="adjust-currency" class="inline-input"><option>CR</option><option>XP</option><option>EX</option></select><input id="adjust-amount" class="inline-input" type="number" placeholder="± amount"></div>' +
-      '<div class="form-field"><label>ПРИЧИНА</label><input id="adjust-reason" class="inline-input" placeholder="Correction: ..." ></div>' +
+      '<div class="form-field"><label>ПРИЧИНА</label><input id="adjust-reason" class="inline-input" placeholder="Correction: ..."></div>' +
       '<div class="form-field"><label>IDEMPOTENCY KEY</label><input id="adjust-key" class="inline-input" placeholder="unique-reference"></div>' +
       '<button class="secondary-button" data-admin-action="ledger-adjust">ЗАПИСАТИ КОРЕКЦІЮ</button></div>' +
       '<div class="section-heading compact"><div><div class="eyebrow">CATALOG CONTROL</div><h2>Каталог предметів</h2></div></div>' +
@@ -844,6 +882,7 @@
         '<div class="admin-row"><div class="panel-top"><span class="panel-code">' + esc(item.item_code) + ' · ' + esc(item.currency) + '</span><span class="status-chip ' + (item.is_enabled ? "" : "pending") + '">' + (item.is_enabled ? "ENABLED" : "DISABLED") + '</span></div><h3>' + esc(item.name) + '</h3>' +
         '<div class="admin-inline"><input class="inline-input" type="number" min="0" value="' + item.price + '" data-item-price="' + item.item_id + '"><label class="preference-item"><span>ENABLED</span><input type="checkbox" data-item-enabled="' + item.item_id + '"' + (item.is_enabled ? " checked" : "") + '></label><button class="secondary-button" data-save-item="' + item.item_id + '">ЗБЕРЕГТИ</button></div></div>'
       ).join("");
+    $("#admin-content").innerHTML = html;
   }
 
   async function saveCatalogItem(id) {
@@ -1060,6 +1099,7 @@
       if (action === "ledger-adjust") return adjustLedger();
       if (action === "save-activity-settings" || action === "save-economy-settings" || action === "save-prediction-settings" || action === "season-status" || action === "reconcile-economy") return saveAdminSettings(action);
       if (action === "calculate-activity-bonus") return calculateActivityBonus();
+      if (action === "refresh-economy-report") return loadAdminEconomy();
       if (action === "search-players") return loadAdminPlayers();
       if (action === "save-import-review") return saveImportReview();
       if (action === "confirm-import") return confirmImport();
