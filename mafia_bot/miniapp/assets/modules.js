@@ -723,7 +723,7 @@
     const data = await api("/admin/markets");
     const events = await api("/events");
     $("#admin-content").innerHTML =
-      '<div class="admin-row"><div class="panel-code">OPEN PREDICTION MARKETS</div><p>Потрібен активний CHRONOS-захід, підтверджений рейтинг і затверджені правила прогнозів. Коефіцієнти фіксуються за поточним складом.</p>' +
+      '<div class="admin-row"><div class="panel-code">OPEN PREDICTION MARKETS</div><p>Потрібен активний CHRONOS-захід, підтверджений рейтинг і затверджені правила економіки. Прогнози безкоштовні, ставки EX немає. Імовірність і винагорода фіксуються за поточним складом.</p>' +
       '<div class="form-field"><label>BOT EVENT ID</label><input id="market-event-id" class="inline-input" type="number" placeholder="ID CHRONOS-події"></div>' +
       '<div class="form-field"><label>ЧАС ЗАКРИТТЯ (ЛОКАЛЬНИЙ)</label><input id="market-close-at" class="inline-input" type="datetime-local"></div>' +
       '<button class="secondary-button" data-admin-action="open-markets">ВІДКРИТИ TOP1 / TOP2 / TOP3</button></div>' +
@@ -753,7 +753,7 @@
     if (!isVoid && !payload.winning_user_id) return toast("Вкажи Telegram user_id переможця.");
     try {
       await api("/predictions/markets/" + id + "/settle", { method: "POST", body: payload });
-      toast(isVoid ? "Ринок скасовано, ставки повернено." : "Ринок розраховано.");
+      toast(isVoid ? "Прогнози анульовано без втрати EX." : "Ринок розраховано.");
       await loadAdminMarkets();
     } catch (error) { toast(error.message); }
   }
