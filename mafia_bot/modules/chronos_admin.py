@@ -990,12 +990,15 @@ async def calculate_season_activity_bonus(request):
 
             if not participants:
                 return json_response({"error":"no_qualified_top10_players"},409)
-            allocations=allocate_activity_bonus(participants,pool)
+            try:
+                allocations=allocate_activity_bonus(participants,pool)
+            except (ValueError,ArithmeticError) as exc:
+                return json_response({"error":"activity_bonus_allocation_failed","details":str(exc)},409)
 
             await conn.execute(
                 """
                 DELETE FROM chronos.season_bonus_allocations
-                WHERE season_id=$1 AND status='draft'
+                WHERE season_id=$1 AND status IN ('draft','void')
                 """,
                 season["season_id"],
             )
@@ -1184,6 +1187,22 @@ async def create_prize_awards(request):
         if event_kind=="main_final" and slot["slot_type"]!="main_final":
             return json_response({"error":"wrong_slot_type"},400)
         created=[]
+        seen_users=set()
+        seen_places=set()
+        for award in awards:
+            try:
+                user_id=int(award["user_id"])
+                place=int(award["place"])
+                base=int(award["base_amount_uah"])
+                coefficient=float(award.get("activity_coefficient",1.0))
+            except (ValueError,KeyError,TypeError):
+                return json_response({"error":"invalid_award_row"},400)
+            if user_id in seen_users or place in seen_places or place not in (1,2,3):
+                return json_response({"error":"duplicate_player_or_place","place":place},400)
+            if base<0 or coefficient!=1.0:
+                return json_response({"error":"fixed_competition_prizes_are_not_reduced_by_activity_score"},400)
+            seen_users.add(user_id)
+            seen_places.add(place)
         async with conn.transaction():
             for award in awards:
                 user_id=int(award["user_id"])
