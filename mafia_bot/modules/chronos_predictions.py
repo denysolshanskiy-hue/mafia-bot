@@ -196,7 +196,7 @@ async def open_prediction_markets(request):
                     reward_ex=prediction_reward_ex(
                         data["probability"],
                         expected_reward=int(settings.get("expected_reward_ex",5)),
-                        minimum=int(settings.get("min_reward_ex",25)),
+                        minimum=int(settings.get("min_reward_ex",5)),
                         maximum=int(settings.get("max_reward_ex",100)),
                     )
                     await conn.execute(
