@@ -38,11 +38,11 @@ except ModuleNotFoundError:
 class ChronosEconomyTests(unittest.TestCase):
     def test_currency_sources_for_player_archetypes(self):
         minimum = player_currency_income(21, 5, 3, 6)
-        regular = player_currency_income(40, 7, 5, 18)
+        regular = player_currency_income(35, 7, 5, 18)
         active = player_currency_income(69, 13, 5, 39)
         active_with_main_final = player_currency_income(79, 13, 5, 39)
         self.assertEqual(minimum, {"CR": 155, "EX_expected": 30, "XP": 280})
-        self.assertEqual(regular, {"CR": 270, "EX_expected": 90, "XP": 490})
+        self.assertEqual(regular, {"CR": 245, "EX_expected": 90, "XP": 435})
         self.assertEqual(active, {"CR": 475, "EX_expected": 195, "XP": 810})
         self.assertEqual(active_with_main_final, {"CR": 525, "EX_expected": 195, "XP": 910})
 
@@ -144,6 +144,7 @@ class ChronosEconomyTests(unittest.TestCase):
         self.assertGreater(report["active_top10"]["CR"], report["regular_player"]["CR"])
         self.assertEqual(report["minimum_qualifier"]["cr_catalog"]["max_unique_items_buyable"], 1)
         self.assertEqual(report["regular_player"]["cr_catalog"]["max_unique_items_buyable"], 2)
+        self.assertEqual(report["regular_player"]["cr_catalog"]["max_unique_items_spend"], 240)
         self.assertEqual(report["active_top10"]["cr_catalog"]["max_unique_items_buyable"], 4)
         self.assertEqual(report["minimum_qualifier"]["ex_catalog"]["max_unique_items_buyable"], 1)
         self.assertEqual(report["regular_player"]["ex_catalog"]["max_unique_items_buyable"], 2)
