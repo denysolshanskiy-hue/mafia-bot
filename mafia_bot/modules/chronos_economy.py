@@ -121,7 +121,7 @@ def player_currency_income(
 def prediction_reward_ex(
     probability: float,
     expected_reward: int = 5,
-    minimum: int = 25,
+    minimum: int = 5,
     maximum: int = 100,
 ) -> int:
     """Probability-weighted, no-stake forecast reward.
