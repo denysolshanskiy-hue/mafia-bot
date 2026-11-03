@@ -1,0 +1,55 @@
+name: CHRONOS backend checks
+
+on:
+  push:
+    branches:
+      - feature/chronos-miniapp-api
+  pull_request:
+    paths:
+      - "mafia_bot/**"
+      - ".github/workflows/chronos-checks.yml"
+
+jobs:
+  python-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install API runtime dependencies
+        run: python -m pip install aiohttp asyncpg
+
+      - name: Compile Python modules
+        run: python -m compileall -q mafia_bot
+
+      - name: Run unit tests
+        run: python -m unittest discover -s mafia_bot/tests -v
+
+      - name: Verify aiohttp route registration
+        env:
+          PYTHONPATH: mafia_bot
+        run: |
+          python - <<'PY'
+          from aiohttp import web
+          from modules.chronos_api import register_chronos_routes, telegram_auth_middleware
+
+          app = web.Application(middlewares=[telegram_auth_middleware])
+          register_chronos_routes(app)
+
+          expected = {
+              "/api/chronos/me",
+              "/api/chronos/events",
+              "/api/chronos/events/{event_id}",
+              "/api/chronos/events/{event_id}/register",
+          }
+          registered = {resource.canonical for resource in app.router.resources()}
+          missing = expected - registered
+          if missing:
+              raise SystemExit(f"Missing routes: {sorted(missing)}")
+          print("CHRONOS routes registered successfully")
+          PY
