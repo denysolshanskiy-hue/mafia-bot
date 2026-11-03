@@ -142,6 +142,12 @@ class ChronosEconomyTests(unittest.TestCase):
         self.assertGreaterEqual(report["minimum_qualifier"]["EX_expected"], min(EX_CATALOG.values()))
         self.assertGreater(report["regular_player"]["CR"], min(CR_CATALOG.values()))
         self.assertGreater(report["active_top10"]["CR"], report["regular_player"]["CR"])
+        self.assertEqual(report["minimum_qualifier"]["cr_catalog"]["max_unique_items_buyable"], 1)
+        self.assertEqual(report["regular_player"]["cr_catalog"]["max_unique_items_buyable"], 2)
+        self.assertEqual(report["active_top10"]["cr_catalog"]["max_unique_items_buyable"], 4)
+        self.assertEqual(report["minimum_qualifier"]["ex_catalog"]["max_unique_items_buyable"], 1)
+        self.assertEqual(report["regular_player"]["ex_catalog"]["max_unique_items_buyable"], 2)
+        self.assertEqual(report["active_top10"]["ex_catalog"]["max_unique_items_buyable"], 3)
 
     def test_deterministic_simulator_reconciles_sources_and_sinks(self):
         report = simulate_economy()
