@@ -848,7 +848,8 @@
     const crCat = catalog.CR || {};
     const exCat = catalog.EX || {};
     const purchases = report.purchases || {};
-    return '<div class="section-heading compact"><div><div class="eyebrow">LIVE ECONOMY · LEDGER</div><h2>Фактичні потоки</h2></div></div>' +
+    return '<div class="row-actions"><button class="secondary-button" data-admin-action="refresh-economy-report">ОНОВИТИ ЕКОНОМІЧНИЙ ЗВІТ</button></div>' +
+      '<div class="section-heading compact"><div><div class="eyebrow">LIVE ECONOMY · LEDGER</div><h2>Фактичні потоки</h2></div></div>' +
       '<div class="admin-overview">' +
         card("CR", "CR", "cyan") + card("EX", "EX", "violet") + card("XP", "XP", "gold") +
       '</div>' +
