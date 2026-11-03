@@ -53,10 +53,20 @@ The backend requires the user to have completed `/start` in the bot and have a g
 
 Run migrations manually in Neon SQL Editor in this order:
 
-1. `001_chronos_foundation.sql`
-2. `002_active_registration_unique.sql`
+1. `001_chronos_foundation.sql` — creates the schema, a draft `CHRONOS` season, and 13 planned slots.
+2. `002_active_registration_unique.sql` — prevents duplicate active registrations.
 
 Migration 002 deliberately stops if duplicate active `(event_id, user_id)` registrations exist. Do not run `database.init_db()` against production; that function contains an outdated schema definition.
+
+The season is deliberately seeded as `draft`. When the schedule and app are ready to accept registrations, activate it manually:
+
+```sql
+UPDATE chronos.seasons
+SET status = 'active', updated_at = NOW()
+WHERE season_code = 'CHRONOS';
+```
+
+Pause registrations without deleting data by changing the status to `paused`. Planned slots remain in the calendar; only events created by the bot and marked `event_type = 'chronos'` are treated as live events.
 
 ## Current scope
 
