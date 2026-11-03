@@ -28,7 +28,7 @@ const data = await response.json();
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/chronos/me` | Checks whether the Telegram user has a bot profile and game nickname |
-| GET | `/api/chronos/events` | Returns active CHRONOS season, active bot-created CHRONOS events, and unlinked planned slots |
+| GET | `/api/chronos/events` | Returns the current draft/active/paused CHRONOS season, active bot-created CHRONOS events, and unlinked planned slots |
 | GET | `/api/chronos/events/{event_id}` | Returns an event and its active roster |
 | POST | `/api/chronos/events/{event_id}/register` | Registers the authenticated Telegram user in the existing `public.registrations` table |
 
