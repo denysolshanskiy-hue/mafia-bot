@@ -7,7 +7,7 @@ import asyncpg
 from aiohttp import web
 
 from modules.chronos_common import (
-    active_season_id, audit, json_response, ledger_balance, require_admin
+    active_season_id, audit, json_response, json_value, ledger_balance, require_admin
 )
 from modules.chronos_logic import AVATAR_BASES, level_for_xp
 
@@ -358,13 +358,14 @@ async def operations(request):
             "SELECT COUNT(*) FROM chronos.activity_events WHERE season_id=$1 AND user_id=$2 AND verified=TRUE",
             season_id,user_id,
         )
-        weights = season["platform_settings"].get("activity_score", {})
+        settings = json_value(season["platform_settings"], {}) or {}
+        weights = settings.get("activity_score", {})
         attendance_total = int(eligible_regular or 0) + int(invited_finals or 0)
         attendance_done = int(attended_regular or 0) + int(attended_finals or 0)
         attendance_pct = round(100*attendance_done/attendance_total,1) if attendance_total else 0.0
         qualifies = int(played_games or 0) >= math.ceil(0.3*int(conducted_games or 0)) if conducted_games else False
         return json_response({
-            "season":{"status":season["platform_settings"].get("activity_score",{}).get("status","draft")},
+            "season":{"status":settings.get("status","draft")},
             "participation":{
                 "games_played":int(played_games or 0),
                 "games_conducted":int(conducted_games or 0),
