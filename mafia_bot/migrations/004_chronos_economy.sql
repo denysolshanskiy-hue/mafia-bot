@@ -76,6 +76,7 @@ SET platform_settings =
           "max_predictions_per_event":3,
           "ex_season_cap":500,
           "store_unlock_after_predictions":6,
+          "store_unlock_scope":"lifetime",
           "self_prediction_allowed":false,
           "stake_required":false,
           "loss_on_wrong_prediction":false
@@ -100,7 +101,8 @@ SET platform_settings =
           "CR":"earned_soft_currency_for_cosmetics_only",
           "EX":"earned_prediction_reward_for_cosmetics_only",
           "XP":"non_spendable_progression_only",
-          "no_purchase_transfer_or_cashout":true
+          "no_purchase_transfer_or_cashout":true,
+          "carry_balances_between_seasons":true
         }
       }'::jsonb,
       TRUE
