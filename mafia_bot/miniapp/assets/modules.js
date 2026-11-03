@@ -1,0 +1,1052 @@
+(() => {
+  "use strict";
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const initData = tg && tg.initData ? tg.initData : "";
+  const S = {
+    identity: null,
+    achievements: [],
+    collection: [],
+    store: null,
+    games: null,
+    game: null,
+    gameTimer: null,
+    gameHideTimer: null,
+    predictions: null,
+    operations: null,
+    rankings: null,
+    notifications: null,
+    adminTab: "schedule",
+    adminImports: [],
+    currentImport: null,
+    importObjectUrl: null,
+    storeFilter: "CR",
+    rewardTab: "achievements",
+    playerQuery: "",
+    season: null
+  };
+
+  const $ = (selector, root) => (root || document).querySelector(selector);
+  const $$ = (selector, root) => Array.from((root || document).querySelectorAll(selector));
+  const esc = (value) => String(value === undefined || value === null ? "" : value).replace(/[&<>"']/g, (ch) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[ch]));
+  const money = (value) => Number(value || 0).toLocaleString("uk-UA");
+  const labels = {
+    finals: "ФІНАЛИ", season: "СЕЗОН", rewards: "НАГОРОДИ",
+    predictions: "ПРОГНОЗИ", events: "ПОДІЇ", system: "СИСТЕМА"
+  };
+
+  function toast(message) {
+    const node = $("#toast");
+    if (!node) return;
+    node.textContent = message;
+    node.classList.add("show");
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => node.classList.remove("show"), 2800);
+  }
+
+  function headers(isJson) {
+    const h = {};
+    if (initData) h.Authorization = "tma " + initData;
+    if (isJson) h["Content-Type"] = "application/json";
+    return h;
+  }
+
+  async function api(path, options) {
+    options = options || {};
+    if (!initData) throw new Error("Відкрий Mini App через Telegram.");
+    const body = options.body;
+    const isForm = (typeof FormData !== "undefined") && (body instanceof FormData);
+    const h = headers(body !== undefined && body !== null && !isForm);
+    const response = await fetch("/api/chronos" + path, {
+      method: options.method || "GET",
+      headers: h,
+      body: isForm ? body : (body === undefined || body === null ? undefined : JSON.stringify(body)),
+      cache: "no-store"
+    });
+    let data = {};
+    try { data = await response.json(); } catch (_) {}
+    if (!response.ok) {
+      const error = new Error(data.message || data.error || ("HTTP " + response.status));
+      error.status = response.status;
+      error.data = data;
+      throw error;
+    }
+    return data;
+  }
+
+  async function apiImage(path) {
+    const response = await fetch("/api/chronos" + path, { headers: headers(false), cache: "no-store" });
+    if (!response.ok) throw new Error("Не вдалося завантажити файл імпорту.");
+    return await response.blob();
+  }
+
+  function fmtDate(value) {
+    if (!value) return "ДАТУ НЕ ВИЗНАЧЕНО";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value);
+    return d.toLocaleDateString("uk-UA", { day: "2-digit", month: "short", year: "numeric" }).replace(/\./g, "").toUpperCase();
+  }
+
+  function fmtTime(value) {
+    if (!value) return "";
+    return String(value).slice(0, 5);
+  }
+
+  function setSync(season) {
+    if (!season) return;
+    const units = Number(season.sync_units || 0);
+    const target = Number(season.target_sync_units || 690);
+    const percent = Math.max(0, Math.min(100, Number(season.sync_percent || 0)));
+    const text = $("#global-sync-text");
+    const bar = $("#sync-meter");
+    const label = $("#sync-percent");
+    const status = $("#sync-status-label");
+    if (text) text.textContent = money(units) + " / " + money(target);
+    if (bar) bar.style.width = percent + "%";
+    if (label) label.textContent = percent.toFixed(1) + "%";
+    if (status) status.textContent = season.status === "active" ? "СЕЗОН АКТИВНИЙ" : season.status === "paused" ? "СЕЗОН НА ПАУЗІ" : "ПОПЕРЕДНІЙ ПЕРЕГЛЯД";
+    $$("#milestone-strip [data-milestone]").forEach((node) => {
+      node.classList.toggle("reached", percent >= Number(node.dataset.milestone));
+    });
+  }
+
+  async function loadIdentity() {
+    try {
+      S.identity = await api("/identity");
+      const p = S.identity;
+      const name = p.display_name || "Гість системи";
+      if ($("#home-name")) $("#home-name").textContent = name;
+      if ($("#profile-name")) $("#profile-name").textContent = name;
+      if ($("#avatar-initial")) $("#avatar-initial").textContent = name.trim().slice(0, 1).toUpperCase() || "?";
+      if ($("#home-profile-note")) $("#home-profile-note").textContent = p.profile_complete ? "Профіль синхронізовано з KMC" : "Потрібно завершити /start у боті";
+      if ($("#profile-telegram")) $("#profile-telegram").textContent = p.profile_complete ? "KMC PLAYER REGISTRY" : "PROFILE NOT LINKED";
+      if ($("#profile-role")) $("#profile-role").textContent = p.role === "admin" ? "ADMIN" : "INITIATE";
+      if ($("#profile-title")) $("#profile-title").textContent = p.active_title ? String(p.active_title).toUpperCase() : "TELEGRAM · KMC";
+      if ($("#admin-shortcut")) $("#admin-shortcut").hidden = p.role !== "admin";
+      const avatar = $(".avatar-person");
+      if (avatar) {
+        avatar.className = "avatar-person " + (p.avatar_base || "european_male");
+      }
+      $$(".avatar-choice").forEach((el) => el.classList.toggle("selected", el.dataset.avatar === p.avatar_base));
+      return p;
+    } catch (error) {
+      if (error.status !== 404) console.warn("Identity load:", error.message);
+      S.identity = null;
+      if ($("#admin-shortcut")) $("#admin-shortcut").hidden = true;
+      return null;
+    }
+  }
+
+  async function saveAvatar(code) {
+    try {
+      await api("/identity/avatar", { method: "POST", body: { avatar_base: code } });
+      if (S.identity) S.identity.avatar_base = code;
+      const avatar = $(".avatar-person");
+      if (avatar) avatar.className = "avatar-person " + code;
+      $$(".avatar-choice").forEach((el) => el.classList.toggle("selected", el.dataset.avatar === code));
+      toast("Основа аватара збережена.");
+    } catch (error) { toast(error.message); }
+  }
+
+  async function loadAppearanceOptions() {
+    const data = await api("/achievements");
+    S.achievements = data.achievements || [];
+    const earned = S.achievements.filter((a) => a.earned);
+    const selects = [
+      { id: "#identity-title", value: S.identity && S.identity.active_title, label: "Без звання" },
+      { id: "#identity-badge-1", value: S.identity && S.identity.badges && S.identity.badges[0], label: "Без бейджа" },
+      { id: "#identity-badge-2", value: S.identity && S.identity.badges && S.identity.badges[1], label: "Без бейджа" }
+    ];
+    selects.forEach((spec) => {
+      const node = $(spec.id);
+      if (!node) return;
+      node.innerHTML = '<option value="">' + spec.label + '</option>' +
+        earned.map((a) => '<option value="' + esc(a.achievement_code) + '">' + esc(a.name) + '</option>').join("");
+      node.value = spec.value || "";
+    });
+  }
+
+  async function saveAppearance() {
+    const payload = {
+      title: $("#identity-title") ? $("#identity-title").value || null : null,
+      badges: [$("#identity-badge-1") ? $("#identity-badge-1").value : "", $("#identity-badge-2") ? $("#identity-badge-2").value : ""].filter(Boolean)
+    };
+    try {
+      await api("/identity/appearance", { method: "POST", body: payload });
+      await loadIdentity();
+      toast("Ідентичність збережена.");
+    } catch (error) { toast(error.message); }
+  }
+
+  async function loadMarket() {
+    try {
+      S.predictions = await api("/predictions");
+      renderMarket();
+    } catch (error) {
+      if ($("#prediction-markets")) $("#prediction-markets").innerHTML = '<div class="empty-state"><span class="empty-symbol">◈</span><b>Біржу ще не запущено</b><small>' + esc(error.message) + '</small></div>';
+    }
+  }
+
+  function renderMarket() {
+    if (!S.predictions) return;
+    const data = S.predictions;
+    if ($("#ex-balance-market")) $("#ex-balance-market").textContent = money(data.balance_ex) + " EX";
+    if ($("#prediction-rules-status")) $("#prediction-rules-status").textContent = "RULES: " + String(data.rules_status || "draft").toUpperCase();
+    const target = $("#prediction-markets");
+    if (!target) return;
+    if (!data.markets.length) {
+      target.innerHTML = '<div class="empty-state"><span class="empty-symbol">◈</span><b>Відкритих ринків поки немає</b><small>Організатор відкриє прогнози після імпорту підтвердженого рейтингу та затвердження правил.</small></div>';
+      return;
+    }
+    target.innerHTML = data.markets.map((m) => {
+      const open = m.status === "open";
+      const mine = m.my_bet;
+      const candidates = m.candidates.map((p) =>
+        '<option value="' + p.user_id + '">' + esc(p.display_name) + ' · x' + Number(p.odds).toFixed(2) + '</option>'
+      ).join("");
+      return '<article class="panel-card">' +
+        '<div class="panel-top"><span class="panel-code">' + esc(m.market_type) + ' · EVENT #' + m.event_id + '</span><span class="status-chip ' + (open ? "" : "locked") + '">' + (open ? "OPEN" : "LOCKED") + '</span></div>' +
+        '<h3>' + esc(m.event_title) + '</h3>' +
+        '<p>' + esc(fmtDate(m.event_date)) + ' · ' + esc(fmtTime(m.event_time)) + ' · закриття: ' + esc(m.closes_at ? new Date(m.closes_at).toLocaleString("uk-UA") : "—") + '</p>' +
+        (mine
+          ? '<div class="notice-card"><span class="notice-mark">✓</span><div><b>Твій прогноз прийнято</b><p>Ставка ' + money(mine.stake) + ' EX · x' + Number(mine.odds).toFixed(2) + ' · потенційне повернення ' + money(mine.potential_return) + ' EX</p></div></div>'
+          : (open
+            ? '<div class="form-field"><label>ОБЕРИ ГРАВЦЯ</label><select data-bet-player="' + m.market_id + '">' + candidates + '</select></div><div class="form-field"><label>СТАВКА EX (10–200)</label><input class="inline-input" type="number" min="10" max="200" value="10" data-bet-stake="' + m.market_id + '"></div><button class="secondary-button" data-place-bet="' + m.market_id + '">ПІДТВЕРДИТИ ПРОГНОЗ</button>'
+            : '<p class="muted-note">Ринок закритий. Результат буде встановлений організатором після вечора.</p>')) +
+        '</article>';
+    }).join("");
+  }
+
+  async function placePrediction(marketId) {
+    const player = $('[data-bet-player="' + marketId + '"]');
+    const stake = $('[data-bet-stake="' + marketId + '"]');
+    if (!player || !stake) return;
+    try {
+      await api("/predictions/markets/" + marketId + "/bet", {
+        method: "POST",
+        body: { candidate_user_id: Number(player.value), stake: Number(stake.value) }
+      });
+      toast("Прогноз прийнято.");
+      await loadMarket();
+    } catch (error) { toast(error.message); }
+  }
+
+  async function loadGames() {
+    try {
+      S.games = await api("/games");
+      renderGames();
+    } catch (error) {
+      if ($("#games-list")) $("#games-list").innerHTML = '<div class="empty-state"><span class="empty-symbol">⌘</span><b>Симуляції недоступні</b><small>' + esc(error.message) + '</small></div>';
+    }
+  }
+
+  function renderGames() {
+    const target = $("#games-list");
+    if (!target || !S.games) return;
+    if (!S.games.season_active) {
+      target.innerHTML = '<div class="empty-state"><span class="empty-symbol">⌘</span><b>Сезон ще не активний</b><small>Симуляційна кімната відкриється разом із сезоном.</small></div>';
+      return;
+    }
+    target.innerHTML = S.games.games.map((game) => {
+      const attempts = Number(game.attempts_today || 0);
+      return '<article class="game-card"><span class="game-symbol">' + (game.game_code === "MEMORY" ? "▦" : "⌘") + '</span>' +
+        '<h3>' + esc(game.title) + '</h3><p>' + esc(game.description) + '</p>' +
+        '<small>' + attempts + ' / 3 СЬОГОДНІ · ' + Number(game.completed || 0) + ' ЗАВЕРШЕНО</small>' +
+        '<button class="secondary-button" data-start-game="' + game.game_code + '"' + (attempts >= 3 ? " disabled" : "") + '>ПОЧАТИ</button></article>';
+    }).join("");
+  }
+
+  async function startGame(code) {
+    try {
+      const session = await api("/games/" + code, { method: "POST" });
+      S.game = { id: session.session_id, code: code, state: session.state, feedback: [], attemptsLeft: 6 };
+      renderGameSession();
+      if (S.gameTimer) clearInterval(S.gameTimer);
+      S.gameTimer = setInterval(() => {
+        if (!S.game || !S.game.state) return;
+        const node = $("#game-seconds");
+        if (node) {
+          S.game.state.seconds_left = Math.max(0, Number(S.game.state.seconds_left || 0) - 1);
+          node.textContent = S.game.state.seconds_left + "s";
+        }
+      }, 1000);
+    } catch (error) { toast(error.message); }
+  }
+
+  function renderGameSession() {
+    const target = $("#active-game");
+    if (!target || !S.game) return;
+    target.hidden = false;
+    const game = S.game;
+    const seconds = game.state ? Number(game.state.seconds_left || 0) : 90;
+    if (game.code === "CODE_BREAKER") {
+      const guesses = (game.feedback || []).map((g, i) =>
+        '<div class="guess-row"><span>' + (i + 1) + '. ' + esc(g.guess) + '</span><span>● ' + g.exact + ' &nbsp; ◇ ' + g.misplaced + '</span></div>'
+      ).join("");
+      target.innerHTML = '<div class="panel-top"><span class="panel-code">CODE BREAKER · SESSION</span><span class="game-timer" id="game-seconds">' + seconds + 's</span></div>' +
+        '<h3>ЗЛАМАТИ КОД</h3><p class="modal-copy">4 різні цифри. ● — цифра та позиція правильні, ◇ — цифра є, позиція інша. 6 спроб.</p>' +
+        '<form class="code-guess-form" id="code-guess-form"><input id="code-guess-input" type="text" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="off" placeholder="••••" required><button class="primary-button" type="submit">ПЕРЕВІРИТИ</button></form>' +
+        '<div class="guess-list">' + guesses + '</div><div class="row-actions"><button class="secondary-button" data-close-game>ЗАКРИТИ</button></div>';
+      const input = $("#code-guess-input");
+      if (input) input.focus();
+    } else {
+      const cells = game.state && game.state.cells ? game.state.cells : [];
+      target.innerHTML = '<div class="panel-top"><span class="panel-code">MEMORY · SESSION</span><span class="game-timer" id="game-seconds">' + seconds + 's</span></div>' +
+        '<h3>ЗНАЙТИ 6 ПАР</h3><p class="modal-copy">Знайди всі пари за 90 секунд. Ходи: ' + Number(game.state.moves || 0) + ' · Пари: ' + Number(game.state.pairs_found || 0) + ' / 6.</p>' +
+        '<div class="memory-board">' + cells.map((cell) =>
+          '<button class="memory-card ' + (cell.matched ? "matched" : cell.flipped ? "revealed" : "") + '" data-memory-card="' + cell.index + '"' +
+          (cell.matched || cell.flipped || game.state.pending_hide ? " disabled" : "") + '>' + (cell.value ? esc(cell.value) : "⌁") + '</button>'
+        ).join("") + '</div>' +
+        (game.state.pending_hide ? '<p class="muted-note">Не збіглося — картки закриються автоматично.</p>' : "") +
+        '<div class="row-actions"><button class="secondary-button" data-close-game>ЗАКРИТИ</button></div>';
+      if (game.state.pending_hide && !S.gameHideTimer) {
+        S.gameHideTimer = setTimeout(async () => {
+          S.gameHideTimer = null;
+          await gameAction("hide");
+        }, 850);
+      }
+    }
+  }
+
+  async function gameAction(action, value) {
+    if (!S.game) return;
+    try {
+      const result = await api("/games/sessions/" + S.game.id + "/action", {
+        method: "POST", body: { action: action, value: value }
+      });
+      if (S.game.code === "CODE_BREAKER") {
+        if (result.feedback) S.game.feedback.push(result.feedback);
+        S.game.attemptsLeft = result.attempts_left;
+        if (result.status !== "running") {
+          if (S.gameTimer) clearInterval(S.gameTimer);
+          S.game.state.seconds_left = 0;
+          showGameResult(result.status, result.xp_awarded || 0);
+          return;
+        }
+      } else {
+        S.game.state = result.state;
+        if (result.status !== "running") {
+          if (S.gameTimer) clearInterval(S.gameTimer);
+          showGameResult(result.status, result.xp_awarded || 0);
+          return;
+        }
+      }
+      renderGameSession();
+    } catch (error) {
+      if (error.data && error.data.status === "expired") {
+        showGameResult("expired", 0);
+      } else {
+        toast(error.message);
+      }
+    }
+  }
+
+  function showGameResult(status, xp) {
+    const target = $("#active-game");
+    if (S.gameTimer) clearInterval(S.gameTimer);
+    if (S.gameHideTimer) clearTimeout(S.gameHideTimer);
+    S.gameTimer = null;
+    S.gameHideTimer = null;
+    if (!target) return;
+    const good = status === "completed";
+    target.innerHTML = '<div class="eyebrow">' + (good ? "SIMULATION COMPLETE" : "SIMULATION CLOSED") + '</div>' +
+      '<h3>' + (good ? "ЗАВДАННЯ ВИКОНАНО" : "ЧАС ВИЧЕРПАНО") + '</h3>' +
+      '<p class="modal-copy">' + (good ? "Нараховано " + xp + " XP. Повторні проходження не дають CR або EX." : "Ця спроба завершена. Можеш спробувати ще раз у межах денного ліміту.") + '</p>' +
+      '<button class="secondary-button" data-close-game>ПОВЕРНУТИСЯ ДО СИМУЛЯЦІЙ</button>';
+    loadGames();
+    if (good && tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+  }
+
+  function closeGame() {
+    S.game = null;
+    if (S.gameTimer) clearInterval(S.gameTimer);
+    if (S.gameHideTimer) clearTimeout(S.gameHideTimer);
+    S.gameTimer = null;
+    S.gameHideTimer = null;
+    if ($("#active-game")) $("#active-game").hidden = true;
+  }
+
+  async function loadOperations() {
+    try {
+      S.operations = await api("/operations");
+      renderOperations();
+    } catch (error) {
+      if ($("#operations-panel")) $("#operations-panel").innerHTML = '<div class="empty-state"><b>Операції недоступні</b><small>' + esc(error.message) + '</small></div>';
+    }
+  }
+
+  function renderOperations() {
+    const target = $("#operations-panel");
+    if (!target || !S.operations) return;
+    const d = S.operations;
+    const p = d.participation || {};
+    const a = d.attendance || {};
+    const w = d.activity_score_weights || {};
+    const qualified = p.qualified;
+    target.innerHTML =
+      '<div class="operation-grid">' +
+        '<div class="operation-stat"><small>ЗІГРАНО ІГОР</small><b>' + Number(p.games_played || 0) + '</b><span>із ' + Number(p.games_conducted || 0) + ' проведених</span></div>' +
+        '<div class="operation-stat"><small>КВАЛІФІКАЦІЯ</small><b style="color:' + (qualified ? "var(--cyan)" : "var(--gold)") + '">' + (qualified ? "YES" : "NO") + '</b><span>мінімум ' + Number(p.qualification_minimum || 0) + ' ігор</span></div>' +
+        '<div class="operation-stat"><small>ВІДВІДУВАННЯ</small><b>' + Number(a.percent || 0).toFixed(1) + '%</b><span>' + Number(a.attended || 0) + ' / ' + Number(a.eligible_evenings || 0) + ' вечорів</span></div>' +
+        '<div class="operation-stat"><small>SIMULATIONS</small><b>' + Number(d.mini_games_completed || 0) + '</b><span>верифікованих завершень</span></div>' +
+      '</div>' +
+      '<div class="panel-card"><div class="panel-top"><span class="panel-code">ACTIVITY SCORE</span><span class="status-chip pending">' + esc(String(d.activity_score_status || "draft").toUpperCase()) + '</span></div>' +
+        '<p>Ваги наразі є чернеткою: відвідування ' + (w.attendance || 80) + '% · активність застосунку ' + (w.app || 15) + '% · мініігри ' + (w.minigame || 5) + '%. Поки правило не затверджене, підсумковий бал не нараховується.</p></div>' +
+      '<div class="section-heading compact"><div><div class="eyebrow">FINAL INVITATIONS</div><h2>Запрошення</h2></div></div>' +
+      ((d.invitations || []).length ? d.invitations.map((i) =>
+        '<div class="invitation-row"><strong>' + esc(i.slot_title) + ' · #' + i.rank_at_invite + '</strong><small>' + esc(i.status.toUpperCase()) + ' · DEADLINE ' + esc(new Date(i.deadline_at).toLocaleString("uk-UA")) + '</small>' +
+        (i.status === "pending" ? '<div class="row-actions"><button class="secondary-button" data-invitation-response="' + i.invitation_id + '" data-response="accepted">ПІДТВЕРДИТИ</button><button class="danger-button" data-invitation-response="' + i.invitation_id + '" data-response="declined">ВІДМОВИТИСЯ</button></div>' : '') +
+        '</div>'
+      ).join("") : '<div class="empty-state"><b>Активних запрошень немає</b><small>Запрошення на фінал з’являться після формування TOP-10.</small></div>');
+  }
+
+  async function respondInvitation(id, response) {
+    try {
+      await api("/operations/invitations/" + id + "/respond", { method: "POST", body: { response: response } });
+      toast(response === "accepted" ? "Участь підтверджена." : "Відмову збережено.");
+      await loadOperations();
+    } catch (error) { toast(error.message); }
+  }
+
+  async function loadRankings() {
+    try {
+      S.rankings = await api("/rankings");
+      renderRankings();
+    } catch (error) {
+      if ($("#ranking-list")) $("#ranking-list").innerHTML = '<div class="empty-state"><b>Рейтинг недоступний</b><small>' + esc(error.message) + '</small></div>';
+    }
+  }
+
+  function renderRankings() {
+    const data = S.rankings;
+    if (!data) return;
+    const summary = $("#ranking-summary");
+    const list = $("#ranking-list");
+    if (!data.snapshot) {
+      summary.innerHTML = '<span>GLOBAL SYNC</span><strong>0 / ' + Number(data.target_sync_units || 690) + '</strong>';
+      list.innerHTML = '<div class="empty-state"><span class="empty-symbol">↗</span><b>Ще немає підтвердженої статистики</b><small>Організатор має імпортувати рейтинг iMafia.</small></div>';
+      return;
+    }
+    summary.innerHTML = '<span>SYNC ' + Number(data.sync_percent || (100 * Number(data.sync_units || 0) / Math.max(1, Number(data.target_sync_units || 690))).toFixed(1)) + '%</span><strong>' + money(data.sync_units) + ' / ' + money(data.target_sync_units) + '</strong>';
+    const q = data.qualification || {};
+    const qHtml = '<div class="panel-card"><div class="panel-top"><span class="panel-code">FINAL QUALIFICATION</span><span class="status-chip ' + (q.qualified ? "" : "pending") + '">' + (q.qualified ? "QUALIFIED" : "NOT QUALIFIED") + '</span></div><p>Твої ігри: ' + Number(q.games_played || 0) + ' · проведено: ' + Number(q.games_conducted || 0) + ' · мінімум: ' + Number(q.minimum || 0) + '. Умова перераховується після кожного підтвердженого імпорту.</p></div>';
+    list.innerHTML = qHtml + (data.players || []).map((p) =>
+      '<div class="rank-row ' + (p.is_me ? "me" : "") + '"><span class="rank-no">' + String(p.rank_position).padStart(2, "0") + '</span><span class="rank-name">' + esc(p.display_name) + '<small class="rank-details">' + p.games_played + ' ІГОР · ' + Number(p.win_rate).toFixed(1) + '% WIN RATE</small></span><span class="rank-points">' + Number(p.points).toFixed(1) + '</span></div>'
+    ).join("");
+  }
+
+  async function loadRewards(tab) {
+    if (tab) S.rewardTab = tab;
+    $$(".sub-tab[data-reward-tab]").forEach((el) => el.classList.toggle("active", el.dataset.rewardTab === S.rewardTab));
+    if (S.rewardTab === "achievements") {
+      const data = await api("/achievements");
+      S.achievements = data.achievements || [];
+      $("#reward-content").innerHTML = S.achievements.map((a) =>
+        '<div class="achievement-card ' + (a.earned ? "earned" : "") + '"><span class="achievement-symbol">' + (a.earned ? "✦" : "◇") + '</span><span><b>' + esc(a.name) + '</b><small>' + esc(a.description) + '</small></span>' + (a.earned ? '<span class="earned-tag">EARNED</span>' : '') + '</div>'
+      ).join("") || '<div class="empty-state"><b>Досягнень ще немає</b></div>';
+    } else if (S.rewardTab === "collection") {
+      const data = await api("/collection");
+      S.collection = data.items || [];
+      $("#reward-content").innerHTML = S.collection.map((item) =>
+        '<div class="achievement-card earned"><span class="achievement-symbol">◇</span><span><b>' + esc(item.name) + '</b><small>' + esc(item.description) + ' · ' + esc(item.equip_slot.toUpperCase()) + '</small></span><span class="earned-tag">' + (item.equipped ? "EQUIPPED" : item.currency) + '</span></div>'
+      ).join("") || '<div class="empty-state"><b>Колекція поки порожня</b><small>Нагороди та придбані предмети з’являться тут.</small></div>';
+    } else {
+      const data = await api("/ledger?limit=50");
+      $("#reward-content").innerHTML = (data.entries || []).map((entry) =>
+        '<div class="admin-row"><div class="panel-top"><span class="panel-code">' + esc(entry.reason_code.toUpperCase()) + '</span><span class="' + (Number(entry.amount) >= 0 ? "admin-success" : "admin-error") + '">' + (entry.amount > 0 ? "+" : "") + money(entry.amount) + ' ' + esc(entry.currency) + '</span></div><p>' + esc(fmtDate(entry.created_at)) + ' · ' + esc(entry.reference_key || "") + '</p></div>'
+      ).join("") || '<div class="empty-state"><b>Історія поки порожня</b></div>';
+    }
+    if ($("#reward-balances") && S.identity) {
+      const b = S.identity.balances || {};
+      $("#reward-balances").innerHTML = '<span>CR / EX / XP</span><strong>' + money(b.CR) + ' / ' + money(b.EX) + ' / ' + money(b.XP) + '</strong>';
+    }
+  }
+
+  async function loadStore(filter) {
+    if (filter) S.storeFilter = filter;
+    const data = await api("/store");
+    S.store = data;
+    const b = data.balances || {};
+    $("#store-balances").textContent = money(b.CR) + " CR · " + money(b.EX) + " EX";
+    $("#store-lock-note").hidden = !(S.storeFilter === "EX" && !data.ex_store_unlocked);
+    $$(".sub-tab[data-store-filter]").forEach((el) => el.classList.toggle("active", el.dataset.storeFilter === S.storeFilter));
+    const items = (data.items || []).filter((item) => item.currency === S.storeFilter);
+    $("#store-items").innerHTML = items.map((item) => {
+      const buyable = item.is_enabled && !item.owned && (item.currency !== "EX" || data.ex_store_unlocked);
+      const action = item.owned
+        ? (item.equipped ? "ЕКІПІРОВАНО" : "ЕКІПІРУВАТИ")
+        : (item.is_enabled ? "ПРИДБАТИ" : "СКОРО");
+      return '<article class="store-item"><div class="item-visual">' + esc(item.visual_key.slice(0, 3).toUpperCase()) + '</div><h3>' + esc(item.name) + '</h3><p>' + esc(item.description) + '</p><small>' + money(item.price) + ' ' + item.currency + ' · ' + esc(item.rarity.toUpperCase()) + '</small>' +
+        '<button class="secondary-button" data-store-action="' + (item.owned ? "equip" : "buy") + '" data-item-id="' + item.item_id + '"' + ((!buyable && !item.owned) ? " disabled" : "") + '>' + action + '</button></article>';
+    }).join("") || '<div class="empty-state"><b>У цьому магазині поки немає предметів</b><small>Каталог та ціни налаштовує адміністратор.</small></div>';
+  }
+
+  async function storeAction(itemId, action) {
+    try {
+      await api("/store/" + itemId + "/" + (action === "equip" ? "equip" : "buy"), { method: "POST" });
+      toast(action === "equip" ? "Предмет екіпіровано." : "Предмет додано до колекції.");
+      await loadIdentity();
+      await loadStore();
+      if (S.rewardTab === "collection") loadRewards("collection");
+    } catch (error) { toast(error.message); }
+  }
+
+  async function loadNotifications() {
+    try {
+      const data = await api("/notifications");
+      S.notifications = data;
+      const prefsData = await api("/notifications/preferences");
+      const prefs = prefsData.preferences || {};
+      const prefNode = $("#notification-preferences");
+      prefNode.innerHTML = Object.keys(labels).map((code) =>
+        '<label class="preference-item"><span>' + labels[code] + '</span><input type="checkbox" data-notification-pref="' + code + '"' + (prefs[code] ? "" : " checked") + '></label>'
+      ).join("");
+      $("#unread-count").textContent = Number(data.unread_count || 0) + " UNREAD";
+      const list = $("#notifications-list");
+      list.innerHTML = (data.items || []).map((item) =>
+        '<article class="notification-card ' + (!item.read_at ? "unread" : "") + '"><small>' + esc(labels[item.category] || item.category.toUpperCase()) + ' · ' + esc(fmtDate(item.created_at)) + '</small><b>' + esc(item.title) + '</b><p>' + esc(item.body) + '</p>' +
+        (!item.read_at ? '<button class="secondary-button" data-mark-read="' + item.notification_id + '">ПОЗНАЧИТИ ПРОЧИТАНИМ</button>' : '') + '</article>'
+      ).join("") || '<div class="empty-state"><span class="empty-symbol">◌</span><b>Нових сигналів немає</b><small>Важливі події з’являться тут.</small></div>';
+    } catch (error) { toast(error.message); }
+  }
+
+  async function toggleNotificationPref(category, muted) {
+    try {
+      const data = await api("/notifications/preferences");
+      const prefs = data.preferences || {};
+      prefs[category] = muted;
+      await api("/notifications/preferences", { method: "POST", body: { preferences: prefs } });
+      await loadNotifications();
+    } catch (error) { toast(error.message); }
+  }
+
+  async function markRead(id) {
+    try {
+      await api("/notifications/" + id + "/read", { method: "POST" });
+      await loadNotifications();
+    } catch (error) { toast(error.message); }
+  }
+
+  function adminMessage(node, text, ok) {
+    if (node) node.innerHTML = '<div class="' + (ok ? "admin-success" : "admin-error") + '">' + esc(text) + '</div>';
+  }
+
+  async function loadAdminOverview() {
+    const data = await api("/admin/overview");
+    const s = data.season || {};
+    const p = data.progress || {};
+    $("#admin-overview").innerHTML =
+      '<div class="admin-stat"><small>SYNC UNITS</small><b>' + money(p.sync_units) + ' / ' + money(p.target_sync_units || s.target_sync_units) + '</b></div>' +
+      '<div class="admin-stat"><small>ПРОГРЕС</small><b>' + Number(p.percent || 0).toFixed(1) + '%</b></div>' +
+      '<div class="admin-stat"><small>ПІДТВЕРДЖЕНІ ІГРИ</small><b>' + Number(p.games || 0) + '</b></div>' +
+      '<div class="admin-stat"><small>ГРАВЦІ</small><b>' + Number(p.players || 0) + '</b></div>' +
+      '<div class="admin-stat"><small>ІМПОРТИ НА ПЕРЕВІРЦІ</small><b>' + Number(data.pending_imports || 0) + '</b></div>' +
+      '<div class="admin-stat"><small>ВІДКРИТІ РИНКИ</small><b>' + Number(data.open_markets || 0) + '</b></div>';
+    const settings = s.platform_settings || {};
+    const pred = settings.predictions || {};
+    const activity = settings.activity_score || {};
+    $("#admin-content").innerHTML =
+      '<div class="admin-row"><div class="panel-top"><span class="panel-code">SEASON STATE</span><span class="status-chip pending">' + esc(String(s.status || "draft").toUpperCase()) + '</span></div>' +
+        '<p>Сезон наразі не запускається автоматично. Змінювати статус можна лише окремою явною дією адміністратора.</p>' +
+        '<div class="admin-inline"><select id="admin-season-status" class="inline-input"><option value="draft">DRAFT</option><option value="active">ACTIVE</option><option value="paused">PAUSED</option><option value="completed">COMPLETED</option></select><button class="secondary-button" data-admin-action="season-status">ЗБЕРЕГТИ СТАТУС</button></div></div>' +
+      '<div class="admin-row"><div class="panel-code">ACTIVITY SCORE · PROPOSAL</div><p>Ваги відвідування / застосунок / мініігри. Усі суми повинні дорівнювати 100. Статус за замовчуванням — DRAFT.</p>' +
+        '<div class="admin-inline"><input class="inline-input" id="weight-attendance" type="number" value="' + Number((activity.weights || {}).attendance || 80) + '" placeholder="Attendance"><input class="inline-input" id="weight-app" type="number" value="' + Number((activity.weights || {}).app || 15) + '" placeholder="App"><input class="inline-input" id="weight-minigame" type="number" value="' + Number((activity.weights || {}).minigame || 5) + '" placeholder="Minigame"></div>' +
+        '<div class="admin-inline"><select id="activity-status" class="inline-input"><option value="draft">DRAFT</option><option value="approved">APPROVED</option></select><button class="secondary-button" data-admin-action="save-activity-settings">ЗБЕРЕГТИ ВАГИ</button></div></div>' +
+      '<div class="admin-row"><div class="panel-code">PREDICTION RULES · PROPOSAL</div><p>Правила залишаються DRAFT, доки не будуть явно затверджені. EX не має грошової вартості.</p>' +
+        '<div class="form-field"><label>СТАТУС ПРАВИЛ</label><select id="prediction-status" class="inline-input"><option value="draft">DRAFT</option><option value="approved">APPROVED</option></select></div>' +
+        '<div class="admin-inline"><input id="pred-min" class="inline-input" type="number" value="' + Number(pred.min_stake || 10) + '" placeholder="Min"><input id="pred-max" class="inline-input" type="number" value="' + Number(pred.max_stake || 200) + '" placeholder="Max"></div>' +
+        '<div class="admin-inline"><input id="pred-evening" class="inline-input" type="number" value="' + Number(pred.max_per_evening || 500) + '" placeholder="Evening cap"><input id="pred-count" class="inline-input" type="number" value="' + Number(pred.max_bets_per_evening || 3) + '" placeholder="Bets max"></div>' +
+        '<div class="admin-inline"><input id="pred-margin" class="inline-input" type="number" step="0.01" min="0" max="0.49" value="' + Number(pred.house_margin || 0.05) + '" placeholder="Margin"><button class="secondary-button" data-admin-action="save-prediction-settings">ЗБЕРЕГТИ ПРАВИЛА</button></div></div>' +
+      '<div class="admin-row"><div class="panel-code">IMPORTANT OPERATIONS</div><p>Імпорт iMafia, прив’язка календаря, запрошення, фінансові правила та зміни балансу записуються в Audit Log. Не запускай сезон до перевірки всіх правил.</p></div>';
+    $("#admin-season-status").value = s.status || "draft";
+    $("#activity-status").value = activity.status || "draft";
+    $("#prediction-status").value = pred.status || "draft";
+  }
+
+  async function loadAdminSchedule() {
+    const data = await api("/admin/slots");
+    const options = data.available_bot_events || [];
+    $("#admin-content").innerHTML = (data.slots || []).map((slot) => {
+      const optionsHtml = options.map((e) => '<option value="' + e.event_id + '">' + esc(e.title) + ' · #' + e.event_id + ' · ' + esc(fmtDate(e.event_date)) + '</option>').join("");
+      return '<article class="admin-row"><div class="panel-top"><span class="panel-code">' + esc(slot.slot_code) + ' · #' + slot.sequence_no + '</span><span class="status-chip">' + esc(slot.slot_type) + '</span></div>' +
+        '<h3>' + esc(slot.title) + '</h3><p>' + (slot.bot_event_id ? 'BOT EVENT: #' + slot.bot_event_id + ' · ' + esc(slot.bot_event_title || "") : "ЩЕ НЕ ПРИВʼЯЗАНО ДО ПОДІЇ БОТА") + '</p>' +
+        '<div class="form-field"><label>ПЛАНОВА ДАТА</label><input type="date" class="inline-input" data-slot-date="' + slot.slot_id + '" value="' + (slot.planned_date || "") + '"></div>' +
+        '<div class="form-field"><label>НАЗВА СЛОТУ</label><input class="inline-input" data-slot-title="' + slot.slot_id + '" value="' + esc(slot.title) + '"></div>' +
+        '<div class="row-actions"><button class="secondary-button" data-save-slot="' + slot.slot_id + '">ЗБЕРЕГТИ СЛОТ</button>' +
+        (!slot.bot_event_id ? '<select class="inline-input" data-slot-event="' + slot.slot_id + '"><option value="">ОБРАТИ CHRONOS-ПОДІЮ</option>' + optionsHtml + '</select><button class="secondary-button" data-link-slot="' + slot.slot_id + '">ПРИВʼЯЗАТИ</button>' : '') +
+        (slot.slot_type !== "regular" ? '<button class="secondary-button" data-generate-invitations="' + slot.slot_id + '">СФОРМУВАТИ TOP-10 ЗАПРОШЕНЬ</button>' : '') +
+        (slot.bot_status === "closed" ? '<button class="secondary-button" data-close-attendance="' + slot.slot_id + '">ЗАКРИТИ ВІДВІДУВАННЯ</button>' : '') +
+        '</div></article>';
+    }).join("") || '<div class="empty-state"><b>План сезону не знайдено</b></div>';
+  }
+
+  async function saveSlot(id) {
+    const dateInput = $('[data-slot-date="' + id + '"]');
+    const titleInput = $('[data-slot-title="' + id + '"]');
+    try {
+      await api("/admin/slots/" + id, { method: "POST", body: { planned_date: dateInput.value || null, title: titleInput.value } });
+      toast("Слот збережено.");
+      await loadAdminSchedule();
+    } catch (error) { toast(error.message); }
+  }
+
+  async function linkSlot(id) {
+    const select = $('[data-slot-event="' + id + '"]');
+    if (!select || !select.value) return toast("Обери реальну CHRONOS-подію з бота.");
+    try {
+      await api("/admin/slots/" + id + "/link", { method: "POST", body: { event_id: Number(select.value) } });
+      toast("Подію прив’язано.");
+      await loadAdminSchedule();
+    } catch (error) { toast(error.message); }
+  }
+
+  async function loadAdminImports() {
+    const data = await api("/admin/imports");
+    S.adminImports = data.imports || [];
+    $("#admin-content").innerHTML =
+      '<div class="admin-row"><div class="panel-code">UPLOAD iMAFIA SCREENSHOT</div><p>Завантаж скриншот таблиці рейтингу або результатів вечора. OCR формує чернетку тексту; усі значення та ніки потрібно перевірити вручну перед підтвердженням.</p>' +
+      '<form id="imafia-upload-form"><div class="form-field"><label>ТИП ІМПОРТУ</label><select id="import-kind" class="inline-input"><option value="ranking">RANKING SNAPSHOT</option><option value="game_results">GAME RESULTS</option></select></div>' +
+      '<div class="form-field"><label>BOT EVENT ID (ДЛЯ РЕЗУЛЬТАТІВ)</label><input class="inline-input" id="import-event-id" type="number" placeholder="Наприклад: 125"></div>' +
+      '<div class="form-field"><label>СКРИНШОТ (PNG / JPG / WEBP, ДО 8 МБ)</label><input class="inline-input" id="imafia-image" type="file" accept="image/png,image/jpeg,image/webp" required></div>' +
+      '<button class="secondary-button" type="submit">ЗАВАНТАЖИТИ ТА РОЗПІЗНАТИ</button></form><div id="import-upload-result"></div></div>' +
+      '<div class="admin-row" id="import-review-panel" hidden><div class="panel-code">MANUAL REVIEW / JSON</div><div id="import-image-preview"></div><pre id="import-ocr-text" class="ocr-text"></pre>' +
+      '<p>Виправ усі поля. Для ranking потрібен масив players. Для game_results — масив games, кожна з рівно 10 гравцями з placement 1–10.</p>' +
+      '<textarea id="import-review-json" class="form-field import-text" spellcheck="false"></textarea>' +
+      '<div class="row-actions"><button class="secondary-button" data-admin-action="save-import-review">ЗБЕРЕГТИ ПЕРЕВІРКУ</button><button class="primary-button" data-admin-action="confirm-import">ПІДТВЕРДИТИ ІМПОРТ</button><button class="danger-button" data-admin-action="reject-import">ВІДХИЛИТИ</button></div><div id="import-confirm-result"></div></div>' +
+      '<div class="section-heading compact"><div><div class="eyebrow">IMPORT HISTORY</div><h2>Завантаження</h2></div></div>' +
+      S.adminImports.map((item) => '<div class="admin-row"><div class="panel-top"><span class="panel-code">#' + item.import_id + ' · ' + esc(item.import_type) + '</span><span class="status-chip ' + (item.status === "confirmed" ? "" : "pending") + '">' + esc(item.status.toUpperCase()) + '</span></div><p>' + esc(item.file_name) + ' · ' + esc(fmtDate(item.uploaded_at)) + ' · ' + esc(item.event_title || "") + '</p><button class="secondary-button" data-open-import="' + item.import_id + '">ВІДКРИТИ ІМПОРТ</button></div>').join("");
+  }
+
+  async function uploadImfiaScreenshot(form) {
+    const input = $("#imafia-image");
+    const file = input && input.files && input.files[0];
+    if (!file) return toast("Оберіть зображення.");
+    const data = new FormData();
+    data.append("import_type", $("#import-kind").value);
+    data.append("event_id", $("#import-event-id").value || "");
+    data.append("image", file, file.name);
+    try {
+      const result = await api("/admin/imports/upload", { method: "POST", body: data });
+      S.currentImport = result;
+      $("#import-upload-result").innerHTML = '<div class="admin-success">Завантажено імпорт #' + result.import_id + '. OCR: ' + (result.ocr_error ? esc(result.ocr_error) : "готово") + '.</div>';
+      await openImport(result.import_id);
+      await loadAdminImports();
+      // Restore the active review after the list refresh.
+      await openImport(result.import_id);
+    } catch (error) { adminMessage($("#import-upload-result"), error.message, false); }
+  }
+
+  function importTemplate(kind) {
+    if (kind === "ranking") {
+      return JSON.stringify({ players: [{ display_name: "Нік із iMafia", rank_position: 1, points: 0, games_played: 0, wins: 0, bonus_points: 0 }] }, null, 2);
+    }
+    return JSON.stringify({ games: [{ external_game_id: "imafia-game-id", game_number: 1, played_at: null, players: [
+      { display_name: "Нік гравця 1", placement: 1, role_name: "Don", points: 0, bonus_points: 0, is_winner: true },
+      { display_name: "Нік гравця 2", placement: 2, role_name: "Sheriff", points: 0, bonus_points: 0, is_winner: false },
+      { display_name: "Нік гравця 3", placement: 3, role_name: "Peaceful", points: 0, bonus_points: 0, is_winner: false },
+      { display_name: "Нік гравця 4", placement: 4, role_name: "Mafia", points: 0, bonus_points: 0, is_winner: false },
+      { display_name: "Нік гравця 5", placement: 5, role_name: "Peaceful", points: 0, bonus_points: 0, is_winner: false },
+      { display_name: "Нік гравця 6", placement: 6, role_name: "Mafia", points: 0, bonus_points: 0, is_winner: false },
+      { display_name: "Нік гравця 7", placement: 7, role_name: "Peaceful", points: 0, bonus_points: 0, is_winner: false },
+      { display_name: "Нік гравця 8", placement: 8, role_name: "Mafia", points: 0, bonus_points: 0, is_winner: false },
+      { display_name: "Нік гравця 9", placement: 9, role_name: "Peaceful", points: 0, bonus_points: 0, is_winner: false },
+      { display_name: "Нік гравця 10", placement: 10, role_name: "Peaceful", points: 0, bonus_points: 0, is_winner: false }
+    ] }] }, null, 2);
+  }
+
+  async function openImport(id) {
+    try {
+      const detail = await api("/admin/imports/" + id);
+      S.currentImport = detail;
+      const panel = $("#import-review-panel");
+      panel.hidden = false;
+      $("#import-ocr-text").textContent = detail.ocr_text || "OCR не знайшов тексту. Заповни JSON вручну.";
+      $("#import-review-json").value = detail.review_payload
+        ? (typeof detail.review_payload === "string" ? JSON.stringify(JSON.parse(detail.review_payload), null, 2) : JSON.stringify(detail.review_payload, null, 2))
+        : importTemplate(detail.import_type);
+      if (S.importObjectUrl) URL.revokeObjectURL(S.importObjectUrl);
+      try {
+        const blob = await apiImage("/admin/imports/" + id + "/image");
+        S.importObjectUrl = URL.createObjectURL(blob);
+        $("#import-image-preview").innerHTML = '<img alt="Скриншот iMafia" class="import-preview" src="' + S.importObjectUrl + '">';
+      } catch (_) { $("#import-image-preview").innerHTML = ""; }
+    } catch (error) { toast(error.message); }
+  }
+
+  async function saveImportReview() {
+    if (!S.currentImport) return;
+    let payload;
+    try { payload = JSON.parse($("#import-review-json").value); }
+    catch (_) { return adminMessage($("#import-confirm-result"), "Помилка JSON. Перевір дужки та коми.", false); }
+    try {
+      const result = await api("/admin/imports/" + S.currentImport.import_id + "/review", { method: "POST", body: payload });
+      adminMessage($("#import-confirm-result"), "Чернетку збережено. Рядків: " + result.rows, true);
+    } catch (error) { adminMessage($("#import-confirm-result"), error.message, false); }
+  }
+
+  async function confirmImport() {
+    if (!S.currentImport) return;
+    try {
+      await saveImportReview();
+      const result = await api("/admin/imports/" + S.currentImport.import_id + "/confirm", { method: "POST", body: {} });
+      adminMessage($("#import-confirm-result"), "Імпорт підтверджено: " + JSON.stringify(result), true);
+      await loadAdminImports();
+      await loadAdminOverview();
+    } catch (error) { adminMessage($("#import-confirm-result"), error.message, false); }
+  }
+
+  async function rejectImport() {
+    if (!S.currentImport) return;
+    const reason = window.prompt("Причина відхилення імпорту:") || "";
+    try {
+      await api("/admin/imports/" + S.currentImport.import_id + "/reject", { method: "POST", body: { reason: reason } });
+      S.currentImport = null;
+      await loadAdminImports();
+      toast("Імпорт відхилено.");
+    } catch (error) { toast(error.message); }
+  }
+
+  async function loadAdminMarkets() {
+    const data = await api("/admin/markets");
+    const events = await api("/events");
+    $("#admin-content").innerHTML =
+      '<div class="admin-row"><div class="panel-code">OPEN PREDICTION MARKETS</div><p>Потрібен активний CHRONOS-захід, підтверджений рейтинг і затверджені правила прогнозів. Коефіцієнти фіксуються за поточним складом.</p>' +
+      '<div class="form-field"><label>BOT EVENT ID</label><input id="market-event-id" class="inline-input" type="number" placeholder="ID CHRONOS-події"></div>' +
+      '<div class="form-field"><label>ЧАС ЗАКРИТТЯ (ЛОКАЛЬНИЙ)</label><input id="market-close-at" class="inline-input" type="datetime-local"></div>' +
+      '<button class="secondary-button" data-admin-action="open-markets">ВІДКРИТИ TOP1 / TOP2 / TOP3</button></div>' +
+      '<div class="section-heading compact"><div><div class="eyebrow">MARKET CONTROL</div><h2>Поточні ринки</h2></div></div>' +
+      (data.markets || []).map((market) =>
+        '<div class="admin-row"><div class="panel-top"><span class="panel-code">#' + market.market_id + ' · ' + esc(market.market_type) + '</span><span class="status-chip">' + esc(market.status) + '</span></div>' +
+        '<h3>' + esc(market.title) + '</h3><p>' + Number(market.bets) + ' ставок · ' + money(market.total_stake) + ' EX · ' + esc(market.closes_at ? new Date(market.closes_at).toLocaleString("uk-UA") : "—") + '</p>' +
+        ((market.status === "open" || market.status === "locked") ? '<div class="admin-inline"><input class="inline-input" type="number" data-market-winner="' + market.market_id + '" placeholder="Telegram user_id переможця"><button class="secondary-button" data-settle-market="' + market.market_id + '">РОЗРАХУВАТИ</button><button class="danger-button" data-void-market="' + market.market_id + '">VOID / REFUND</button></div>' : '') +
+        '</div>'
+      ).join("") || '<div class="empty-state"><b>Ринків поки немає</b></div>';
+  }
+
+  async function openMarkets() {
+    const eventId = Number($("#market-event-id").value);
+    const raw = $("#market-close-at").value;
+    if (!eventId || !raw) return toast("Вкажи event ID та час закриття.");
+    try {
+      await api("/predictions/markets/open", { method: "POST", body: { event_id: eventId, closes_at: new Date(raw).toISOString() } });
+      toast("Три ринки відкрито.");
+      await loadAdminMarkets();
+    } catch (error) { toast(error.message); }
+  }
+
+  async function settleMarket(id, isVoid) {
+    const winnerInput = $('[data-market-winner="' + id + '"]');
+    const payload = isVoid ? { result: "void" } : { result: "settled", winning_user_id: Number(winnerInput && winnerInput.value) };
+    if (!isVoid && !payload.winning_user_id) return toast("Вкажи Telegram user_id переможця.");
+    try {
+      await api("/predictions/markets/" + id + "/settle", { method: "POST", body: payload });
+      toast(isVoid ? "Ринок скасовано, ставки повернено." : "Ринок розраховано.");
+      await loadAdminMarkets();
+    } catch (error) { toast(error.message); }
+  }
+
+  async function loadAdminPrizes() {
+    const data = await api("/admin/prizes");
+    $("#admin-content").innerHTML =
+      '<div class="admin-row"><div class="panel-code">DRAFT PRIZE AWARDS</div><p>Створи чернетку результатів. Коефіцієнт вводиться після перевірки Activity Score; гроші тут не переказуються автоматично.</p>' +
+      '<div class="form-field"><label>SLOT ID</label><input id="prize-slot-id" class="inline-input" type="number"></div>' +
+      '<div class="form-field"><label>EVENT TYPE</label><select id="prize-event-kind" class="inline-input"><option value="intermediate_final">INTERMEDIATE FINAL</option><option value="main_final">MAIN FINAL</option><option value="legacy">CHRONOS LEGACY</option></select></div>' +
+      '<textarea id="prize-awards-json" class="form-field import-text" spellcheck="false">' + esc(JSON.stringify({ awards: [{ user_id: 0, place: 1, base_amount_uah: 1000, activity_coefficient: 1.0 }] }, null, 2)) + '</textarea>' +
+      '<button class="secondary-button" data-admin-action="draft-prizes">СТВОРИТИ ЧЕРНЕТКУ</button></div>' +
+      '<div class="section-heading compact"><div><div class="eyebrow">AWARDS</div><h2>Призи</h2></div></div>' +
+      (data.awards || []).map((a) =>
+        '<div class="admin-row"><div class="panel-top"><span class="panel-code">' + esc(a.event_kind) + ' · #' + a.place + '</span><span class="status-chip ' + (a.status === "draft" ? "pending" : "") + '">' + esc(a.status) + '</span></div>' +
+        '<h3>' + esc(a.display_name) + '</h3><p>' + money(a.base_amount_uah) + ' грн × ' + Number(a.activity_coefficient).toFixed(2) + ' = ' + money(a.final_amount_uah) + ' грн</p>' +
+        (a.status === "draft" ? '<button class="secondary-button" data-prize-status="' + a.award_id + '" data-status="approved">ЗАТВЕРДИТИ</button>' : a.status === "approved" ? '<button class="secondary-button" data-prize-status="' + a.award_id + '" data-status="paid">ПОЗНАЧИТИ ОПЛАЧЕНИМ</button>' : '') +
+        '</div>'
+      ).join("") +
+      '<div class="section-heading compact"><div><div class="eyebrow">PRIZE RULES</div><h2>Правила фонду</h2></div></div>' +
+      (data.rules || []).map((r) =>
+        '<div class="admin-row"><div class="panel-top"><span class="panel-code">' + esc(r.event_kind) + ' · PLACE ' + r.place + '</span><span class="status-chip">' + (r.is_enabled ? "ACTIVE" : "DRAFT") + '</span></div><p>' + money(r.amount_uah) + ' грн · ' + esc(r.rule_note) + '</p></div>'
+      ).join("");
+  }
+
+  async function draftPrizes() {
+    let awards;
+    try { awards = JSON.parse($("#prize-awards-json").value).awards; }
+    catch (_) { return toast("Некоректний JSON нагород."); }
+    try {
+      await api("/admin/prizes", { method: "POST", body: { slot_id: Number($("#prize-slot-id").value), event_kind: $("#prize-event-kind").value, awards: awards } });
+      toast("Чернетку призів створено.");
+      await loadAdminPrizes();
+    } catch (error) { toast(error.message); }
+  }
+
+  async function prizeStatus(id, status) {
+    try {
+      await api("/admin/prizes/" + id + "/status", { method: "POST", body: { status: status } });
+      toast("Статус нагороди змінено.");
+      await loadAdminPrizes();
+    } catch (error) { toast(error.message); }
+  }
+
+  async function loadAdminEconomy() {
+    const data = await api("/store");
+    $("#admin-content").innerHTML =
+      '<div class="admin-row"><div class="panel-code">LEDGER CORRECTION</div><p>Корекції CR/XP — лише з причиною та унікальним ключем. EX можна позитивно коригувати лише як явне виправлення; купівлі/передачі EX немає.</p>' +
+      '<div class="form-field"><label>PLAYER USER ID</label><input id="adjust-user" class="inline-input" type="number"></div>' +
+      '<div class="admin-inline"><select id="adjust-currency" class="inline-input"><option>CR</option><option>XP</option><option>EX</option></select><input id="adjust-amount" class="inline-input" type="number" placeholder="± amount"></div>' +
+      '<div class="form-field"><label>ПРИЧИНА</label><input id="adjust-reason" class="inline-input" placeholder="Correction: ..." ></div>' +
+      '<div class="form-field"><label>IDEMPOTENCY KEY</label><input id="adjust-key" class="inline-input" placeholder="unique-reference"></div>' +
+      '<button class="secondary-button" data-admin-action="ledger-adjust">ЗАПИСАТИ КОРЕКЦІЮ</button></div>' +
+      '<div class="section-heading compact"><div><div class="eyebrow">CATALOG CONTROL</div><h2>Каталог предметів</h2></div></div>' +
+      (data.items || []).map((item) =>
+        '<div class="admin-row"><div class="panel-top"><span class="panel-code">' + esc(item.item_code) + ' · ' + esc(item.currency) + '</span><span class="status-chip ' + (item.is_enabled ? "" : "pending") + '">' + (item.is_enabled ? "ENABLED" : "DISABLED") + '</span></div><h3>' + esc(item.name) + '</h3>' +
+        '<div class="admin-inline"><input class="inline-input" type="number" min="0" value="' + item.price + '" data-item-price="' + item.item_id + '"><label class="preference-item"><span>ENABLED</span><input type="checkbox" data-item-enabled="' + item.item_id + '"' + (item.is_enabled ? " checked" : "") + '></label><button class="secondary-button" data-save-item="' + item.item_id + '">ЗБЕРЕГТИ</button></div></div>'
+      ).join("");
+  }
+
+  async function saveCatalogItem(id) {
+    const price = Number($('[data-item-price="' + id + '"]').value);
+    const enabled = $('[data-item-enabled="' + id + '"]').checked;
+    try {
+      await api("/admin/catalog/" + id, { method: "POST", body: { price: price, is_enabled: enabled } });
+      toast("Каталог оновлено.");
+      await loadAdminEconomy();
+    } catch (error) { toast(error.message); }
+  }
+
+  async function adjustLedger() {
+    const payload = {
+      user_id: Number($("#adjust-user").value),
+      currency: $("#adjust-currency").value,
+      amount: Number($("#adjust-amount").value),
+      reason: $("#adjust-reason").value.trim(),
+      idempotency_key: $("#adjust-key").value.trim()
+    };
+    try {
+      await api("/admin/economy/adjust", { method: "POST", body: payload });
+      toast("Корекцію записано в журнал.");
+      await loadAdminEconomy();
+    } catch (error) { toast(error.message); }
+  }
+
+  async function loadAdminPlayers() {
+    const q = $("#admin-player-query") ? $("#admin-player-query").value : "";
+    const data = await api("/admin/players?q=" + encodeURIComponent(q));
+    $("#admin-content").innerHTML =
+      '<div class="form-field"><label>ПОШУК ГРАВЦЯ</label><input id="admin-player-query" class="inline-input" placeholder="Нік або username" value="' + esc(q) + '"></div><button class="secondary-button" data-admin-action="search-players">ШУКАТИ</button>' +
+      (data.players || []).map((p) =>
+        '<div class="admin-row"><div class="panel-top"><span class="panel-code">ID ' + p.user_id + '</span><span class="status-chip">' + esc(p.role) + '</span></div><h3>' + esc(p.display_name || p.username || "Без ніку") + '</h3><p>CR ' + money(p.cr) + ' · EX ' + money(p.ex) + ' · XP ' + money(p.xp) + ' · ' + (p.is_active ? "ACTIVE" : "DISABLED") + '</p></div>'
+      ).join("");
+  }
+
+  async function loadAdminAudit() {
+    const data = await api("/admin/audit");
+    $("#admin-content").innerHTML = (data.entries || []).map((a) =>
+      '<div class="admin-row"><div class="panel-top"><span class="panel-code">' + esc(a.action_code.toUpperCase()) + '</span><span class="section-code">' + esc(fmtDate(a.created_at)) + '</span></div><h3>' + esc(a.actor_name || "SYSTEM") + ' · ' + esc(a.target_type) + ' ' + esc(a.target_id || "") + '</h3><p>' + esc(JSON.stringify(a.details)) + '</p></div>'
+    ).join("") || '<div class="empty-state"><b>Audit Log порожній</b></div>';
+  }
+
+  async function saveAdminSettings(kind) {
+    try {
+      let payload;
+      if (kind === "season-status") {
+        payload = { status: $("#admin-season-status").value };
+        await api("/admin/season/status", { method: "POST", body: payload });
+      } else if (kind === "save-activity-settings") {
+        payload = { activity_score: { status: $("#activity-status").value, weights: {
+          attendance: Number($("#weight-attendance").value),
+          app: Number($("#weight-app").value),
+          minigame: Number($("#weight-minigame").value)
+        } } };
+        await api("/admin/settings", { method: "POST", body: payload });
+      } else if (kind === "save-prediction-settings") {
+        payload = { predictions: {
+          status: $("#prediction-status").value,
+          min_stake: Number($("#pred-min").value),
+          max_stake: Number($("#pred-max").value),
+          max_per_evening: Number($("#pred-evening").value),
+          max_bets_per_evening: Number($("#pred-count").value),
+          house_margin: Number($("#pred-margin").value)
+        } };
+        await api("/admin/settings", { method: "POST", body: payload });
+      }
+      toast("Налаштування збережено.");
+      await loadAdminOverview();
+    } catch (error) { toast(error.message); }
+  }
+
+  async function loadAdminTab(tab) {
+    S.adminTab = tab || S.adminTab;
+    $$(".admin-tab").forEach((el) => el.classList.toggle("active", el.dataset.adminTab === S.adminTab));
+    try {
+      if (S.adminTab === "schedule") return await loadAdminSchedule();
+      if (S.adminTab === "imports") return await loadAdminImports();
+      if (S.adminTab === "markets") return await loadAdminMarkets();
+      if (S.adminTab === "prizes") return await loadAdminPrizes();
+      if (S.adminTab === "economy") return await loadAdminEconomy();
+      if (S.adminTab === "players") return await loadAdminPlayers();
+      if (S.adminTab === "audit") return await loadAdminAudit();
+    } catch (error) {
+      $("#admin-content").innerHTML = '<div class="empty-state"><b>Помилка завантаження</b><small>' + esc(error.message) + '</small></div>';
+    }
+  }
+
+  async function loadAdmin() {
+    if (!S.identity || S.identity.role !== "admin") {
+      toast("Адміністративний доступ відсутній.");
+      return;
+    }
+    try {
+      await loadAdminOverview();
+      await loadAdminTab("schedule");
+    } catch (error) { toast(error.message); }
+  }
+
+  async function loadModule(name) {
+    try {
+      if (name === "market") return await loadMarket();
+      if (name === "simulations") return await loadGames();
+      if (name === "operations") return await loadOperations();
+      if (name === "rankings") return await loadRankings();
+      if (name === "rewards") return await loadRewards();
+      if (name === "store") return await loadStore();
+      if (name === "notifications") return await loadNotifications();
+      if (name === "admin") return await loadAdmin();
+      if (name === "profile") {
+        await loadIdentity();
+        await loadAppearanceOptions();
+      }
+      if (name === "tower" || name === "home") {
+        const data = await api("/events");
+        S.season = data.season;
+        setSync(data.season);
+      }
+    } catch (error) {
+      toast(error.message);
+    }
+  }
+
+  document.addEventListener("click", async (event) => {
+    const nav = event.target.closest("[data-nav]");
+    if (nav && nav.dataset.nav) {
+      const name = nav.dataset.nav;
+      setTimeout(() => loadModule(name), 40);
+      return;
+    }
+
+    const avatar = event.target.closest("[data-avatar]");
+    if (avatar) return saveAvatar(avatar.dataset.avatar);
+
+    const placeBet = event.target.closest("[data-place-bet]");
+    if (placeBet) return placePrediction(placeBet.dataset.placeBet);
+
+    const start = event.target.closest("[data-start-game]");
+    if (start) return startGame(start.dataset.startGame);
+
+    const mem = event.target.closest("[data-memory-card]");
+    if (mem && S.game && S.game.code === "MEMORY") return gameAction("flip", Number(mem.dataset.memoryCard));
+
+    const close = event.target.closest("[data-close-game]");
+    if (close) { closeGame(); return; }
+
+    const inv = event.target.closest("[data-invitation-response]");
+    if (inv) return respondInvitation(inv.dataset.invitationResponse, inv.dataset.response);
+
+    const rewardTab = event.target.closest("[data-reward-tab]");
+    if (rewardTab) return loadRewards(rewardTab.dataset.rewardTab);
+
+    const storeTab = event.target.closest("[data-store-filter]");
+    if (storeTab) return loadStore(storeTab.dataset.storeFilter);
+
+    const storeActionButton = event.target.closest("[data-store-action]");
+    if (storeActionButton) return storeAction(storeActionButton.dataset.itemId, storeActionButton.dataset.storeAction);
+
+    const mark = event.target.closest("[data-mark-read]");
+    if (mark) return markRead(mark.dataset.markRead);
+
+    const adminTab = event.target.closest("[data-admin-tab]");
+    if (adminTab) return loadAdminTab(adminTab.dataset.adminTab);
+
+    const saveSlot = event.target.closest("[data-save-slot]");
+    if (saveSlot) return saveSlot(saveSlot.dataset.saveSlot);
+
+    const link = event.target.closest("[data-link-slot]");
+    if (link) return linkSlot(link.dataset.linkSlot);
+
+    const generate = event.target.closest("[data-generate-invitations]");
+    if (generate) {
+      try { await api("/admin/slots/" + generate.dataset.generateInvitations + "/invitations", { method: "POST", body: {} }); toast("Запрошення сформовано."); await loadAdminSchedule(); }
+      catch (error) { toast(error.message); }
+      return;
+    }
+
+    const closeAttendance = event.target.closest("[data-close-attendance]");
+    if (closeAttendance) {
+      try { await api("/admin/slots/" + closeAttendance.dataset.closeAttendance + "/close-attendance", { method: "POST", body: {} }); toast("Відвідування закрито."); await loadAdminSchedule(); }
+      catch (error) { toast(error.message); }
+      return;
+    }
+
+    const openImportButton = event.target.closest("[data-open-import]");
+    if (openImportButton) return openImport(openImportButton.dataset.openImport);
+
+    const settle = event.target.closest("[data-settle-market]");
+    if (settle) return settleMarket(settle.dataset.settleMarket, false);
+    const voidMarket = event.target.closest("[data-void-market]");
+    if (voidMarket) return settleMarket(voidMarket.dataset.voidMarket, true);
+
+    const draft = event.target.closest("[data-admin-action]");
+    if (draft) {
+      const action = draft.dataset.adminAction;
+      if (action === "open-markets") return openMarkets();
+      if (action === "draft-prizes") return draftPrizes();
+      if (action === "ledger-adjust") return adjustLedger();
+      if (action === "save-activity-settings" || action === "save-prediction-settings" || action === "season-status") return saveAdminSettings(action);
+      if (action === "search-players") return loadAdminPlayers();
+      if (action === "save-import-review") return saveImportReview();
+      if (action === "confirm-import") return confirmImport();
+      if (action === "reject-import") return rejectImport();
+    }
+
+    const saveItem = event.target.closest("[data-save-item]");
+    if (saveItem) return saveCatalogItem(saveItem.dataset.saveItem);
+
+    const prize = event.target.closest("[data-prize-status]");
+    if (prize) return prizeStatus(prize.dataset.prizeStatus, prize.dataset.status);
+
+    const appearance = event.target.closest("#save-appearance");
+    if (appearance) return saveAppearance();
+  });
+
+  document.addEventListener("submit", async (event) => {
+    if (event.target && event.target.id === "code-guess-form") {
+      event.preventDefault();
+      const input = $("#code-guess-input");
+      const guess = input ? input.value.trim() : "";
+      if (!/^[0-9]{4}$/.test(guess) || new Set(guess).size !== 4) return toast("Введи чотири різні цифри.");
+      if (input) input.value = "";
+      await gameAction("guess", guess);
+      return;
+    }
+    if (event.target && event.target.id === "imafia-upload-form") {
+      event.preventDefault();
+      await uploadImfiaScreenshot(event.target);
+    }
+  });
+
+  document.addEventListener("change", (event) => {
+    const pref = event.target.closest("[data-notification-pref]");
+    if (pref) toggleNotificationPref(pref.dataset.notificationPref, !pref.checked);
+  });
+
+  // Keep the extended screens ready while retaining the original app's base navigation and event modal.
+  if (initData) {
+    loadIdentity().then(async () => {
+      const calendar = await api("/events").catch(() => null);
+      if (calendar) {
+        S.season = calendar.season;
+        setSync(calendar.season);
+      }
+    }).catch(() => {});
+  }
+
+  window.ChronosModules = { loadModule: loadModule, refreshIdentity: loadIdentity };
+})();
