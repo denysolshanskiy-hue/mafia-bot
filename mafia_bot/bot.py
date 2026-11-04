@@ -4,12 +4,14 @@ from aiohttp import web
 from aiogram import Bot, Dispatcher, types, F
 from modules.keyboards import admin_menu_keyboard, player_menu_keyboard
 from modules.event_types import detect_event_type
+from modules.chronos_api import register_chronos_routes, telegram_auth_middleware
 from aiogram.filters import CommandStart
 from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
     ReplyKeyboardMarkup,
     KeyboardButton,
+    WebAppInfo,
 )
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -52,14 +54,25 @@ class InviteCallback(CallbackData, prefix="invite"):
 
 # ================== KEYBOARDS ==================
 
-def admin_menu_keyboard():
+def chronos_webapp_row():
+    """Show the Mini App button only when a valid HTTPS URL is configured."""
+    from urllib.parse import urlparse
+
+    url = os.getenv("CHRONOS_WEBAPP_URL", "").strip()
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or not parsed.netloc:
+        return []
+    return [[KeyboardButton(text="⏳ CHRONOS", web_app=WebAppInfo(url=url))]]
+
+def admin_menu_keyboard(user_id=None):
     return ReplyKeyboardMarkup(
     keyboard=[
 [KeyboardButton(text="➕ Створити івент"), KeyboardButton(text="📅 Активні події")],
 [KeyboardButton(text="💳 Оплатити ігри"), KeyboardButton(text="🛠 Адмін: список + скасовані")],
 [KeyboardButton(text="✅ Підтвердити вечір"), KeyboardButton(text="🏁 Завершити вечір")],
 [KeyboardButton(text="❌ Скасувати івент"), KeyboardButton(text="📣 Повідомлення")],
-[KeyboardButton(text="☣️ UNDERGROUND")]  # ← ОКРЕМИЙ РЯДОК
+[KeyboardButton(text="☣️ UNDERGROUND")],
+        *(chronos_webapp_row() if os.getenv('CHRONOS_TEST_ADMIN_ID', '').strip().isdigit() and str(user_id) == os.getenv('CHRONOS_TEST_ADMIN_ID', '').strip() else []),
     ],
         resize_keyboard=True
     )
@@ -69,8 +82,7 @@ def player_menu_keyboard():
         keyboard=[
             [KeyboardButton(text="📅 Активні події")],
             [KeyboardButton(text="💳 Оплатити ігри")],
-            [KeyboardButton(text="☣️ UNDERGROUND")]
-        ],
+            [KeyboardButton(text="☣️ UNDERGROUND")],        ],
         resize_keyboard=True
     )
 
@@ -161,7 +173,7 @@ async def start_handler(message: types.Message, state: FSMContext):
             await state.set_state(NicknameState.waiting_for_nickname)
             return
 
-        keyboard = admin_menu_keyboard() if role == "admin" else player_menu_keyboard()
+        keyboard = admin_menu_keyboard(user_id) if role == "admin" else player_menu_keyboard()
         await message.answer(
             f"З поверненням, **{display_name}** 👋",
             parse_mode="Markdown",
@@ -678,14 +690,20 @@ async def invite_join(
             return
 
         # 4️⃣ Запис
-        await conn.execute(
+        inserted_registration = await conn.fetchval(
             """
             INSERT INTO registrations (event_id, user_id, status)
             VALUES ($1, $2, 'active')
+            ON CONFLICT DO NOTHING
+            RETURNING registration_id
             """,
             event_id,
             user_id
         )
+
+        if inserted_registration is None:
+            await callback.answer("Ви вже записані на цей івент", show_alert=True)
+            return
 
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.answer("Ви записані!")
@@ -1484,7 +1502,8 @@ async def handle(request):
 
 async def start_all():
     await init_db()
-    app = web.Application()
+    app = web.Application(middlewares=[telegram_auth_middleware], client_max_size=9 * 1024 * 1024)
+    register_chronos_routes(app)
     app.router.add_get('/', handle)
     runner = web.AppRunner(app)
     await runner.setup()
