@@ -668,6 +668,17 @@ async def respond_invitation(request):
     conn=await get_connection()
     try:
         async with conn.transaction():
+            slot_id=await conn.fetchval(
+                "SELECT slot_id FROM chronos.final_invitations WHERE invitation_id=$1 AND user_id=$2",
+                invitation_id,user_id,
+            )
+            if not slot_id:
+                return json_response({"error":"invitation_not_found"},404)
+            # Serialize all accept/decline/expiry/refill operations for this final slot.
+            await conn.fetchrow(
+                "SELECT slot_id FROM chronos.event_slots WHERE slot_id=$1 FOR UPDATE",
+                slot_id,
+            )
             invitation=await conn.fetchrow(
                 """
                 SELECT fi.*,s.season_id,s.title,s.slot_type,s.slot_id
@@ -766,12 +777,27 @@ async def process_expired_invitations(request):
             return error
         changed=0
         async with conn.transaction():
+            # Lock slots before invitation rows, matching respond_invitation's lock order.
+            expired_slots=await conn.fetch(
+                """
+                SELECT DISTINCT fi.slot_id
+                FROM chronos.final_invitations fi
+                WHERE fi.status='pending' AND fi.deadline_at<=NOW()
+                ORDER BY fi.slot_id
+                """
+            )
+            for expired_slot in expired_slots:
+                await conn.fetchrow(
+                    "SELECT slot_id FROM chronos.event_slots WHERE slot_id=$1 FOR UPDATE",
+                    expired_slot["slot_id"],
+                )
             expired=await conn.fetch(
                 """
                 SELECT fi.invitation_id,fi.slot_id,s.season_id,fi.user_id
                 FROM chronos.final_invitations fi JOIN chronos.event_slots s ON s.slot_id=fi.slot_id
                 WHERE fi.status='pending' AND fi.deadline_at<=NOW()
-                FOR UPDATE
+                ORDER BY fi.slot_id,fi.invitation_id
+                FOR UPDATE OF fi
                 """
             )
             affected=set()
