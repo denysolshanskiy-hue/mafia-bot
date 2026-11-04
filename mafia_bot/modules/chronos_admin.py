@@ -1350,6 +1350,7 @@ async def create_prize_awards(request):
         if event_kind=="main_final" and slot["slot_type"]!="main_final":
             return json_response({"error":"wrong_slot_type"},400)
         created=[]
+        normalized=[]
         seen_users=set()
         seen_places=set()
         for award in awards:
@@ -1366,24 +1367,43 @@ async def create_prize_awards(request):
                 return json_response({"error":"fixed_competition_prizes_are_not_reduced_by_activity_score"},400)
             seen_users.add(user_id)
             seen_places.add(place)
+            normalized.append({"user_id":user_id,"place":place,"base":base,"coefficient":coefficient})
+        if seen_places!={1,2,3}:
+            return json_response({"error":"all_three_prize_places_required"},400)
         async with conn.transaction():
-            for award in awards:
-                user_id=int(award["user_id"])
-                place=int(award["place"])
-                base=int(award["base_amount_uah"])
-                coefficient=float(award.get("activity_coefficient",1.0))
+            locked_slot=await conn.fetchrow(
+                "SELECT season_id,slot_type FROM chronos.event_slots WHERE slot_id=$1 FOR UPDATE",
+                slot_id,
+            )
+            if not locked_slot or locked_slot["season_id"]!=slot["season_id"] or locked_slot["slot_type"]!=slot["slot_type"]:
+                return json_response({"error":"slot_changed_retry"},409)
+            # Preflight every rule and existing award before writing anything. An
+            # approved or paid award must never be silently reset to draft.
+            for item in normalized:
                 rule=await conn.fetchrow(
                     """
                     SELECT amount_uah,is_enabled FROM chronos.prize_rules
                     WHERE season_id=$1 AND event_kind=$2 AND place=$3
                     """,
-                    slot["season_id"],event_kind,place,
+                    slot["season_id"],event_kind,item["place"],
                 )
-                if place<1 or not rule or not rule["is_enabled"] or base!=int(rule["amount_uah"]):
-                    return json_response({"error":"award_must_match_enabled_fixed_prize_rule","place":place},409)
-                if coefficient!=1.0:
-                    return json_response({"error":"fixed_competition_prizes_are_not_reduced_by_activity_score"},400)
-                final=base
+                if not rule or not rule["is_enabled"] or item["base"]!=int(rule["amount_uah"]):
+                    return json_response({"error":"award_must_match_enabled_fixed_prize_rule","place":item["place"]},409)
+                existing=await conn.fetchrow(
+                    """
+                    SELECT award_id,status FROM chronos.prize_awards
+                    WHERE slot_id=$1 AND event_kind=$2 AND user_id=$3
+                    FOR UPDATE
+                    """,
+                    slot_id,event_kind,item["user_id"],
+                )
+                if existing and existing["status"] not in ("draft","void"):
+                    return json_response({
+                        "error":"existing_award_already_approved_or_paid",
+                        "user_id":item["user_id"],
+                        "status":existing["status"],
+                    },409)
+            for item in normalized:
                 award_id=await conn.fetchval(
                     """
                     INSERT INTO chronos.prize_awards
@@ -1392,10 +1412,14 @@ async def create_prize_awards(request):
                     ON CONFLICT(slot_id,event_kind,user_id) DO UPDATE
                       SET place=EXCLUDED.place,base_amount_uah=EXCLUDED.base_amount_uah,
                           activity_coefficient=EXCLUDED.activity_coefficient,final_amount_uah=EXCLUDED.final_amount_uah,status='draft'
+                      WHERE chronos.prize_awards.status IN ('draft','void')
                     RETURNING award_id
                     """,
-                    slot["season_id"],slot_id,event_kind,user_id,place,base,coefficient,final,
+                    slot["season_id"],slot_id,event_kind,item["user_id"],item["place"],
+                    item["base"],item["coefficient"],item["base"],
                 )
+                if award_id is None:
+                    raise RuntimeError("Prize award changed concurrently; transaction rolled back")
                 created.append(award_id)
             await audit(conn,actor_id,"prize_awards_drafted","event_slot",slot_id,{"award_ids":created})
         return json_response({"drafted":len(created),"award_ids":created})
