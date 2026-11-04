@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#080d12">
+  <meta name="color-scheme" content="dark">
+  <base href="/miniapp/">
+  <title>CHRONOS — Хранителі часу</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/app.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script defer src="assets/app.js"></script>
+  <script defer src="assets/modules.js"></script>
+</head>
+<body>
+  <div class="ambient ambient-a"></div>
+  <div class="ambient ambient-b"></div>
+  <main id="soon-screen" class="soon-screen">
+    <section class="soon-card" aria-live="polite">
+      <div class="soon-mark"><span class="soon-mark-symbol">◈</span><span>CHRONOS</span><small>CHRONO SYSTEM · INITIALIZING</small></div>
+      <h1>СКОРО</h1>
+      <p>Нова ера гри вже наближається. Ми готуємо для вас дещо особливе.</p>
+    </section>
+  </main>
+  <div class="app-shell" id="app-shell" hidden>
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="CHRONOS — на головну" data-nav="home">
+        <span class="brand-mark"><span></span><span></span><span></span></span>
+        <span class="brand-copy"><b>CHRONOS</b><small>ХРАНИТЕЛІ ЧАСУ</small></span>
+      </a>
+      <div class="topbar-right">
+        <span id="connection-state" class="connection"><i></i> З'ЄДНАННЯ</span>
+        <button class="icon-button" id="refresh-button" aria-label="Оновити дані" title="Оновити">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5M5.5 9A7 7 0 0 1 18 6l2 1M4 17l2-1a7 7 0 0 0 12.5-3"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main id="app-main">
+      <section class="screen active" id="screen-home" data-screen="home">
+        <div class="eyebrow"><span class="pulse-dot"></span> SEASON INTERFACE <span class="eyebrow-line"></span> <span id="season-state">SYNC STANDBY</span></div>
+        <div class="hero">
+          <div class="hero-grid"></div>
+          <div class="hero-orbit orbit-one"></div>
+          <div class="hero-orbit orbit-two"></div>
+          <div class="hero-content">
+            <div class="hero-kicker">ВХІД У СИСТЕМУ <span>№ 001</span></div>
+            <h1>Час не<br><em>чекає.</em></h1>
+            <p>Кожна гра залишає слід.<br>Кожен вибір змінює хронологію.</p>
+            <button class="primary-button" data-nav="tower">ВІДКРИТИ ВЕЖУ <span>↗</span></button>
+          </div>
+          <div class="hero-visual" aria-hidden="true">
+            <div class="core-ring ring-outer"></div>
+            <div class="core-ring ring-inner"></div>
+            <div class="core-center"><span>CH</span><small>CORE</small></div>
+            <span class="orbit-point point-a"></span><span class="orbit-point point-b"></span>
+            <span class="orbit-label label-a">T-00</span><span class="orbit-label label-b">690</span>
+            <div class="hero-crosshair"></div>
+          </div>
+          <div class="hero-index">C / 26</div>
+        </div>
+
+        <div class="section-heading">
+          <div><div class="eyebrow">PERSONAL ACCESS</div><h2>Твоя зміна</h2></div>
+          <span class="section-code">01 — HOME</span>
+        </div>
+        <div class="welcome-card">
+          <div class="avatar-chip"><span id="avatar-initial">?</span><i></i></div>
+          <div class="welcome-copy">
+            <small>ОПЕРАТОР СИСТЕМИ</small>
+            <strong id="home-name">Гість системи</strong>
+            <span id="home-profile-note">Перевіряємо доступ...</span>
+          </div>
+          <button class="round-arrow" data-nav="profile" aria-label="Відкрити профіль">↗</button>
+        </div>
+
+        <div class="section-heading compact">
+          <div><div class="eyebrow">LIVE OPERATIONS</div><h2>Найближча подія</h2></div>
+          <button class="text-link" data-nav="events">УСІ ПОДІЇ <span>→</span></button>
+        </div>
+        <div id="home-event" class="event-feature">
+          <div class="loading-line"></div><div class="loading-line short"></div>
+        </div>
+
+        <div class="metric-strip">
+          <div class="metric">
+            <span class="metric-icon">⌁</span>
+            <strong>690</strong>
+            <small>SYNC UNITS</small>
+          </div>
+          <div class="metric-divider"></div>
+          <div class="metric">
+            <span class="metric-icon">◈</span>
+            <strong>12</strong>
+            <small>SEASON NIGHTS</small>
+          </div>
+          <div class="metric-divider"></div>
+          <div class="metric">
+            <span class="metric-icon">10</span>
+            <strong>10</strong>
+            <small>CORE FLOORS</small>
+          </div>
+        </div>
+        <p class="footnote">Синхронізація сезону з'явиться після імпорту результатів ігор.</p>
+
+        <div class="section-heading compact">
+          <div><div class="eyebrow">SYSTEM MODULES</div><h2>Доступні модулі</h2></div>
+          <span class="section-code">CHRONOS OS</span>
+        </div>
+        <div class="module-grid">
+          <button class="module-tile" data-nav="simulations"><span class="module-symbol">⌘</span><b>СИМУЛЯЦІЇ</b><small>CODE BREAKER · MEMORY</small></button>
+          <button class="module-tile" data-nav="operations"><span class="module-symbol">◷</span><b>ОПЕРАЦІЇ</b><small>УЧАСТЬ · ФІНАЛИ</small></button>
+          <button class="module-tile" data-nav="rankings"><span class="module-symbol">↗</span><b>РЕЙТИНГИ</b><small>iMAFIA · TOP 10</small></button>
+          <button class="module-tile" data-nav="rewards"><span class="module-symbol">◇</span><b>НАГОРОДИ</b><small>ACHIEVEMENTS · VAULT</small></button>
+          <button class="module-tile" data-nav="store"><span class="module-symbol">▣</span><b>МАГАЗИН</b><small>CR · EX ITEMS</small></button>
+          <button class="module-tile" data-nav="notifications"><span class="module-symbol">◌</span><b>СПОВІЩЕННЯ</b><small>NOTIFICATION CENTER</small></button>
+          <button class="module-tile admin-module" id="admin-shortcut" data-nav="admin" hidden><span class="module-symbol">⌬</span><b>ADMIN CONSOLE</b><small>SEASON CONTROL</small></button>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-tower" data-screen="tower">
+        <div class="page-intro">
+          <div class="eyebrow">CHRONOS ARCHITECTURE <span class="eyebrow-line"></span> 10 FLOORS</div>
+          <h1>Вежа<br><em>часу.</em></h1>
+          <p>Десять рівнів однієї хронології. Усі поверхи доступні для перегляду; функції відкриватимуться за умовами сезону.</p>
+        </div>
+        <div class="milestone-strip" id="milestone-strip">
+          <span data-milestone="25">25% <small>INITIALIZATION</small></span>
+          <span data-milestone="50">50% <small>STABILITY</small></span>
+          <span data-milestone="75">75% <small>OVERDRIVE</small></span>
+          <span data-milestone="100">100% <small>FINAL</small></span>
+        </div>
+        <div class="tower-status">
+          <div class="tower-status-top"><span>GLOBAL SYNC</span><b>690 <small>UNITS</small></b></div>
+          <div class="sync-track"><span id="sync-meter"></span></div>
+          <div class="tower-status-bottom"><span id="sync-status-label">СИСТЕМА ОЧІКУЄ РЕЗУЛЬТАТИ ІГОР</span><span id="sync-percent">0%</span></div>
+        </div>
+        <div class="tower-layout">
+          <div class="tower-spine"><span></span></div>
+          <div id="tower-floors" class="tower-floors"></div>
+        </div>
+        <div class="tower-legend"><span><i class="legend-open"></i> БАЗОВИЙ ОГЛЯД</span><span><i class="legend-locked"></i> УМОВА ВІДКРИТТЯ</span></div>
+      </section>
+
+      <section class="screen" id="screen-events" data-screen="events">
+        <div class="page-intro">
+          <div class="eyebrow">MISSION CONTROL <span class="eyebrow-line"></span> LIVE FEED</div>
+          <h1>Календар<br><em>операцій.</em></h1>
+          <p>Реальні події створюються в Telegram-боті. Тут вони з'являються автоматично.</p>
+        </div>
+        <div class="filter-tabs" role="tablist" aria-label="Типи подій">
+          <button class="filter-tab active" data-filter="all">УСІ <span id="event-count">0</span></button>
+          <button class="filter-tab" data-filter="live">ВІДКРИТІ</button>
+          <button class="filter-tab" data-filter="planned">СКОРО</button>
+        </div>
+        <div id="events-list" class="events-list">
+          <div class="empty-state"><span class="empty-symbol">⌁</span><b>Завантажуємо календар</b><small>Синхронізація з ботом...</small></div>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-profile" data-screen="profile">
+        <div class="page-intro">
+          <div class="eyebrow">IDENTITY CENTER <span class="eyebrow-line"></span> PLAYER ID</div>
+          <h1>Твоя<br><em>ідентичність.</em></h1>
+          <p>Профіль CHRONOS пов'язаний з твоїм Telegram-акаунтом та ігровим ніком у KMC.</p>
+        </div>
+        <div class="profile-card">
+          <div class="profile-card-top"><span>IDENTITY RECORD</span><span class="record-live"><i></i> LINKED</span></div>
+          <div class="profile-avatar">
+            <div class="avatar-halo"></div>
+            <div class="avatar-person"><span></span><i></i></div>
+            <div class="avatar-scan"></div>
+          </div>
+          <div class="profile-name" id="profile-name">Гість системи</div>
+          <div class="profile-subtitle" id="profile-title"></div>
+          <div class="profile-subtitle" id="profile-telegram">TELEGRAM CONNECTION</div>
+          <div class="profile-divider"></div>
+          <div class="profile-data">
+            <div><small>СТАТУС</small><b id="profile-role">INITIATE</b></div>
+            <div><small>СЕЗОН</small><b>CHRONOS</b></div>
+            <div><small>РІВЕНЬ</small><b>01 <span>—</span></b></div>
+          </div>
+        </div>
+        <div class="notice-card">
+          <span class="notice-mark">i</span>
+          <div><b>Синхронізація профілю</b><p>Нік і реєстрація керуються через Telegram-бот. Кастомізація аватара та досвід будуть підключені окремими модулями.</p></div>
+        </div>
+        <div class="profile-customizer">
+          <div class="eyebrow">BASE AVATAR</div>
+          <h3>Обери основу персонажа</h3>
+          <div class="avatar-grid">
+            <button class="avatar-choice" data-avatar="european_male"><span class="mini-avatar european"></span><small>EURO<br>MALE</small></button>
+            <button class="avatar-choice" data-avatar="european_female"><span class="mini-avatar european female"></span><small>EURO<br>FEMALE</small></button>
+            <button class="avatar-choice" data-avatar="dark_male"><span class="mini-avatar dark"></span><small>DARK<br>MALE</small></button>
+            <button class="avatar-choice" data-avatar="dark_female"><span class="mini-avatar dark female"></span><small>DARK<br>FEMALE</small></button>
+            <button class="avatar-choice" data-avatar="asian_male"><span class="mini-avatar asian"></span><small>ASIAN<br>MALE</small></button>
+            <button class="avatar-choice" data-avatar="asian_female"><span class="mini-avatar asian female"></span><small>ASIAN<br>FEMALE</small></button>
+            <button class="avatar-choice" data-avatar="android_male"><span class="mini-avatar android"></span><small>ANDROID<br>MALE</small></button>
+            <button class="avatar-choice" data-avatar="android_female"><span class="mini-avatar android female"></span><small>ANDROID<br>FEMALE</small></button>
+          </div>
+          <p class="muted-note">Це стартова основа. Предмети, рамки та ефекти екіпіруються окремо.</p>
+          <div class="identity-controls">
+            <label>АКТИВНЕ ЗВАННЯ<select id="identity-title"><option value="">Без звання</option></select></label>
+            <label>БЕЙДЖ №1<select id="identity-badge-1"><option value="">Без бейджа</option></select></label>
+            <label>БЕЙДЖ №2<select id="identity-badge-2"><option value="">Без бейджа</option></select></label>
+            <button class="secondary-button" id="save-appearance">ЗБЕРЕГТИ ІДЕНТИЧНІСТЬ</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-market" data-screen="market">
+        <div class="page-intro">
+          <div class="eyebrow">PREDICTION EXCHANGE <span class="eyebrow-line"></span> LIVE MARKETS</div>
+          <h1>Біржа<br><em>прогнозів.</em></h1>
+          <p>Три окремі ринки TOP 1, TOP 2 та TOP 3. Прогнозувати можуть лише гравці, які не зареєстровані на цей вечір.</p>
+        </div>
+        <div class="wallet-strip"><span>ТВІЙ БАЛАНС EX</span><strong id="ex-balance-market">0 EX</strong><small id="prediction-rules-status">RULES: DRAFT</small></div>
+        <div id="prediction-markets" class="stack-list"><div class="empty-state"><span class="empty-symbol">◈</span><b>Ринки завантажуються</b></div></div>
+        <div class="notice-card"><span class="notice-mark">i</span><div><b>EX — лише ігрова валюта</b><p>Не має грошової вартості, не продається, не передається та не виводиться. Коефіцієнти фіксуються при відкритті ринку.</p></div></div>
+      </section>
+
+      <section class="screen" id="screen-simulations" data-screen="simulations">
+        <div class="page-intro">
+          <div class="eyebrow">SIMULATION ROOM <span class="eyebrow-line"></span> TRAINING</div>
+          <h1>Тести<br><em>системи.</em></h1>
+          <p>Два серверні випробування. Кожна сесія має 90 секунд; не більше трьох запусків кожної гри на добу.</p>
+        </div>
+        <div id="games-list" class="game-grid"><div class="loading-line"></div></div>
+        <div id="active-game" class="active-game" hidden></div>
+      </section>
+
+      <section class="screen" id="screen-operations" data-screen="operations">
+        <div class="page-intro">
+          <div class="eyebrow">OPERATIONS <span class="eyebrow-line"></span> FIELD RECORD</div>
+          <h1>Твоя<br><em>активність.</em></h1>
+          <p>Особиста участь, запрошення у фінали та динамічна кваліфікація. Мініапка не змінює спортивний рейтинг.</p>
+        </div>
+        <div id="operations-panel" class="stack-list"><div class="loading-line"></div></div>
+      </section>
+
+      <section class="screen" id="screen-rankings" data-screen="rankings">
+        <div class="page-intro">
+          <div class="eyebrow">SPORTS RANKING <span class="eyebrow-line"></span> iMAFIA SOURCE</div>
+          <h1>Рейтинг<br><em>гравців.</em></h1>
+          <p>Показники надходять лише з підтверджених імпортів iMafia. XP, CR та EX на спортивний TOP-10 не впливають.</p>
+        </div>
+        <div id="ranking-summary" class="wallet-strip"><span>ОСТАННІЙ ЗНІМОК</span><strong>—</strong></div>
+        <div id="ranking-list" class="ranking-list"><div class="empty-state"><span class="empty-symbol">↗</span><b>Ще немає підтвердженої статистики</b><small>Організатор має імпортувати рейтинг iMafia.</small></div></div>
+      </section>
+
+      <section class="screen" id="screen-rewards" data-screen="rewards">
+        <div class="page-intro">
+          <div class="eyebrow">COLLECTION VAULT <span class="eyebrow-line"></span> REWARDS</div>
+          <h1>Архів<br><em>нагород.</em></h1>
+          <p>Досягнення заробляються. Предмети зберігаються у колекції. Те, що не відкрито, не можна купити чи екіпірувати.</p>
+        </div>
+        <div id="reward-balances" class="wallet-strip"><span>CR / EX / XP</span><strong>—</strong></div>
+        <div class="sub-tabs"><button class="sub-tab active" data-reward-tab="achievements">ДОСЯГНЕННЯ</button><button class="sub-tab" data-reward-tab="collection">КОЛЕКЦІЯ</button><button class="sub-tab" data-reward-tab="history">ІСТОРІЯ</button></div>
+        <div id="reward-content" class="stack-list"></div>
+      </section>
+
+      <section class="screen" id="screen-store" data-screen="store">
+        <div class="page-intro">
+          <div class="eyebrow">CHRONOS STORE <span class="eyebrow-line"></span> EQUIPMENT</div>
+          <h1>Сховище<br><em>предметів.</em></h1>
+          <p>Косметика для п'яти слотів: очі, шия, предмет у руці, аура та рамка. Жодного декору кімнати.</p>
+        </div>
+        <div class="wallet-strip"><span>ДОСТУПНІ КОШТИ</span><strong id="store-balances">0 CR · 0 EX</strong></div>
+        <div class="sub-tabs"><button class="sub-tab active" data-store-filter="CR">CR STORE</button><button class="sub-tab" data-store-filter="EX">EX STORE</button></div>
+        <div id="store-lock-note" class="notice-card" hidden><span class="notice-mark">i</span><div><b>EX Store заблоковано</b><p>Потрібно зробити шість прийнятих прогнозів. Це окрема умова і не відкриває поверх біржі автоматично.</p></div></div>
+        <div id="store-items" class="store-grid"><div class="loading-line"></div></div>
+      </section>
+
+      <section class="screen" id="screen-notifications" data-screen="notifications">
+        <div class="page-intro">
+          <div class="eyebrow">NOTIFICATION CENTER <span class="eyebrow-line"></span> INBOX</div>
+          <h1>Центр<br><em>сигналів.</em></h1>
+          <p>Внутрішні сповіщення CHRONOS. Вони не дублюють існуючі розсилки Telegram-бота.</p>
+        </div>
+        <div class="section-heading"><div><div class="eyebrow">PREFERENCES</div><h2>Категорії</h2></div></div>
+        <div id="notification-preferences" class="preference-list"></div>
+        <div class="section-heading compact"><div><div class="eyebrow">INBOX</div><h2>Останні сигнали</h2></div><span id="unread-count" class="section-code">0 UNREAD</span></div>
+        <div id="notifications-list" class="stack-list"></div>
+      </section>
+
+      <section class="screen" id="screen-admin" data-screen="admin">
+        <div class="page-intro">
+          <div class="eyebrow">ADMINISTRATOR CONSOLE <span class="eyebrow-line"></span> RESTRICTED</div>
+          <h1>Пульт<br><em>керування.</em></h1>
+          <p>Адміністративні операції CHRONOS. Усі зміни журналюються; розрахунки нагород потребують окремого підтвердження.</p>
+        </div>
+        <div id="admin-overview" class="admin-overview"></div>
+        <div class="admin-tabs">
+          <button class="admin-tab active" data-admin-tab="schedule">КАЛЕНДАР</button>
+          <button class="admin-tab" data-admin-tab="imports">iMAFIA</button>
+          <button class="admin-tab" data-admin-tab="markets">ПРОГНОЗИ</button>
+          <button class="admin-tab" data-admin-tab="prizes">ФІНАЛИ</button>
+          <button class="admin-tab" data-admin-tab="economy">ЕКОНОМІКА</button>
+          <button class="admin-tab" data-admin-tab="players">ГРАВЦІ</button>
+          <button class="admin-tab" data-admin-tab="audit">АУДИТ</button>
+        </div>
+        <div id="admin-content" class="admin-content"></div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Основна навігація">
+      <button class="nav-item active" data-nav="home"><span class="nav-icon">⌂</span><small>ГОЛОВНА</small></button>
+      <button class="nav-item" data-nav="tower"><span class="nav-icon">▤</span><small>ВЕЖА</small></button>
+      <button class="nav-item nav-center" data-nav="events"><span class="nav-icon">⌁</span><small>ПОДІЇ</small></button>
+      <button class="nav-item" data-nav="market"><span class="nav-icon">◈</span><small>БІРЖА</small></button>
+      <button class="nav-item" data-nav="profile"><span class="nav-icon">◉</span><small>ПРОФІЛЬ</small></button>
+    </nav>
+  </div>
+
+  <div class="modal-backdrop" id="modal-backdrop" aria-hidden="true">
+    <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-handle"></div>
+      <div class="modal-header"><span class="eyebrow" id="modal-kicker">EVENT DETAIL</span><button id="modal-close" class="icon-button" aria-label="Закрити">×</button></div>
+      <div id="modal-content"></div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
