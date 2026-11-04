@@ -76,7 +76,7 @@ class ChronosClosedAccessTests(unittest.IsolatedAsyncioTestCase):
             "/api/chronos/private-test", headers={"Authorization": "tma invalid"}
         )
         self.assertEqual(response.status, 401)
-        self.get_connection.return_value.fetchrow.assert_not_awaited()
+        self.conn.fetchrow = AsyncMock()\n        self.get_connection.return_value.assert_not_awaited()
 
 
 if __name__ == "__main__":
