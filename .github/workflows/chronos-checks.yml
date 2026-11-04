@@ -1,6 +1,7 @@
 name: CHRONOS backend checks
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - feature/chronos-miniapp-api
