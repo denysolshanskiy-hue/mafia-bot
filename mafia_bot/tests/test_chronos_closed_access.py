@@ -33,7 +33,7 @@ class ChronosClosedAccessTests(unittest.IsolatedAsyncioTestCase):
             chronos_api, "validate_init_data",
             return_value={"id": 424242, "username": "tester"},
         )
-        self.validate = self.auth.start()
+        self.validate = self.auth.start()\n        self.test_admin_env = patch.dict("os.environ", {"CHRONOS_TEST_ADMIN_ID": "424242"})\n        self.test_admin_env.start()
         app = web.Application(middlewares=[chronos_api.telegram_auth_middleware])
         app.router.add_get("/api/chronos/private-test", self.private_endpoint)
         self.client = TestClient(TestServer(app))
@@ -43,7 +43,7 @@ class ChronosClosedAccessTests(unittest.IsolatedAsyncioTestCase):
         if self.client:
             await self.client.close()
         self.get_connection.stop()
-        self.auth.stop()
+        self.auth.stop()\n        self.test_admin_env.stop()
 
     async def private_endpoint(self, request):
         return web.json_response({"season_data": "visible"})
@@ -58,6 +58,14 @@ class ChronosClosedAccessTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_player_is_denied(self):
         self.account.update(role="player")
+        response = await self.client.get(
+            "/api/chronos/private-test", headers={"Authorization": "tma signed"}
+        )
+        self.assertEqual(response.status, 403)
+        self.assertEqual((await response.json())["error"], "admin_test_access_only")
+
+    async def test_other_admin_is_denied_even_with_admin_role(self):
+        self.validate.return_value = {"id": 854716579, "username": "other_admin"}
         response = await self.client.get(
             "/api/chronos/private-test", headers={"Authorization": "tma signed"}
         )
