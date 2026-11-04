@@ -37,6 +37,11 @@ def _public_state(game_code, state, session):
 
 
 async def _award_minigame_xp(conn, season_id, user_id, game_code, session_id):
+    # Serialize first-clear and repeat-cap checks across concurrent sessions.
+    await conn.fetchval(
+        "SELECT user_id FROM public.users WHERE user_id=$1 FOR UPDATE",
+        user_id,
+    )
     row=await conn.fetchrow(
         "SELECT platform_settings FROM chronos.seasons WHERE season_id=$1",
         season_id,
@@ -94,8 +99,9 @@ async def start_game(request):
             economy=(platform or {}).get("economy",{})
             if economy.get("status")!="approved":
                 return json_response({"error":"economy_not_approved"},409)
+            # Lock the player row so parallel starts cannot exceed the daily cap.
             user = await conn.fetchrow(
-                "SELECT display_name,is_active FROM public.users WHERE user_id=$1",
+                "SELECT display_name,is_active FROM public.users WHERE user_id=$1 FOR UPDATE",
                 user_id,
             )
             if not user or not user["display_name"]:
@@ -286,7 +292,10 @@ async def games_status(request):
             return json_response({"season_active":False,"games":[]})
         rows = await conn.fetch(
             """
-            SELECT game_code,COUNT(*) FILTER (WHERE started_at >= NOW()-INTERVAL '24 hours') AS attempts_today,
+            SELECT game_code,COUNT(*) FILTER (
+                       WHERE started_at >= ((NOW() AT TIME ZONE 'Europe/Kyiv')::date::timestamp AT TIME ZONE 'Europe/Kyiv')
+                         AND started_at < ((((NOW() AT TIME ZONE 'Europe/Kyiv')::date + 1)::timestamp) AT TIME ZONE 'Europe/Kyiv')
+                   ) AS attempts_today,
                    COUNT(*) FILTER (WHERE status='completed') AS completed,
                    COALESCE(SUM(xp_awarded),0) AS xp_total
             FROM chronos.minigame_sessions
