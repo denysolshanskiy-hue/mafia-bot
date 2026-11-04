@@ -80,6 +80,7 @@ Existing:
 For Mini App:
 - CHRONOS_WEBAPP_URL=https://YOUR-PUBLIC-HOST/miniapp — actual Koyeb public HTTPS URL.
 - TELEGRAM_INIT_DATA_MAX_AGE=86400 — optional initData age limit in seconds.
+- CHRONOS_TEST_ADMIN_ID — required during closed testing; Telegram user ID of the single designated test administrator. The account must also remain active with role `admin` in `public.users`. Requests are denied if this variable is missing or invalid.
 
 The Docker image installs Tesseract with Ukrainian and English language packs for screenshot OCR. OCR is an assistive draft only; an admin must correct and confirm every import.
 
