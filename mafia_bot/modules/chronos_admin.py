@@ -4,6 +4,7 @@ import asyncio
 import json
 import shutil
 from datetime import datetime, date, timedelta, time, timezone
+from zoneinfo import ZoneInfo
 
 import asyncpg
 from aiohttp import web
@@ -12,6 +13,14 @@ from modules.chronos_common import (
     audit, award_game_and_evening_rewards, check_player_achievements, json_response, json_value, ledger_balance, notify_user, require_admin, award_ledger
 )
 from modules.chronos_economy import allocate_activity_bonus, calculate_activity_score, qualification_games_required, season_prize_budget, simulate_economy
+
+
+def _invitation_deadline(planned_date, now=None):
+    """Limit confirmations to seven days, or 48 hours when the final is closer."""
+    now = now or datetime.now(timezone.utc)
+    kyiv_today = now.astimezone(ZoneInfo("Europe/Kyiv")).date()
+    days_until_final = (planned_date - kyiv_today).days
+    return now + (timedelta(days=7) if days_until_final >= 7 else timedelta(hours=48))
 
 
 def _user_id_from_row(row):
@@ -621,9 +630,7 @@ async def generate_invitations(request):
             )
             if len(top)<10:
                 return json_response({"error":"top10_not_complete"},409)
-            now=datetime.now(timezone.utc)
-            days=(slot["planned_date"]-date.today()).days
-            deadline=(datetime.combine(slot["planned_date"],time.min,tzinfo=timezone.utc)-timedelta(days=7)) if days>=7 else now+timedelta(hours=48)
+            deadline=_invitation_deadline(slot["planned_date"])
             for row in top:
                 await conn.execute(
                     """
@@ -734,9 +741,7 @@ async def _invite_next_rank(conn,slot_id,season_id):
     if not next_player:
         return
     slot=await conn.fetchrow("SELECT title,planned_date FROM chronos.event_slots WHERE slot_id=$1",slot_id)
-    days=(slot["planned_date"]-date.today()).days if slot["planned_date"] else 0
-    now=datetime.now(timezone.utc)
-    deadline=(datetime.combine(slot["planned_date"],time.min,tzinfo=timezone.utc)-timedelta(days=7)) if days>=7 else now+timedelta(hours=48)
+    deadline=_invitation_deadline(slot["planned_date"]) if slot["planned_date"] else datetime.now(timezone.utc)+timedelta(hours=48)
     await conn.execute(
         "INSERT INTO chronos.final_invitations(slot_id,user_id,rank_at_invite,deadline_at) VALUES($1,$2,$3,$4)",
         slot_id,next_player["user_id"],next_player["rank_position"],deadline,
