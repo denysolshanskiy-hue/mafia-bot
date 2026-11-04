@@ -173,7 +173,7 @@ async def start_handler(message: types.Message, state: FSMContext):
             await state.set_state(NicknameState.waiting_for_nickname)
             return
 
-        keyboard = admin_menu_keyboard() if role == "admin" else player_menu_keyboard()
+        keyboard = admin_menu_keyboard(user_id) if role == "admin" else player_menu_keyboard()
         await message.answer(
             f"З поверненням, **{display_name}** 👋",
             parse_mode="Markdown",
