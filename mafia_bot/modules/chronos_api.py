@@ -240,7 +240,7 @@ async def get_event(request):
                 """
                 INSERT INTO chronos.activity_events
                   (season_id,user_id,action_code,score_value,source_key,verified,metadata)
-                SELECT season_id,$2,'event_detail_view',1,$3,TRUE,$4::jsonb
+                SELECT season_id,$1,'event_detail_view',1,$2,TRUE,$3::jsonb
                 FROM chronos.seasons
                 WHERE status='active'
                 ON CONFLICT(source_key) DO NOTHING
@@ -382,12 +382,11 @@ async def register_for_event(request):
                 """
                 INSERT INTO chronos.activity_events
                   (season_id,user_id,action_code,score_value,source_key,verified,metadata)
-                SELECT s.season_id,$2,'event_registration',1,$3,TRUE,$4::jsonb
+                SELECT s.season_id,$1,'event_registration',1,$2,TRUE,$3::jsonb
                 FROM chronos.seasons s
                 WHERE s.status='active'
                 ON CONFLICT(source_key) DO NOTHING
                 """,
-                await conn.fetchval("SELECT season_id FROM chronos.seasons WHERE status='active' ORDER BY season_id DESC LIMIT 1"),
                 tg_user["id"],
                 f"miniapp-registration:{event_id}:{tg_user['id']}",
                 json.dumps({"event_id":event_id}),
@@ -442,7 +441,7 @@ async def cancel_event_registration(request):
                 """
                 INSERT INTO chronos.activity_events
                   (season_id,user_id,action_code,score_value,source_key,verified,metadata)
-                SELECT season_id,$2,'event_cancellation',0,$3,TRUE,$4::jsonb
+                SELECT season_id,$1,'event_cancellation',0,$2,TRUE,$3::jsonb
                 FROM chronos.seasons WHERE status='active'
                 ON CONFLICT(source_key) DO NOTHING
                 """,
