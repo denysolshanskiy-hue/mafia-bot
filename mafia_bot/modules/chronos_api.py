@@ -61,6 +61,34 @@ async def telegram_auth_middleware(request, handler):
     except ValueError:
         return _json({"error": "unauthorized", "message": "Telegram-сесію не підтверджено."}, 401)
 
+    # Closed CHRONOS test mode: only active bot administrators may use any API.
+    # The role is read from the existing bot users table on every request so
+    # access changes take effect immediately and cannot be spoofed by the client.
+    conn = None
+    try:
+        conn = await get_connection()
+        account = await conn.fetchrow(
+            """
+            SELECT role, is_active
+            FROM public.users
+            WHERE user_id = $1
+            """,
+            request["telegram_user"]["id"],
+        )
+        if not account or account["is_active"] != 1 or account["role"] != "admin":
+            return _json({
+                "error": "admin_test_access_only",
+                "message": "CHRONOS зараз доступний лише адміністратору під час тестування.",
+            }, 403)
+    except asyncpg.UndefinedTableError:
+        return _json({"error": "database_not_ready"}, 503)
+    except Exception:
+        # Fail closed: database/auth lookup failures must never expose season data.
+        return _json({"error": "access_check_unavailable"}, 503)
+    finally:
+        if conn is not None:
+            await conn.close()
+
     return await handler(request)
 
 
