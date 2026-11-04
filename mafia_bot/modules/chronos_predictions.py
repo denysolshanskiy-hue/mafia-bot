@@ -236,8 +236,10 @@ async def open_prediction_markets(request):
 async def _void_market_if_roster_changed(conn, market):
     current_rows=await conn.fetch(
         """
-        SELECT user_id FROM public.registrations
-        WHERE event_id=$1 AND status='active'
+        SELECT r.user_id
+        FROM public.registrations r
+        JOIN public.users u ON u.user_id=r.user_id
+        WHERE r.event_id=$1 AND r.status='active' AND u.is_active=1
         """,
         market["bot_event_id"],
     )
@@ -325,6 +327,12 @@ async def place_bet(request):
             )
             if not candidate:
                 return json_response({"error":"candidate_not_available"},404)
+            # Serialize this player's forecasts across different markets so
+            # concurrent requests cannot exceed the per-event forecast cap.
+            await conn.fetchval(
+                "SELECT user_id FROM public.users WHERE user_id=$1 FOR UPDATE",
+                user_id,
+            )
             duplicate=await conn.fetchval(
                 "SELECT EXISTS(SELECT 1 FROM chronos.prediction_bets WHERE market_id=$1 AND bettor_user_id=$2)",
                 market_id,user_id,
@@ -403,6 +411,22 @@ async def settle_market(request):
                 return json_response({"error":"market_not_settleable"},409)
             if market["status"]=="open" and market["closes_at"]>datetime.now(timezone.utc):
                 return json_response({"error":"market_still_open"},409)
+
+            # Revalidate the frozen roster at settlement time too. Without this,
+            # a changed roster could still be paid if nobody submits another forecast.
+            if await _void_market_if_roster_changed(conn,market):
+                await audit(
+                    conn,actor_id,"prediction_market_voided_roster_changed",
+                    "market",market_id,{"event_id":market["bot_event_id"]},
+                )
+                return json_response({
+                    "settled":True,
+                    "result":"void",
+                    "reason":"roster_changed",
+                    "settlements":[],
+                    "no_stakes":True,
+                })
+
             if result=="settled":
                 candidate=await conn.fetchval(
                     "SELECT 1 FROM chronos.prediction_candidates WHERE market_id=$1 AND user_id=$2",
