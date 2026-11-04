@@ -64,7 +64,7 @@ def chronos_webapp_row():
         return []
     return [[KeyboardButton(text="⏳ CHRONOS", web_app=WebAppInfo(url=url))]]
 
-def admin_menu_keyboard():
+def admin_menu_keyboard(user_id=None):
     return ReplyKeyboardMarkup(
     keyboard=[
 [KeyboardButton(text="➕ Створити івент"), KeyboardButton(text="📅 Активні події")],
@@ -72,7 +72,7 @@ def admin_menu_keyboard():
 [KeyboardButton(text="✅ Підтвердити вечір"), KeyboardButton(text="🏁 Завершити вечір")],
 [KeyboardButton(text="❌ Скасувати івент"), KeyboardButton(text="📣 Повідомлення")],
 [KeyboardButton(text="☣️ UNDERGROUND")],
-        *chronos_webapp_row(),
+        *(chronos_webapp_row() if os.getenv('CHRONOS_TEST_ADMIN_ID', '').strip().isdigit() and str(user_id) == os.getenv('CHRONOS_TEST_ADMIN_ID', '').strip() else []),
     ],
         resize_keyboard=True
     )
