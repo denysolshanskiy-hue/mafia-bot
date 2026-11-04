@@ -82,9 +82,7 @@ def player_menu_keyboard():
         keyboard=[
             [KeyboardButton(text="📅 Активні події")],
             [KeyboardButton(text="💳 Оплатити ігри")],
-            [KeyboardButton(text="☣️ UNDERGROUND")],
-            *chronos_webapp_row(),
-        ],
+            [KeyboardButton(text="☣️ UNDERGROUND")],        ],
         resize_keyboard=True
     )
 
