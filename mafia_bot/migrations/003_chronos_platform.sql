@@ -179,7 +179,7 @@ CREATE TABLE IF NOT EXISTS chronos.ranking_players (
 CREATE INDEX IF NOT EXISTS chronos_ranking_players_user_idx
   ON chronos.ranking_players(user_id, snapshot_id DESC);
 
-DO $
+DO $$
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
@@ -191,7 +191,7 @@ BEGIN
           FOREIGN KEY(source_import_id) REFERENCES chronos.import_batches(import_id) ON DELETE SET NULL;
     END IF;
 END
-$;
+$$;
 
 CREATE TABLE IF NOT EXISTS chronos.notification_preferences (
     user_id BIGINT NOT NULL REFERENCES public.users(user_id) ON DELETE CASCADE,
