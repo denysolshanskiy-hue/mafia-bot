@@ -82,6 +82,23 @@ class ChronosClosedAccessTests(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(response.status, 403)
 
+    async def test_missing_test_admin_configuration_fails_closed(self):
+        with patch.dict("os.environ", {"CHRONOS_TEST_ADMIN_ID": ""}):
+            response = await self.client.get(
+                "/api/chronos/private-test", headers={"Authorization": "tma signed"}
+            )
+        self.assertEqual(response.status, 503)
+        self.assertEqual((await response.json())["error"], "closed_test_admin_not_configured")
+        self.db_connect.assert_not_awaited()
+
+    async def test_database_lookup_failure_fails_closed(self):
+        self.db_connect.side_effect = RuntimeError("database unavailable")
+        response = await self.client.get(
+            "/api/chronos/private-test", headers={"Authorization": "tma signed"}
+        )
+        self.assertEqual(response.status, 503)
+        self.assertEqual((await response.json())["error"], "access_check_unavailable")
+
     async def test_invalid_telegram_session_is_denied_before_role_lookup(self):
         self.validate.side_effect = ValueError("invalid init data")
         response = await self.client.get(
