@@ -1419,21 +1419,30 @@ async def update_prize_status(request):
         error=await require_admin(request,conn)
         if error:
             return error
-        if status=="paid":
-            prior=await conn.fetchval("SELECT status FROM chronos.prize_awards WHERE award_id=$1",award_id)
-            if prior!="approved":
+        async with conn.transaction():
+            row=await conn.fetchrow(
+                "SELECT status FROM chronos.prize_awards WHERE award_id=$1 FOR UPDATE",
+                award_id,
+            )
+            if not row:
+                return json_response({"error":"award_not_found"},404)
+            current=row["status"]
+            if status=="approved" and current!="draft":
+                return json_response({"error":"only_draft_award_can_be_approved"},409)
+            if status=="paid" and current!="approved":
                 return json_response({"error":"approve_before_marking_paid"},409)
-        result=await conn.execute(
-            """
-            UPDATE chronos.prize_awards SET status=$2,approved_by=CASE WHEN $2='approved' THEN $3 ELSE approved_by END,
-                approved_at=CASE WHEN $2='approved' THEN NOW() ELSE approved_at END
-            WHERE award_id=$1
-            """,
-            award_id,status,actor_id,
-        )
-        if result.endswith("0"):
-            return json_response({"error":"award_not_found"},404)
-        await audit(conn,actor_id,"prize_status_changed","prize_award",award_id,{"status":status})
+            if status=="void" and current not in ("draft","approved"):
+                return json_response({"error":"only_unpaid_award_can_be_voided"},409)
+            await conn.execute(
+                """
+                UPDATE chronos.prize_awards SET status=$2,
+                    approved_by=CASE WHEN $2='approved' THEN $3 ELSE approved_by END,
+                    approved_at=CASE WHEN $2='approved' THEN NOW() ELSE approved_at END
+                WHERE award_id=$1
+                """,
+                award_id,status,actor_id,
+            )
+            await audit(conn,actor_id,"prize_status_changed","prize_award",award_id,{"from":current,"status":status})
         return json_response({"updated":True,"status":status})
     finally:
         await conn.close()
