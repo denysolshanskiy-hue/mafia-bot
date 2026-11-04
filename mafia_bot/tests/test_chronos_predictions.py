@@ -28,7 +28,7 @@ class PredictionRosterGuardTests(unittest.IsolatedAsyncioTestCase):
             conn, {"bot_event_id": 7, "market_id": 3}
         )
         self.assertTrue(changed)
-        self.assertEqual(conn.execute.await_count, 2)
+        self.assertEqual(conn.execute.await_count, 3)
         self.assertIn("status='void'", conn.execute.await_args_list[0].args[0])
         self.assertIn("status='refunded'", conn.execute.await_args_list[1].args[0])
 
