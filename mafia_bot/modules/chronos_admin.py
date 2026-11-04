@@ -1063,27 +1063,33 @@ async def update_activity_bonus_status(request):
         error=await require_admin(request,conn)
         if error:
             return error
-        row=await conn.fetchrow(
-            "SELECT status FROM chronos.season_bonus_allocations WHERE allocation_id=$1 FOR UPDATE",
-            allocation_id,
-        )
-        if not row:
-            return json_response({"error":"bonus_allocation_not_found"},404)
-        if status=="paid" and row["status"]!="approved":
-            return json_response({"error":"approve_bonus_before_marking_paid"},409)
-        await conn.execute(
-            """
-            UPDATE chronos.season_bonus_allocations
-            SET status=$2,
-                approved_by=CASE WHEN $2='approved' THEN $3 ELSE approved_by END,
-                approved_at=CASE WHEN $2='approved' THEN NOW() ELSE approved_at END,
-                paid_at=CASE WHEN $2='paid' THEN NOW() ELSE paid_at END,
-                updated_at=NOW()
-            WHERE allocation_id=$1
-            """,
-            allocation_id,status,actor_id,
-        )
-        await audit(conn,actor_id,"activity_bonus_status_changed","season_bonus",allocation_id,{"status":status})
+        async with conn.transaction():
+            row=await conn.fetchrow(
+                "SELECT status FROM chronos.season_bonus_allocations WHERE allocation_id=$1 FOR UPDATE",
+                allocation_id,
+            )
+            if not row:
+                return json_response({"error":"bonus_allocation_not_found"},404)
+            current=row["status"]
+            if status=="approved" and current!="draft":
+                return json_response({"error":"only_draft_bonus_can_be_approved"},409)
+            if status=="paid" and current!="approved":
+                return json_response({"error":"approve_bonus_before_marking_paid"},409)
+            if status=="void" and current not in ("draft","approved"):
+                return json_response({"error":"only_unpaid_bonus_can_be_voided"},409)
+            await conn.execute(
+                """
+                UPDATE chronos.season_bonus_allocations
+                SET status=$2,
+                    approved_by=CASE WHEN $2='approved' THEN $3 ELSE approved_by END,
+                    approved_at=CASE WHEN $2='approved' THEN NOW() ELSE approved_at END,
+                    paid_at=CASE WHEN $2='paid' THEN NOW() ELSE paid_at END,
+                    updated_at=NOW()
+                WHERE allocation_id=$1
+                """,
+                allocation_id,status,actor_id,
+            )
+            await audit(conn,actor_id,"activity_bonus_status_changed","season_bonus",allocation_id,{"from":current,"status":status})
         return json_response({"updated":True,"status":status})
     finally:
         await conn.close()
