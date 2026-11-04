@@ -24,8 +24,9 @@ class ChronosClosedAccessTests(unittest.IsolatedAsyncioTestCase):
         self.client = None
         self.account = {"role": "admin", "is_active": 1}
         self.conn = FakeConnection(self.account)
+        self.db_connect = AsyncMock(return_value=self.conn)
         self.get_connection = patch.object(
-            chronos_api, "get_connection", new=AsyncMock(return_value=self.conn)
+            chronos_api, "get_connection", new=self.db_connect
         )
         self.get_connection.start()
         self.auth = patch.object(
