@@ -33,6 +33,8 @@ jobs:
           node --check mafia_bot/miniapp/assets/modules.js
 
       - name: Run unit tests
+        env:
+          PYTHONPATH: mafia_bot
         run: python -m unittest discover -s mafia_bot/tests -v
 
       - name: Verify aiohttp route registration and economy migration
