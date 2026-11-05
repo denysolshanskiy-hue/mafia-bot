@@ -13,9 +13,10 @@
 #screen-home .home-brand-bars{display:flex;gap:3px;margin-left:8px}
 #screen-home .home-brand-bars i{width:6px;height:18px;transform:skew(-28deg);background:#00d6ff;box-shadow:0 0 9px rgba(0,214,255,.55)}
 #screen-home .home-brand-bars i:nth-child(2){background:#a95cff}#screen-home .home-brand-bars i:nth-child(3){background:#ff3fa4;box-shadow:0 0 9px rgba(255,63,164,.5)}
-#screen-home .home-notice-button{position:relative;margin-left:auto;width:34px;height:34px;border:1px solid rgba(0,210,255,.3);border-radius:10px;background:rgba(4,14,27,.62);color:#c8f8ff;display:grid;place-items:center;cursor:pointer}
-#screen-home .home-notice-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
-#screen-home .home-notice-button i{position:absolute;width:6px;height:6px;right:7px;top:6px;border-radius:50%;background:#ff3fa4;box-shadow:0 0 8px #ff3fa4}
+#screen-home .home-notice-button{position:relative;margin-left:auto;width:42px;height:42px;padding:0;border:0;border-radius:0;background:transparent;color:#c8f8ff;display:grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent;filter:drop-shadow(0 3px 9px rgba(0,0,0,.38)) drop-shadow(0 0 7px rgba(0,205,255,.18));transition:transform .16s ease,filter .16s ease}
+#screen-home .home-notice-button img{display:block;width:100%;height:100%;object-fit:contain}
+#screen-home .home-notice-button:active{transform:scale(.95);filter:drop-shadow(0 2px 6px rgba(0,0,0,.4)) drop-shadow(0 0 10px rgba(255,63,164,.25))}
+#screen-home .home-notice-button:focus-visible{outline:2px solid rgba(0,214,255,.85);outline-offset:3px;border-radius:10px}
 #screen-home .home-hero-copy{position:relative;z-index:2;max-width:290px;padding:23px 17px 62px}
 #screen-home .home-chronos-lockup{display:flex;align-items:center;gap:10px;margin:3px 0 18px}
 #screen-home .home-chronos-symbol{width:40px;height:40px;border:1px solid #00d6ff;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:3px;transform:rotate(30deg);box-shadow:0 0 15px rgba(0,214,255,.25),inset 0 0 12px rgba(0,214,255,.1)}
@@ -112,8 +113,7 @@
 #screen-home .home-brand-bars{display:none!important}
 #screen-home .home-notice-button{
   position:absolute;right:0;top:0;pointer-events:auto;
-  background:rgba(5,12,26,.62);
-  backdrop-filter:blur(8px);
+  background:transparent;
 }
 #screen-home .home-hero-copy{
   position:absolute;left:16px;right:16px;bottom:51px;
