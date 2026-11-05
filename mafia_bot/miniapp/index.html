@@ -10,10 +10,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css?v=chronos-visual-2">
+  <link rel="stylesheet" href="assets/app.css?v=chronos-visual-3">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script defer src="assets/app.js?v=chronos-visual-2"></script>
-  <script defer src="assets/modules.js?v=chronos-visual-2"></script>
+  <script defer src="assets/app.js?v=chronos-visual-3"></script>
+  <script defer src="assets/modules.js?v=chronos-visual-3"></script>
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -168,28 +168,26 @@
       </section>
 
       <section class="screen events-screen" id="screen-events" data-screen="events">
-        <div class="page-intro events-intro">
-          <div class="eyebrow"><span class="pulse-dot"></span> CHRONOS NETWORK <span class="eyebrow-line"></span> EVENT LOG</div>
-          <h1>Наступна<br><em>точка часу.</em></h1>
-          <p>Усі ігрові вечори KMC в одному місці. Обирай подію, переглядай склад і підтверджуй участь.</p>
+        <div class="events-page-head">
+          <div class="eyebrow"><span class="pulse-dot"></span> CHRONOS / SEASON 01</div>
+          <h1>ПОДІЇ</h1>
+          <p>Календар сезону</p>
+          <span class="events-head-code">KMC · EVENT ARCHIVE</span>
         </div>
-        <div class="events-overview">
-          <div class="events-overview-main"><span>СИНХРОНІЗОВАНО З KMC</span><strong id="event-total">—</strong><small>ПОДІЙ У ХРОНОЛОГІЇ</small></div>
-          <div class="events-overview-side"><i></i><span>LIVE FEED</span><b>АКТИВНИЙ</b></div>
-        </div>
-        <div class="events-toolbar">
-          <div><div class="eyebrow">MISSION SELECT</div><h2>Календар подій</h2></div>
-          <span class="section-code">01 / EVENTS</span>
-        </div>
-        <div class="filter-tabs" role="tablist" aria-label="Типи подій">
+        <div class="filter-tabs events-filter-tabs" role="tablist" aria-label="Фільтр подій">
           <button class="filter-tab active" data-filter="all">УСІ <span id="event-count">0</span></button>
-          <button class="filter-tab" data-filter="live">ВІДКРИТІ</button>
-          <button class="filter-tab" data-filter="planned">ЗАПЛАНОВАНІ</button>
+          <button class="filter-tab" data-filter="upcoming">НАЙБЛИЖЧІ <span id="event-upcoming-count">0</span></button>
+          <button class="filter-tab" data-filter="finals">ФІНАЛИ <span id="event-finals-count">0</span></button>
         </div>
         <div id="events-list" class="events-list">
-          <div class="empty-state"><span class="empty-symbol">⌁</span><b>Завантажуємо календар</b><small>Синхронізація з ботом...</small></div>
+          <div class="empty-state"><span class="empty-symbol">⌁</span><b>Завантажуємо календар</b><small>Синхронізація з ботом KMC...</small></div>
         </div>
-        <p class="events-footnote">Дані оновлюються з основного Telegram-бота KMC. Статус реєстрації та склад учасників — у картці конкретної події.</p>
+      </section>
+
+      <section class="screen event-detail-screen" id="screen-event-detail" data-screen="event-detail">
+        <div id="event-detail-content">
+          <div class="detail-loading"><span class="pulse-dot"></span> ЗАВАНТАЖЕННЯ ПОДІЇ</div>
+        </div>
       </section>
 
       <section class="screen" id="screen-profile" data-screen="profile">
