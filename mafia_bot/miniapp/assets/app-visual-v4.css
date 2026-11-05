@@ -1,0 +1,157 @@
+/* CHRONOS Home — composition v2. Dedicated visual layer over the approved cinematic scene. */
+:root{--chronos-blue:#00cfff;--chronos-pink:#ff3fa4;--cyan:#00cfff;--cyan-2:#008dff;--violet:#ff3fa4}
+#screen-home.home-screen{padding-top:16px;padding-bottom:30px}
+#screen-home .home-hero{
+  min-height:348px;margin:0 0 14px;border-radius:21px;
+  border:1px solid rgba(0,207,255,.28);
+  box-shadow:0 22px 50px rgba(0,0,0,.32),0 0 30px rgba(0,207,255,.06),inset 0 0 0 1px rgba(255,63,164,.1)
+}
+#screen-home .home-hero:before{
+  background:linear-gradient(90deg,rgba(5,9,18,.88) 0%,rgba(5,9,18,.72) 47%,rgba(5,9,18,.14) 100%),linear-gradient(0deg,rgba(5,9,18,.58),transparent 44%)
+}
+#screen-home .home-hero:after{border:1px solid rgba(0,207,255,.13);box-shadow:inset 0 0 0 1px rgba(255,63,164,.045)}
+#screen-home .home-hero-top{top:17px;left:18px;right:18px}
+#screen-home .home-hero-kicker{color:#e3edf8}
+#screen-home .home-hero-kicker i{background:var(--chronos-blue);box-shadow:0 0 8px var(--chronos-blue)}
+#screen-home .home-hero-code{color:#ff8bc5}
+#screen-home .home-hero-copy{max-width:300px;padding:82px 19px 73px;z-index:3}
+#screen-home .home-hero-overline{margin-bottom:14px;color:#c0d8ed;font-size:7px;letter-spacing:.17em}
+#screen-home .home-hero-copy h1{
+ display:block;margin:0 0 15px;font-family:var(--sans);
+ font-size:clamp(37px,10.2vw,45px);font-weight:800;line-height:1.06;
+ letter-spacing:-.028em;word-spacing:.025em;color:#f3f7ff;text-wrap:balance
+}
+#screen-home .home-hero-copy h1 em{
+ display:inline-block;font-style:normal;
+ background:linear-gradient(90deg,#00cfff 0%,#00b9ff 47%,#ff3fa4 53%,#ff70bc 100%);
+ -webkit-background-clip:text;background-clip:text;color:transparent;
+ text-shadow:none;filter:drop-shadow(0 0 13px rgba(0,207,255,.16))
+}
+#screen-home .home-hero-copy p{max-width:242px;margin:0 0 20px;color:#d0d9e8;font-size:11px;line-height:1.68;letter-spacing:0}
+#screen-home .home-hero-action{
+ display:inline-flex;align-items:center;justify-content:space-between;gap:18px;
+ min-height:45px;padding:0 15px;border:1px solid rgba(255,255,255,.18);border-radius:10px;
+ background:linear-gradient(90deg,#00cfff 0%,#00baff 49.5%,#ff3fa4 50.5%,#ff65b5 100%);
+ color:#06101c;font:700 8px var(--mono);letter-spacing:.09em;
+ box-shadow:0 8px 25px rgba(0,166,255,.2),0 5px 23px rgba(255,63,164,.14)
+}
+#screen-home .home-hero-action span{margin:0;font-size:8px}
+#screen-home .home-hero-action b{font-size:16px;font-weight:500}
+#screen-home .home-hero-bottom{bottom:16px;color:#c5d2e0;font:600 6px var(--mono);letter-spacing:.12em}
+#screen-home .home-hero-bottom>span:last-child{color:#e6c3df}
+#screen-home .home-hero-bottom>span:last-child i{color:var(--chronos-pink);padding:0 4px}
+#screen-home .home-season-state{color:#eaf7ff}
+#screen-home .home-season-state i{background:var(--chronos-blue);box-shadow:0 0 8px var(--chronos-blue)}
+
+/* Percentage-only season progress */
+#screen-home .home-progress-panel{
+ position:relative;isolation:isolate;overflow:hidden;margin:0 0 24px;padding:17px 17px 14px;
+ border:1px solid rgba(0,207,255,.22);border-radius:15px;
+ background:radial-gradient(ellipse at 94% 8%,rgba(255,63,164,.1),transparent 44%),linear-gradient(115deg,rgba(15,28,45,.97),rgba(10,16,29,.98));
+ box-shadow:0 12px 28px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.025)
+}
+#screen-home .home-progress-panel:before{
+ content:"";position:absolute;left:0;top:0;bottom:0;width:2px;
+ background:linear-gradient(180deg,#00cfff 0%,#00cfff 50%,#ff3fa4 50%,#ff3fa4 100%)
+}
+#screen-home .home-progress-head{display:flex;align-items:end;justify-content:space-between;gap:12px;margin-bottom:14px}
+#screen-home .home-panel-kicker{display:block;color:#89a8c6;font:600 7px var(--mono);letter-spacing:.16em}
+#screen-home .home-progress-head h2,#screen-home .home-section-head h2{
+ margin:6px 0 0;color:#f1f6ff;font-size:16px;font-weight:700;letter-spacing:-.035em
+}
+#screen-home .home-progress-value{
+ flex:0 0 auto;font:700 29px/1 var(--mono);letter-spacing:-.07em;
+ background:linear-gradient(90deg,#00cfff 0%,#00cfff 50%,#ff3fa4 50%,#ff3fa4 100%);
+ -webkit-background-clip:text;background-clip:text;color:transparent;
+ filter:drop-shadow(0 0 12px rgba(0,207,255,.15))
+}
+#screen-home .home-progress-track{
+ height:9px;overflow:hidden;border-radius:99px;border:1px solid rgba(142,179,211,.14);
+ background:rgba(2,8,18,.75);box-shadow:inset 0 2px 5px rgba(0,0,0,.4)
+}
+#screen-home .home-progress-track span{
+ display:block;width:0;height:100%;border-radius:99px;
+ background:linear-gradient(90deg,#00cfff 0%,#009fff 46%,#ff3fa4 100%);
+ box-shadow:0 0 14px rgba(0,207,255,.3),0 0 13px rgba(255,63,164,.18);
+ transition:width .6s cubic-bezier(.2,.7,.2,1)
+}
+#screen-home .home-progress-foot{
+ display:flex;justify-content:space-between;gap:12px;margin-top:10px;
+ color:#8298b2;font:600 6px var(--mono);letter-spacing:.1em
+}
+#screen-home .home-progress-foot span:last-child{color:#d68ab9}
+
+/* Operator, live event and quick launch */
+#screen-home .home-operator-section,#screen-home .home-event-section,#screen-home .home-modules-section{margin:0 0 24px}
+#screen-home .home-section-head{display:flex;align-items:end;justify-content:space-between;gap:10px;margin:0 0 11px}
+#screen-home .home-section-head h2{font-size:17px}
+#screen-home .home-section-index{color:#607c98;font:600 6px var(--mono);letter-spacing:.13em}
+#screen-home .home-operator-card{
+ position:relative;min-height:76px;padding:12px 13px;border-color:rgba(0,207,255,.2);
+ background:linear-gradient(105deg,rgba(12,34,51,.96),rgba(13,20,34,.98) 65%,rgba(39,16,42,.72));
+ box-shadow:inset 0 1px rgba(255,255,255,.025)
+}
+#screen-home .home-operator-card:after{
+ content:"";position:absolute;top:0;right:56px;bottom:0;width:1px;
+ background:linear-gradient(180deg,transparent,rgba(255,63,164,.28),transparent)
+}
+#screen-home .home-operator-card .avatar-chip{
+ background:linear-gradient(135deg,rgba(0,207,255,.2),rgba(255,63,164,.16));
+ border-color:rgba(0,207,255,.38);color:#dff7ff;
+ box-shadow:inset 0 0 16px rgba(0,207,255,.08),0 0 14px rgba(0,207,255,.08)
+}
+#screen-home .home-operator-card .avatar-chip i{background:var(--chronos-pink);box-shadow:0 0 8px var(--chronos-pink)}
+#screen-home .home-operator-card .welcome-copy small{color:#89a9c7}
+#screen-home .home-operator-card .welcome-copy strong{color:#f1f6ff;font-size:14px}
+#screen-home .home-operator-card .welcome-copy span{color:#9aacc1;font-size:9px}
+#screen-home .home-operator-card .round-arrow{color:#ff91c8;border-color:rgba(255,63,164,.35);background:rgba(255,63,164,.07)}
+#screen-home .home-event-card{
+ min-height:125px;padding:17px;border-color:rgba(255,63,164,.22);
+ background:radial-gradient(ellipse at 92% 8%,rgba(255,63,164,.12),transparent 46%),linear-gradient(115deg,rgba(13,34,51,.98),rgba(10,17,30,.98))
+}
+#screen-home .home-event-card:after{border-color:rgba(0,207,255,.17);box-shadow:0 0 0 18px rgba(0,207,255,.035),0 0 0 38px rgba(255,63,164,.035)}
+#screen-home .home-event-card .event-tag{color:#8ee8ff}
+#screen-home .home-event-card .event-tag:before{background:#00cfff;box-shadow:0 0 8px #00cfff}
+#screen-home .home-event-card .event-meta{color:#ff81bd}
+#screen-home .home-event-card .event-open{border-color:rgba(255,63,164,.38);background:rgba(255,63,164,.1);color:#ff8bc5}
+#screen-home .home-module-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+#screen-home .home-module-grid .module-tile{
+ min-height:91px;padding:12px 13px;border-radius:13px;border:1px solid rgba(102,159,198,.17);
+ background:linear-gradient(145deg,rgba(15,30,48,.97),rgba(8,15,27,.98));
+ box-shadow:inset 0 1px rgba(255,255,255,.025);
+ transition:transform .18s ease,border-color .18s ease,background .18s ease
+}
+#screen-home .home-module-grid .module-tile:active{transform:scale(.985)}
+#screen-home .home-module-grid .module-tile.room-module{
+ border-color:rgba(0,207,255,.4);
+ background:linear-gradient(135deg,rgba(0,151,205,.16),rgba(19,25,45,.97) 65%,rgba(255,63,164,.08))
+}
+#screen-home .home-module-grid .module-symbol{margin-bottom:9px;color:#00cfff;font-size:19px;text-shadow:0 0 12px rgba(0,207,255,.28)}
+#screen-home .home-module-grid .module-tile:nth-child(3n) .module-symbol,
+#screen-home .home-module-grid .module-tile:nth-child(3n+2) .module-symbol{color:#ff73b8;text-shadow:0 0 12px rgba(255,63,164,.24)}
+#screen-home .home-module-grid .module-tile b{color:#edf5ff;font-size:9px;letter-spacing:.05em}
+#screen-home .home-module-grid .module-tile small{color:#8399b4;font:6px var(--mono);letter-spacing:.08em}
+#screen-home .text-link{color:#ff83bf}
+#screen-home .admin-module{grid-column:1/-1}
+@media(min-width:760px){
+ #screen-home .home-hero{min-height:390px}
+ #screen-home .home-hero-copy{max-width:390px;padding:90px 28px 78px}
+ #screen-home .home-hero-copy h1{font-size:54px}
+ #screen-home .home-progress-panel{padding:21px 23px 17px}
+ #screen-home .home-progress-value{font-size:36px}
+ #screen-home .home-module-grid .module-tile{min-height:104px;padding:15px}
+}
+@media(max-width:390px){
+ #screen-home .home-hero{min-height:334px}
+ #screen-home .home-hero-copy{max-width:270px;padding:78px 16px 70px}
+ #screen-home .home-hero-copy h1{font-size:36px;letter-spacing:-.025em;line-height:1.08}
+ #screen-home .home-hero-copy p{max-width:224px;font-size:10px}
+ #screen-home .home-hero-action{min-height:43px;padding:0 12px;gap:13px}
+ #screen-home .home-progress-panel{padding:15px 14px 13px}
+ #screen-home .home-progress-value{font-size:26px}
+ #screen-home .home-section-head h2{font-size:16px}
+ #screen-home .home-module-grid .module-tile{min-height:86px;padding:11px}
+}
+@media(prefers-reduced-motion:reduce){
+ #screen-home .home-progress-track span,#screen-home .home-module-grid .module-tile{transition:none}
+}

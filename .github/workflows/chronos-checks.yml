@@ -91,6 +91,7 @@ jobs:
               "assets/app.css",
               "assets/app-visual-v2.css",
               "assets/app-visual-v3.css",
+              "assets/app-visual-v4.css",
               "assets/app.js",
               "assets/modules.js",
               "assets/chronos-core.svg",
@@ -109,7 +110,7 @@ jobs:
 
           index_html = (miniapp_dir / "index.html").read_text(encoding="utf-8")
           visual_css = (miniapp_dir / "assets/app-visual-v2.css").read_text(encoding="utf-8")
-          if 'href="assets/app-visual-v2.css?v=chronos-visual-12"' not in index_html:
+          if 'href="assets/app-visual-v2.css?v=chronos-visual-13"' not in index_html:
               raise SystemExit("Visual v2 stylesheet is not loaded by index.html")
 
           for referenced_asset in ("chronos-core.svg", "chronos-tower.svg"):
@@ -118,9 +119,14 @@ jobs:
               if not (miniapp_dir / "assets" / referenced_asset).is_file():
                   raise SystemExit(f"Missing CSS-referenced asset: {referenced_asset}")
 
-          if 'href="assets/app-visual-v3.css?v=chronos-visual-12"' not in index_html:
+          if 'href="assets/app-visual-v3.css?v=chronos-visual-13"' not in index_html:
               raise SystemExit("CHRONOS v3 visual stylesheet is not loaded")
           visual_v3 = (miniapp_dir / "assets/app-visual-v3.css").read_text(encoding="utf-8")
+          visual_v4 = (miniapp_dir / "assets/app-visual-v4.css").read_text(encoding="utf-8")
+          if 'href="assets/app-visual-v4.css?v=chronos-visual-13"' not in index_html:
+              raise SystemExit("CHRONOS v4 Home stylesheet is not loaded")
+          if "#screen-home .home-progress-panel" not in visual_v4 or "#screen-home .home-hero-copy h1" not in visual_v4:
+              raise SystemExit("CHRONOS Home screen composition rules are missing")
           for selector in (".home-hero", ".home-stats", "#screen-tower .tower-layout", ".floor-card", ".topbar"):
               if selector not in visual_v3:
                   raise SystemExit(f"Missing responsive visual rule: {selector}")
@@ -138,8 +144,15 @@ jobs:
                   raise SystemExit(f"Home Hero asset is missing: {asset}")
           if "home-hero-tile" not in visual_v3 or "grid-template-columns:repeat(2" not in visual_v3:
               raise SystemExit("Home Hero four-tile composition rules are missing")
-          if "690 <small>UNITS</small>" in index_html or "690 участ" in index_html.lower():
-              raise SystemExit("Removed absolute season participation count is still visible")
+          if 'class="home-stats"' in index_html or "690" in index_html:
+              raise SystemExit("Legacy absolute-count home stats must not be present")
+          if 'id="home-sync-percent"' not in index_html or 'id="home-sync-meter"' not in index_html:
+              raise SystemExit("Home percentage progress component is missing")
+          modules_js = (miniapp_dir / "assets/modules.js").read_text(encoding="utf-8")
+          if "homeLabel.textContent = formatted" not in modules_js or 'homeBar.style.width = percent + "%"' not in modules_js:
+              raise SystemExit("Season percentage is not wired to the Home dashboard")
+          if "SYNC UNITS" in modules_js:
+              raise SystemExit("Absolute season units are still displayed in the admin overview")
           if 'class="home-hero"' not in index_html or 'id="home-event"' not in index_html:
               raise SystemExit("CHRONOS home dashboard or live event slot is missing")
           app_js = (miniapp_dir / "assets/app.js").read_text(encoding="utf-8")

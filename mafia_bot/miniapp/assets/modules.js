@@ -95,18 +95,25 @@
 
   function setSync(season) {
     if (!season) return;
-    const units = Number(season.sync_units || 0);
-    const target = Number(season.target_sync_units || 690);
-    const percent = Math.max(0, Math.min(100, Number(season.sync_percent || 0)));
-    const text = $("#global-sync-text");
-    const bar = $("#sync-meter");
-    const label = $("#sync-percent");
-    const status = $("#sync-status-label");
-    if (text) text.textContent = money(units) + " / " + money(target);
-    if (bar) bar.style.width = percent + "%";
-    if (label) label.textContent = percent.toFixed(1) + "%";
-    if (status) status.textContent = season.status === "active" ? "СЕЗОН АКТИВНИЙ" : season.status === "paused" ? "СЕЗОН НА ПАУЗІ" : "ПОПЕРЕДНІЙ ПЕРЕГЛЯД";
-    $$("#milestone-strip [data-milestone]").forEach((node) => {
+    const percentValue = Number(season.sync_percent ?? 0);
+    const percent = Number.isFinite(percentValue) ? Math.max(0, Math.min(100, percentValue)) : 0;
+    const formatted = percent.toFixed(1) + "%";
+    const statusText = season.status === "active" ? "СЕЗОН АКТИВНИЙ" : season.status === "paused" ? "СЕЗОН НА ПАУЗІ" : "ПОПЕРЕДНІЙ ПЕРЕГЛЯД";
+    const towerBar = $("#sync-meter");
+    const towerLabel = $("#sync-percent");
+    const towerStatus = $("#sync-status-label");
+    const homeBar = $("#home-sync-meter");
+    const homeLabel = $("#home-sync-percent");
+    const homeStatus = $("#home-sync-status");
+    const homeTrack = $("#home-sync-track");
+    if (towerBar) towerBar.style.width = percent + "%";
+    if (towerLabel) towerLabel.textContent = formatted;
+    if (towerStatus) towerStatus.textContent = statusText;
+    if (homeBar) homeBar.style.width = percent + "%";
+    if (homeLabel) homeLabel.textContent = formatted;
+    if (homeStatus) homeStatus.textContent = statusText;
+    if (homeTrack) homeTrack.setAttribute("aria-valuenow", String(percent));
+    $("#milestone-strip [data-milestone]").forEach((node) => {
       node.classList.toggle("reached", percent >= Number(node.dataset.milestone));
     });
   }
@@ -430,12 +437,13 @@
     if (!data) return;
     const summary = $("#ranking-summary");
     const list = $("#ranking-list");
+    const progressValue = Number(data.sync_percent ?? 0);
+    const progressPercent = Number.isFinite(progressValue) ? Math.max(0, Math.min(100, progressValue)) : 0;
+    summary.innerHTML = '<span>ПРОГРЕС СЕЗОНУ</span><strong>' + progressPercent.toFixed(1) + '%</strong>';
     if (!data.snapshot) {
-      summary.innerHTML = '<span>GLOBAL SYNC</span><strong>0 / ' + Number(data.target_sync_units || 690) + '</strong>';
       list.innerHTML = '<div class="empty-state"><span class="empty-symbol">↗</span><b>Ще немає підтвердженої статистики</b><small>Організатор має імпортувати рейтинг iMafia.</small></div>';
       return;
     }
-    summary.innerHTML = '<span>SYNC ' + Number(data.sync_percent || (100 * Number(data.sync_units || 0) / Math.max(1, Number(data.target_sync_units || 690))).toFixed(1)) + '%</span><strong>' + money(data.sync_units) + ' / ' + money(data.target_sync_units) + '</strong>';
     const q = data.qualification || {};
     const qHtml = '<div class="panel-card"><div class="panel-top"><span class="panel-code">FINAL QUALIFICATION</span><span class="status-chip ' + (q.qualified ? "" : "pending") + '">' + (q.qualified ? "QUALIFIED" : "NOT QUALIFIED") + '</span></div><p>Твої ігри: ' + Number(q.games_played || 0) + ' · проведено: ' + Number(q.games_conducted || 0) + ' · мінімум: ' + Number(q.minimum || 0) + '. Умова перераховується після кожного підтвердженого імпорту.</p></div>';
     list.innerHTML = qHtml + (data.players || []).map((p) =>
@@ -544,8 +552,7 @@
     const s = data.season || {};
     const p = data.progress || {};
     $("#admin-overview").innerHTML =
-      '<div class="admin-stat"><small>SYNC UNITS</small><b>' + money(p.sync_units) + ' / ' + money(p.target_sync_units || s.target_sync_units) + '</b></div>' +
-      '<div class="admin-stat"><small>ПРОГРЕС</small><b>' + Number(p.percent || 0).toFixed(1) + '%</b></div>' +
+      '<div class="admin-stat"><small>ПРОГРЕС СЕЗОНУ</small><b>' + Number(p.percent || 0).toFixed(1) + '%</b></div>' +
       '<div class="admin-stat"><small>ПІДТВЕРДЖЕНІ ІГРИ</small><b>' + Number(p.games || 0) + '</b></div>' +
       '<div class="admin-stat"><small>ГРАВЦІ</small><b>' + Number(p.players || 0) + '</b></div>' +
       '<div class="admin-stat"><small>ІМПОРТИ НА ПЕРЕВІРЦІ</small><b>' + Number(data.pending_imports || 0) + '</b></div>' +
