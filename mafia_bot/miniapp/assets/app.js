@@ -132,11 +132,14 @@
 
   function showScreen(name) {
     state.currentScreen = name;
-    $$(".screen").forEach(el => el.classList.toggle("active", el.dataset.screen === name));
-    $$(".nav-item").forEach(el => el.classList.toggle("active", el.dataset.nav === name));
+    $(".screen").forEach(el => el.classList.toggle("active", el.dataset.screen === name));
+    const activeNav = name === "event-detail" ? "events" : name;
+    $(".nav-item").forEach(el => el.classList.toggle("active", el.dataset.nav === activeNav));
+    const shell = $("#app-shell");
+    if (shell) shell.classList.toggle("detail-open", name === "event-detail");
     if (name === "room") renderRoom();
     if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "instant" });
   }
 
   function currentProfileName() {
@@ -234,42 +237,183 @@
       </button>`).join("");
   }
 
+  function eventSlotType(event) {
+    return event && event.slot_type ? event.slot_type : "regular";
+  }
+
+  function eventTitle(event, planned) {
+    let title = String(event.title || "Вечір KMC");
+    if (planned && eventSlotType(event) === "regular") {
+      const match = title.match(/#\s*(\d+)/);
+      title = match ? "Вечір #" + match[1] : "Вечір #" + String(event.sequence_no || "");
+    }
+    return title;
+  }
+
+  function eventArtwork(type) {
+    if (type === "regular") {
+      return '<div class="event-art event-art-room"><img src="assets/chronos-hall.svg" alt="" loading="lazy"></div>';
+    }
+    const main = type === "main_final";
+    const color = main ? "#e9c77b" : "#b49aff";
+    const shadow = main ? "rgba(233,199,123,.2)" : "rgba(180,154,255,.2)";
+    return '<div class="event-art ' + (main ? "event-art-main" : "event-art-cup") + '">' +
+      '<svg viewBox="0 0 120 120" aria-hidden="true">' +
+      '<circle cx="60" cy="60" r="45" fill="none" stroke="' + color + '" stroke-opacity=".22" stroke-width="1"/>' +
+      '<path d="M38 30h44v18c0 18-8 28-22 28S38 66 38 48V30Z" fill="' + color + '" fill-opacity=".13" stroke="' + color + '" stroke-width="2"/>' +
+      '<path d="M38 38H24c0 19 8 27 22 27M82 38h14c0 19-8 27-22 27M60 76v17M43 96h34" fill="none" stroke="' + color + '" stroke-width="3" stroke-linecap="round"/>' +
+      '<path d="M49 43h22M60 32v33" stroke="' + color + '" stroke-opacity=".55" stroke-width="1.5"/>' +
+      '</svg><span>' + (main ? "GRAND FINAL" : "CHRONOS CUP") + '</span></div>';
+  }
+
+  function eventCard(event, planned) {
+    const type = eventSlotType(event);
+    const isFinal = type !== "regular";
+    const title = escapeHtml(eventTitle(event, planned));
+    const code = escapeHtml(event.slot_code || (event.event_id ? "EVENT " + event.event_id : ""));
+    if (planned) {
+      return '<article class="event-list-card planned-card ' + (isFinal ? "final-card" : "regular-card") + '">' +
+        eventArtwork(type) +
+        '<div class="event-card-copy">' +
+          '<div class="event-card-title-row"><h3>' + title + '</h3><span class="event-status-pill soon">СКОРО</span></div>' +
+          '<p class="event-card-kind">' + (isFinal ? (type === "main_final" ? "ГОЛОВНИЙ ФІНАЛ СЕЗОНУ" : "ПРОМІЖНИЙ ФІНАЛ") : "СЕЗОННИЙ ВЕЧІР") + '</p>' +
+          '<span class="event-card-code">' + code + '</span>' +
+        '</div></article>';
+    }
+    const count = Number(event.active_count) || 0;
+    const date = escapeHtml(formatDate(event.event_date, event.event_time));
+    const registered = Boolean(event.is_registered);
+    const statusText = registered ? "ТИ ЗАРЕЄСТРОВАНИЙ" : (state.season && state.season.status === "active" ? "РЕЄСТРАЦІЯ ВІДКРИТА" : "РЕЄСТРАЦІЯ ЗАКРИТА");
+    const statusClass = registered ? "joined" : (state.season && state.season.status === "active" ? "open" : "closed");
+    const countText = count <= 10 ? count + " / 10" : String(count) + " УЧАСНИКІВ";
+    return '<button type="button" class="event-list-card real-event-card ' + (isFinal ? "final-card" : "regular-card") + '" data-event-id="' + Number(event.event_id) + '">' +
+      eventArtwork(type) +
+      '<div class="event-card-copy">' +
+        '<div class="event-card-title-row"><h3>' + title + '</h3><span class="event-chevron">›</span></div>' +
+        '<div class="event-card-meta"><span class="meta-icon">▦</span><span>' + date + '</span></div>' +
+        '<div class="event-card-meta"><span class="meta-icon">⌖</span><span>Театр комедії МО</span></div>' +
+        '<div class="event-card-bottom"><span class="event-participant-count">◉ ' + countText + '</span><span class="event-status-pill ' + statusClass + '">' + statusText + '</span></div>' +
+      '</div></button>';
+  }
+
+  function sortEventSlots(items) {
+    return items.sort((a, b) => {
+      const sa = Number(a.sequence_no) || 999;
+      const sb = Number(b.sequence_no) || 999;
+      if (sa !== sb) return sa - sb;
+      return Number(Boolean(a.event_id)) - Number(Boolean(b.event_id));
+    });
+  }
+
+  function renderEvents() {
+    const events = (state.events || []).map(item => Object.assign({}, item, { planned: false }));
+    const planned = (state.planned || []).map(item => Object.assign({}, item, { planned: true }));
+    const all = sortEventSlots(events.concat(planned));
+    const regular = all.filter(item => eventSlotType(item) === "regular");
+    const finals = all.filter(item => eventSlotType(item) !== "regular");
+    $("#event-count").textContent = String(all.length);
+    $("#event-upcoming-count").textContent = String(regular.length);
+    $("#event-finals-count").textContent = String(finals.length);
+
+    const sections = [];
+    if (state.filter !== "finals" && regular.length) {
+      sections.push('<section class="event-group"><div class="event-group-heading"><div><span class="eyebrow">SEASON CALENDAR</span><h2>Найближчі вечори</h2></div><span>' + String(regular.length).padStart(2, "0") + '</span></div>' +
+        '<div class="event-card-list">' + regular.map(item => eventCard(item, item.planned)).join("") + '</div></section>');
+    }
+    if (state.filter !== "upcoming" && finals.length) {
+      sections.push('<section class="event-group"><div class="event-group-heading"><div><span class="eyebrow">SPECIAL OPERATIONS</span><h2>' + (state.filter === "finals" ? "Фінали сезону" : "Інші події сезону") + '</h2></div><span>' + String(finals.length).padStart(2, "0") + '</span></div>' +
+        '<div class="event-card-list">' + finals.map(item => eventCard(item, item.planned)).join("") + '</div></section>');
+    }
+    $("#events-list").innerHTML = sections.length
+      ? sections.join("")
+      : '<div class="empty-state"><span class="empty-symbol">⌁</span><b>Подій у цьому розділі поки немає</b><small>Нові вечори та фінали з’являться тут після синхронізації з ботом KMC.</small></div>';
+    $$(".filter-tab").forEach(el => el.classList.toggle("active", el.dataset.filter === state.filter));
+  }
+
+  function renderEventDetail(data) {
+    const event = data.event || {};
+    const roster = data.roster || [];
+    const listEvent = (state.events || []).find(item => Number(item.event_id) === Number(event.event_id));
+    const type = eventSlotType(listEvent || {});
+    const count = Math.max(Number(event.active_count) || 0, roster.length);
+    const registered = Boolean(event.is_registered);
+    const profileComplete = Boolean(state.profile && state.profile.profile_complete);
+    const seasonActive = Boolean(state.season && state.season.status === "active");
+    const canRegister = seasonActive && profileComplete && !registered;
+    const statusText = registered ? "ТИ ЗАРЕЄСТРОВАНИЙ" : (seasonActive ? "РЕЄСТРАЦІЯ ВІДКРИТА" : "РЕЄСТРАЦІЯ ЗАКРИТА");
+    const statusClass = registered ? "joined" : (seasonActive ? "open" : "closed");
+    const formatText = type === "main_final" ? "Головний фінал сезону" : (type === "intermediate_final" ? "Проміжний фінал" : "Класичний KMC");
+    const title = eventTitle(event, false);
+    const dateText = event.event_date ? formatDate(event.event_date) : "Дата не визначена";
+    const timeText = event.event_time || "—";
+    const venueText = event.location || "Театр комедії МО";
+    const playerMarkup = roster.slice(0, 10).map((player, index) => {
+      const name = String(player.display_name || "Гравець");
+      const initials = name.trim().split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join("").toUpperCase() || "?";
+      const base = String(player.avatar_base || "default").replace(/[^a-z0-9_-]/gi, "");
+      return '<div class="event-seat occupied"><span class="seat-avatar avatar-' + base + '">' + escapeHtml(initials) + '</span><b>' + escapeHtml(name) + '</b><small>МІСЦЕ ' + String(index + 1).padStart(2, "0") + '</small></div>';
+    }).join("");
+    const emptyCount = Math.max(0, 10 - Math.min(10, count));
+    const emptyMarkup = Array.from({length: emptyCount}, (_, index) =>
+      '<div class="event-seat empty-seat"><span class="seat-avatar">＋</span><b>Вільне місце</b><small>МІСЦЕ ' + String(Math.min(10, count) + index + 1).padStart(2, "0") + '</small></div>'
+    ).join("");
+    let helperText = "Список учасників синхронізується з Telegram-ботом KMC.";
+    if (registered) helperText = "Твоя участь підтверджена. Склад вечора оновлюється з основної системи KMC.";
+    else if (!profileComplete) helperText = "Щоб зареєструватися, спочатку заверши профіль через /start у боті KMC.";
+    else if (!seasonActive) helperText = "Реєстрація стане доступною після офіційного запуску сезону.";
+
+    const actionText = registered ? "СКАСУВАТИ РЕЄСТРАЦІЮ" : (!seasonActive ? "РЕЄСТРАЦІЯ ЗАКРИТА" : (!profileComplete ? "СПЕРШУ ЗАВЕРШИ ПРОФІЛЬ" : "ЗАРЕЄСТРУВАТИСЯ"));
+    const actionClass = registered ? "event-action-cancel" : "event-action-register";
+    const actionKind = registered ? "cancel" : "register";
+    const actionDisabled = !registered && !canRegister ? "disabled" : "";
+
+    $("#event-detail-content").innerHTML =
+      '<div class="event-detail-topbar">' +
+        '<button type="button" class="event-back-button" data-back-events aria-label="Назад до подій">←</button>' +
+        '<div class="event-detail-heading"><small>CHRONOS / ПОДІЇ</small><h1>' + escapeHtml(title) + '</h1></div>' +
+        '<span class="event-status-pill ' + statusClass + '">' + statusText + '</span>' +
+      '</div>' +
+      '<div class="event-detail-stage">' +
+        '<img src="assets/chronos-hall.svg" alt="Ігрова зала KMC із круглим столом та десятьма місцями">' +
+        '<div class="event-stage-shade"></div>' +
+        '<div class="event-stage-top"><span>◉ KMC PLAYER ARENA</span><b>CHRONOS · ' + (type === "regular" ? "REGULAR" : "FINAL") + '</b></div>' +
+        '<div class="event-stage-bottom"><span>LIVE EVENT VIEW</span><strong>' + String(count).padStart(2, "0") + ' <small>/ 10 PLAYERS</small></strong></div>' +
+      '</div>' +
+      '<div class="event-facts">' +
+        '<div class="event-fact"><span>▦</span><small>ДАТА</small><b>' + escapeHtml(dateText) + '</b></div>' +
+        '<div class="event-fact"><span>◷</span><small>ЧАС</small><b>' + escapeHtml(timeText) + '</b></div>' +
+        '<div class="event-fact"><span>⌖</span><small>МІСЦЕ</small><b>' + escapeHtml(venueText) + '</b></div>' +
+      '</div>' +
+      '<div class="event-detail-panel">' +
+        '<div class="event-panel-heading"><div><span class="eyebrow">PLAYER ROSTER</span><h2>Учасники вечора</h2></div><strong>' + String(count) + ' / 10</strong></div>' +
+        '<div class="event-seat-progress">' + Array.from({length: 10}, (_, index) => '<i class="' + (index < Math.min(10, count) ? "filled" : "") + '"></i>').join("") + '</div>' +
+        '<div class="event-seat-grid">' + playerMarkup + emptyMarkup + '</div>' +
+      '</div>' +
+      '<div class="event-detail-facts">' +
+        '<div class="event-info-row"><span class="event-info-icon">♛</span><div><small>ФОРМАТ</small><b>' + escapeHtml(formatText) + '</b></div></div>' +
+        '<div class="event-info-row"><span class="event-info-icon">◉</span><div><small>СТАТУС</small><b>' + statusText + '</b></div><span class="event-status-dot ' + statusClass + '"></span></div>' +
+      '</div>' +
+      '<div class="event-detail-note"><span>i</span><p>' + escapeHtml(helperText) + '</p></div>' +
+      '<button type="button" class="event-action-button ' + actionClass + '" id="event-action-button" data-event-action="' + actionKind + '" ' + actionDisabled + '>' + actionText + '</button>' +
+      '<p class="event-sync-note">⌁ СПИСОК УЧАСНИКІВ СИНХРОНІЗОВАНО З БОТОМ KMC</p>';
+  }
+
   async function openEvent(eventId) {
     state.currentEventId = Number(eventId);
-    openModal("EVENT DETAIL", '<div class="loading-line"></div><div class="loading-line short"></div>');
+    showScreen("event-detail");
+    $("#event-detail-content").innerHTML = '<div class="detail-loading"><span class="pulse-dot"></span> ЗАВАНТАЖЕННЯ ПОДІЇ</div>';
     try {
       const data = await api("/events/" + encodeURIComponent(eventId));
-      const event = data.event;
-      const registered = Boolean(event.is_registered);
-      const seasonActive = state.season?.status === "active";
-      const profileComplete = Boolean(state.profile?.profile_complete);
-      const canRegister = seasonActive && profileComplete && !registered;
-
-      const roster = (data.roster || []).map((player, index) => `
-        <div class="roster-row"><span class="roster-num">${String(index + 1).padStart(2, "0")}</span><span class="roster-name">${escapeHtml(player.display_name)}</span></div>`).join("");
-
-      let lockNote = "";
-      if (!profileComplete) lockNote = "Спочатку заверши /start у Telegram-боті та вкажи ігровий нік.";
-      else if (!seasonActive) lockNote = "Реєстрація відкриється після офіційного запуску сезону.";
-      else if (registered) lockNote = "Ти вже є у списку учасників цього вечора.";
-
-      $("#modal-content").innerHTML = `
-        <div class="event-tag">CHRONOS OPERATION #${event.event_id}</div>
-        <h2 class="modal-title" id="modal-title">${escapeHtml(event.title)}</h2>
-        <div class="modal-meta"><span>◷ ${escapeHtml(formatDate(event.event_date, event.event_time))}</span><span>◉ ${Number(event.active_count) || 0} ГРАВЦІВ</span></div>
-        <p class="modal-copy">Реєстрація синхронізується з основним Telegram-ботом KMC. Список показує всіх зареєстрованих на вечір — кількість учасників не обмежена десятьма.</p>
-        <div class="roster-head"><span>ОПЕРАТИВНИЙ СКЛАД</span><span>${(data.roster || []).length} / ∞</span></div>
-        <div class="roster-list">${roster || '<div class="modal-copy">Поки ніхто не зареєструвався.</div>'}</div>
-        <button class="modal-action" id="register-button" ${canRegister ? "" : "disabled"}>${registered ? "✓ ТИ ВЖЕ В СПИСКУ" : !seasonActive ? "РЕЄСТРАЦІЯ ЩЕ ЗАКРИТА" : !profileComplete ? "СПЕРШУ ЗАВЕРШИ ПРОФІЛЬ" : "ПІДТВЕРДИТИ РЕЄСТРАЦІЮ"}</button>
-        ${lockNote ? '<p class="modal-copy">' + escapeHtml(lockNote) + '</p>' : ""}`;
-      $("#register-button")?.addEventListener("click", () => registerForEvent(event.event_id));
+      renderEventDetail(data);
     } catch (error) {
-      $("#modal-content").innerHTML = '<h2 class="modal-title" id="modal-title">Не вдалося завантажити</h2><p class="modal-copy">' + escapeHtml(error.message) + '</p>';
+      $("#event-detail-content").innerHTML =
+        '<div class="event-detail-topbar"><button type="button" class="event-back-button" data-back-events aria-label="Назад до подій">←</button><div class="event-detail-heading"><small>CHRONOS / ПОДІЇ</small><h1>Подію не завантажено</h1></div></div>' +
+        '<div class="empty-state"><span class="empty-symbol">⌁</span><b>Не вдалося отримати дані</b><small>' + escapeHtml(error.message) + '</small></div>';
     }
   }
 
   async function registerForEvent(eventId) {
-    const button = $("#register-button");
+    const button = $("#event-action-button");
     if (button) { button.disabled = true; button.textContent = "ОБРОБКА ЗАПИТУ..."; }
     try {
       await api("/events/" + encodeURIComponent(eventId) + "/register", {
@@ -277,6 +421,25 @@
         body: { comment: null }
       });
       toast("Реєстрацію підтверджено");
+      if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+      await refreshData();
+      await openEvent(eventId);
+    } catch (error) {
+      if (button) { button.disabled = false; button.textContent = "ПОВТОРИТИ"; }
+      toast(error.message);
+      if (error.status === 401) setConnection(false, "SESSION EXPIRED");
+    }
+  }
+
+  async function cancelEventRegistration(eventId) {
+    const button = $("#event-action-button");
+    if (button) { button.disabled = true; button.textContent = "СКАСОВУЄМО..."; }
+    try {
+      await api("/events/" + encodeURIComponent(eventId) + "/cancel", {
+        method: "POST",
+        body: {}
+      });
+      toast("Реєстрацію скасовано");
       if (tg?.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
       await refreshData();
       await openEvent(eventId);
@@ -362,6 +525,16 @@
   }
 
   document.addEventListener("click", event => {
+    const backEvents = event.target.closest("[data-back-events]");
+    if (backEvents) {
+      showScreen("events");
+      return;
+    }
+    const detailAction = event.target.closest("[data-event-action]");
+    if (detailAction) {
+      if (detailAction.dataset.eventAction === "register") return registerForEvent(state.currentEventId);
+      if (detailAction.dataset.eventAction === "cancel") return cancelEventRegistration(state.currentEventId);
+    }
     const nav = event.target.closest("[data-nav]");
     if (nav) {
       event.preventDefault();
