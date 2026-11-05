@@ -329,9 +329,10 @@ async def get_event(request):
 
         roster = await conn.fetch(
             """
-            SELECT u.display_name, r.created_at
+            SELECT u.display_name, p.avatar_base, r.created_at
             FROM public.registrations r
             JOIN public.users u ON u.user_id = r.user_id
+            LEFT JOIN chronos.profiles p ON p.user_id = u.user_id
             WHERE r.event_id = $1
               AND r.status = 'active'
               AND u.is_active = 1
@@ -364,6 +365,7 @@ async def get_event(request):
             "roster": [
                 {
                     "display_name": row["display_name"],
+                    "avatar_base": row["avatar_base"] or "european_male",
                     "registered_at": row["created_at"].isoformat(),
                 }
                 for row in roster
