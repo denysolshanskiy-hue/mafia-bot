@@ -165,3 +165,40 @@
   #screen-home .home-hero{aspect-ratio:2 / 3;min-height:0;max-height:none}
   #screen-home .home-hero-copy{left:22px;bottom:46px}
 }
+
+
+/* Generated CHRONOS Hall CTA artwork; the enclosing HTML button stays fully interactive. */
+#screen-home .home-enter-button{
+  appearance:none;-webkit-appearance:none;
+  display:block;
+  width:184px;max-width:72vw;
+  height:auto;min-width:0;min-height:0;
+  margin:0;padding:0;
+  border:0;border-radius:0;
+  background:transparent;
+  box-shadow:none;
+  line-height:0;
+  overflow:visible;
+  cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+  filter:drop-shadow(0 4px 10px rgba(0,0,0,.38)) drop-shadow(0 0 7px rgba(0,205,255,.17));
+  transition:transform .16s ease,filter .16s ease;
+}
+#screen-home .home-enter-button img{
+  display:block;width:100%;height:auto;max-width:none;
+  object-fit:contain;
+}
+#screen-home .home-enter-button:active{
+  transform:scale(.975);
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,.4)) drop-shadow(0 0 10px rgba(255,63,164,.25));
+}
+#screen-home .home-enter-button:focus-visible{
+  outline:2px solid rgba(0,214,255,.85);
+  outline-offset:4px;border-radius:10px;
+}
+@media(max-width:370px){
+  #screen-home .home-enter-button{width:min(176px,74vw);max-width:74vw;height:auto;min-width:0;min-height:0}
+}
+@media(min-width:520px){
+  #screen-home .home-enter-button{width:200px;max-width:48vw;height:auto;min-width:0;min-height:0}
+}
