@@ -140,7 +140,7 @@
       const main = $("#app-main");
       if (shell) shell.scrollTop = 0;
       if (main) main.scrollTop = 0;
-      resetAppScroll();
+      try { window.scrollTo(0, 0); } catch (_) {}
     };
     reset();
     if (typeof window.requestAnimationFrame === "function") {
@@ -150,19 +150,19 @@
   }
 
   function showScreen(name) {
-    const nextScreen = $(".screen").find(el => el.dataset.screen === name);
+    const nextScreen = $$(".screen").find(el => el.dataset.screen === name);
     if (!nextScreen) {
       toast("Цей розділ зараз недоступний.");
       return false;
     }
     state.currentScreen = name;
-    $(".screen").forEach(el => {
+    $$(".screen").forEach(el => {
       const active = el === nextScreen;
       el.classList.toggle("active", active);
       el.setAttribute("aria-hidden", active ? "false" : "true");
     });
     const activeNav = name === "event-detail" ? "events" : name;
-    $(".nav-item").forEach(el => {
+    $$(".nav-item").forEach(el => {
       const active = el.dataset.nav === activeNav;
       el.classList.toggle("active", active);
       if (active) el.setAttribute("aria-current", "page");
