@@ -10,10 +10,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css">
+  <link rel="stylesheet" href="assets/app.css?v=chronos-visual-1">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script defer src="assets/app.js"></script>
-  <script defer src="assets/modules.js"></script>
+  <script defer src="assets/app.js?v=chronos-visual-1"></script>
+  <script defer src="assets/modules.js?v=chronos-visual-1"></script>
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -50,7 +50,7 @@
             <div class="hero-kicker">ВХІД У СИСТЕМУ <span>№ 001</span></div>
             <h1>Час не<br><em>чекає.</em></h1>
             <p>Кожна гра залишає слід.<br>Кожен вибір змінює хронологію.</p>
-            <button class="primary-button" data-nav="tower">ВІДКРИТИ ВЕЖУ <span>↗</span></button>
+            <button class="primary-button" data-nav="room">УВІЙТИ ДО ЗАЛИ <span>↗</span></button>
           </div>
           <div class="hero-visual" aria-hidden="true">
             <div class="core-ring ring-outer"></div>
@@ -111,6 +111,7 @@
           <span class="section-code">CHRONOS OS</span>
         </div>
         <div class="module-grid">
+          <button class="module-tile room-module" data-nav="room"><span class="module-symbol">◉</span><b>ІГРОВА ЗАЛА</b><small>KMC · 10 SEATS</small></button>
           <button class="module-tile" data-nav="simulations"><span class="module-symbol">⌘</span><b>СИМУЛЯЦІЇ</b><small>CODE BREAKER · MEMORY</small></button>
           <button class="module-tile" data-nav="operations"><span class="module-symbol">◷</span><b>ОПЕРАЦІЇ</b><small>УЧАСТЬ · ФІНАЛИ</small></button>
           <button class="module-tile" data-nav="rankings"><span class="module-symbol">↗</span><b>РЕЙТИНГИ</b><small>iMAFIA · TOP 10</small></button>
@@ -118,6 +119,27 @@
           <button class="module-tile" data-nav="store"><span class="module-symbol">▣</span><b>МАГАЗИН</b><small>CR · EX ITEMS</small></button>
           <button class="module-tile" data-nav="notifications"><span class="module-symbol">◌</span><b>СПОВІЩЕННЯ</b><small>NOTIFICATION CENTER</small></button>
           <button class="module-tile admin-module" id="admin-shortcut" data-nav="admin" hidden><span class="module-symbol">⌬</span><b>ADMIN CONSOLE</b><small>SEASON CONTROL</small></button>
+        </div>
+      </section>
+
+      <section class="screen" id="screen-room" data-screen="room">
+        <div class="page-intro room-intro">
+          <div class="eyebrow"><span class="pulse-dot"></span> KMC · CHRONOS HALL <span class="eyebrow-line"></span> 10 SEATS</div>
+          <h1>Ігрова<br><em>зала.</em></h1>
+          <p>Місце, де зустрічаються гравці KMC. Склад вечора та реєстрації синхронізуються з подіями Telegram-бота.</p>
+        </div>
+        <div class="hall-scene">
+          <img src="assets/chronos-hall.svg" alt="Футуристична ігрова зала CHRONOS із центральним столом та десятьма місцями">
+          <div class="hall-scene-overlay"><span class="hall-live-dot"></span><span>KMC PLAYER ARENA</span><b>10 МІСЦЬ</b></div>
+        </div>
+        <div class="hall-control">
+          <div><div class="eyebrow">LIVE SESSION</div><h2 id="hall-session-title">Зала очікує на вечір</h2><p id="hall-session-note">Коли організатор відкриє подію, тут з'явиться її актуальний стан.</p></div>
+          <button class="primary-button" data-nav="events">ПЕРЕЙТИ ДО ПОДІЙ <span>↗</span></button>
+        </div>
+        <div class="hall-feature-grid">
+          <div class="hall-feature"><span>01</span><b>Реєстрація</b><small>Через Telegram-бот</small></div>
+          <div class="hall-feature"><span>02</span><b>Склад вечора</b><small>Підтверджені гравці</small></div>
+          <div class="hall-feature"><span>03</span><b>Хронологія</b><small>Історія сезону</small></div>
         </div>
       </section>
 

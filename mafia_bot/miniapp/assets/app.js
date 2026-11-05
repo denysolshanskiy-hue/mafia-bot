@@ -98,10 +98,43 @@
     ];
   }
 
+  function renderRoom() {
+    const title = $("#hall-session-title");
+    const note = $("#hall-session-note");
+    if (!title || !note) return;
+    const live = state.events[0];
+    const planned = state.planned[0];
+    if (live) {
+      title.textContent = live.title || "Поточний вечір KMC";
+      note.textContent = "Подія відкрита · " + (Number(live.active_count) || 0) + " учасників у реєстрації.";
+      const button = document.querySelector("#screen-room [data-nav='events']");
+      if (button) {
+        button.dataset.eventId = String(live.event_id);
+        button.dataset.nav = "";
+        button.textContent = "ПЕРЕГЛЯНУТИ СКЛАД ↗";
+      }
+      return;
+    }
+    if (planned) {
+      title.textContent = planned.title || "Наступний вечір";
+      note.textContent = planned.planned_date ? "Заплановано на " + formatDate(planned.planned_date) + ". Реєстрація відкривається через Telegram-бот." : "Подію заплановано. Дату та реєстрацію організатор повідомить у Telegram.";
+    } else {
+      title.textContent = "Зала очікує на вечір";
+      note.textContent = "Коли організатор відкриє подію, тут з'явиться її актуальний стан.";
+    }
+    const button = document.querySelector("#screen-room [data-event-id]");
+    if (button) {
+      button.removeAttribute("data-event-id");
+      button.dataset.nav = "events";
+      button.textContent = "ПЕРЕЙТИ ДО ПОДІЙ ↗";
+    }
+  }
+
   function showScreen(name) {
     state.currentScreen = name;
-    $$(".screen").forEach(el => el.classList.toggle("active", el.dataset.screen === name));
-    $$(".nav-item").forEach(el => el.classList.toggle("active", el.dataset.nav === name));
+    $(".screen").forEach(el => el.classList.toggle("active", el.dataset.screen === name));
+    $(".nav-item").forEach(el => el.classList.toggle("active", el.dataset.nav === name));
+    if (name === "room") renderRoom();
     if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -295,6 +328,7 @@
       state.planned = calendar.planned_slots || [];
       renderProfile();
       renderHomeEvent();
+      renderRoom();
       renderEvents();
       $("#season-state").textContent = state.season?.status === "active"
         ? "SEASON ACTIVE"
