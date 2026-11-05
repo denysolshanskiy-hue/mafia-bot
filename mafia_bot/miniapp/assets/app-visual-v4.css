@@ -337,3 +337,47 @@
   #screen-home .home-next-info p{font-size:7.5px}
   #screen-home .home-next-arrow{right:9px;bottom:9px;width:26px;height:26px}
 }
+
+
+/* CHRONOS event card: stronger safe inset; keep the table image fully inside the frame. */
+#screen-home .home-next-card{
+  box-sizing:border-box;
+  grid-template-columns:39% minmax(0,1fr);
+  align-items:center;
+  min-height:190px;
+  padding:18px;
+  gap:12px;
+}
+#screen-home .home-next-art{
+  width:100%;
+  height:145px;
+  min-height:0;
+  max-height:145px;
+  align-self:center;
+  object-fit:contain;
+  border-radius:9px;
+}
+#screen-home .home-next-info{
+  align-self:stretch;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  padding:10px 24px 10px 2px;
+}
+#screen-home .home-next-info h3{overflow-wrap:anywhere}
+#screen-home .home-next-arrow{right:14px;bottom:14px}
+@media(max-width:370px){
+  #screen-home .home-next-card{
+    grid-template-columns:39% minmax(0,1fr);
+    min-height:172px;
+    padding:15px;
+    gap:9px;
+  }
+  #screen-home .home-next-art{
+    height:132px;
+    max-height:132px;
+    min-height:0;
+  }
+  #screen-home .home-next-info{padding:8px 19px 8px 1px}
+  #screen-home .home-next-arrow{right:11px;bottom:11px}
+}
