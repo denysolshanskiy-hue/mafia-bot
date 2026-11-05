@@ -10,12 +10,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css?v=chronos-visual-11">
-  <link rel="stylesheet" href="assets/app-visual-v2.css?v=chronos-visual-11">
-  <link rel="stylesheet" href="assets/app-visual-v3.css?v=chronos-visual-11">
+  <link rel="stylesheet" href="assets/app.css?v=chronos-visual-12">
+  <link rel="stylesheet" href="assets/app-visual-v2.css?v=chronos-visual-12">
+  <link rel="stylesheet" href="assets/app-visual-v3.css?v=chronos-visual-12">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script defer src="assets/app.js?v=chronos-visual-11"></script>
-  <script defer src="assets/modules.js?v=chronos-visual-11"></script>
+  <script defer src="assets/app.js?v=chronos-visual-12"></script>
+  <script defer src="assets/modules.js?v=chronos-visual-12"></script>
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -45,7 +45,10 @@
       <section class="screen active" id="screen-home" data-screen="home">
         <div class="home-hero">
           <div class="home-hero-art" aria-hidden="true">
-            <img src="assets/chronos-v2/backgrounds/home/home-hero-city-v01.webp" alt="">
+            <img class="home-hero-tile home-hero-tile-tl" src="assets/chronos-v2/backgrounds/home/home-hero-city-v01-tl.webp" alt="">
+            <img class="home-hero-tile home-hero-tile-tr" src="assets/chronos-v2/backgrounds/home/home-hero-city-v01-tr.webp" alt="">
+            <img class="home-hero-tile home-hero-tile-bl" src="assets/chronos-v2/backgrounds/home/home-hero-city-v01-bl.webp" alt="">
+            <img class="home-hero-tile home-hero-tile-br" src="assets/chronos-v2/backgrounds/home/home-hero-city-v01-br.webp" alt="">
             <span class="home-orbit home-orbit-a"></span>
             <span class="home-orbit home-orbit-b"></span>
           </div>
@@ -146,7 +149,7 @@
           <span data-milestone="100">100% <small>FINAL</small></span>
         </div>
         <div class="tower-status">
-          <div class="tower-status-top"><span>GLOBAL SYNC</span><b>690 <small>UNITS</small></b></div>
+          <div class="tower-status-top"><span>ПРОГРЕС СЕЗОНУ</span><b>SYNC</b></div>
           <div class="sync-track"><span id="sync-meter"></span></div>
           <div class="tower-status-bottom"><span id="sync-status-label">СИСТЕМА ОЧІКУЄ РЕЗУЛЬТАТИ ІГОР</span><span id="sync-percent">0%</span></div>
         </div>
