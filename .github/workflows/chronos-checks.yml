@@ -94,7 +94,11 @@ jobs:
               "assets/app.js",
               "assets/modules.js",
               "assets/chronos-core.svg",
-              "assets/chronos-v2/backgrounds/home/home-hero-city-v01.webp",
+              "assets/chronos-v2/backgrounds/home/home-hero-city-v01-tl.webp",
+              "assets/chronos-v2/backgrounds/home/home-hero-city-v01-tr.webp",
+              "assets/chronos-v2/backgrounds/home/home-hero-city-v01-bl.webp",
+              "assets/chronos-v2/backgrounds/home/home-hero-city-v01-br.webp",
+              "assets/chronos-v2/backgrounds/home/home-hero-city-v01.json",
               "assets/chronos-hall.svg",
               "assets/chronos-tower.svg",
           ):
@@ -105,7 +109,7 @@ jobs:
 
           index_html = (miniapp_dir / "index.html").read_text(encoding="utf-8")
           visual_css = (miniapp_dir / "assets/app-visual-v2.css").read_text(encoding="utf-8")
-          if 'href="assets/app-visual-v2.css?v=chronos-visual-11"' not in index_html:
+          if 'href="assets/app-visual-v2.css?v=chronos-visual-12"' not in index_html:
               raise SystemExit("Visual v2 stylesheet is not loaded by index.html")
 
           for referenced_asset in ("chronos-core.svg", "chronos-tower.svg"):
@@ -114,18 +118,28 @@ jobs:
               if not (miniapp_dir / "assets" / referenced_asset).is_file():
                   raise SystemExit(f"Missing CSS-referenced asset: {referenced_asset}")
 
-          if 'href="assets/app-visual-v3.css?v=chronos-visual-11"' not in index_html:
+          if 'href="assets/app-visual-v3.css?v=chronos-visual-12"' not in index_html:
               raise SystemExit("CHRONOS v3 visual stylesheet is not loaded")
           visual_v3 = (miniapp_dir / "assets/app-visual-v3.css").read_text(encoding="utf-8")
           for selector in (".home-hero", ".home-stats", "#screen-tower .tower-layout", ".floor-card", ".topbar"):
               if selector not in visual_v3:
                   raise SystemExit(f"Missing responsive visual rule: {selector}")
-          if 'src="assets/chronos-v2/backgrounds/home/home-hero-city-v01.webp"' not in index_html:
-              raise SystemExit("Approved Home Hero background is not referenced")
-          if not (miniapp_dir / "assets/chronos-v2/backgrounds/home/home-hero-city-v01.webp").is_file():
-              raise SystemExit("Approved Home Hero background asset is missing")
-          if "home-hero-city-v01.webp" not in visual_v3 or "object-fit:cover" not in visual_v3:
-              raise SystemExit("Home Hero scene layout rules are missing")
+          home_tiles = (
+              "assets/chronos-v2/backgrounds/home/home-hero-city-v01-tl.webp",
+              "assets/chronos-v2/backgrounds/home/home-hero-city-v01-tr.webp",
+              "assets/chronos-v2/backgrounds/home/home-hero-city-v01-bl.webp",
+              "assets/chronos-v2/backgrounds/home/home-hero-city-v01-br.webp",
+              "assets/chronos-v2/backgrounds/home/home-hero-city-v01.json",
+          )
+          for asset in home_tiles:
+              if asset not in index_html and asset.endswith(".webp"):
+                  raise SystemExit(f"Home Hero tile is not referenced: {asset}")
+              if not (miniapp_dir / asset).is_file():
+                  raise SystemExit(f"Home Hero asset is missing: {asset}")
+          if "home-hero-tile" not in visual_v3 or "grid-template-columns:repeat(2" not in visual_v3:
+              raise SystemExit("Home Hero four-tile composition rules are missing")
+          if "690 <small>UNITS</small>" in index_html or "690 участ" in index_html.lower():
+              raise SystemExit("Removed absolute season participation count is still visible")
           if 'class="home-hero"' not in index_html or 'id="home-event"' not in index_html:
               raise SystemExit("CHRONOS home dashboard or live event slot is missing")
           app_js = (miniapp_dir / "assets/app.js").read_text(encoding="utf-8")
