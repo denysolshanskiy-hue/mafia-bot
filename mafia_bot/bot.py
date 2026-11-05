@@ -11,7 +11,6 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
     KeyboardButton,
     WebAppInfo,
-    MenuButtonWebApp,
 )
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -54,27 +53,6 @@ class InviteCallback(CallbackData, prefix="invite"):
 
 # ================== KEYBOARDS ==================
 
-async def configure_chronos_menu_button():
-    """Configure the bot's global menu button to launch CHRONOS with Telegram auth context."""
-    from urllib.parse import urlparse
-
-    url = os.getenv("CHRONOS_WEBAPP_URL", "").strip()
-    parsed = urlparse(url)
-    if parsed.scheme != "https" or not parsed.netloc:
-        print("CHRONOS menu button not configured: valid HTTPS CHRONOS_WEBAPP_URL is missing.")
-        return
-
-    try:
-        await bot.set_chat_menu_button(
-            menu_button=MenuButtonWebApp(
-                text="⏳ CHRONOS",
-                web_app=WebAppInfo(url=url),
-            )
-        )
-        print("CHRONOS Telegram menu button configured.")
-    except Exception as exc:
-        print(f"CHRONOS menu button configuration failed: {type(exc).__name__}: {exc}")
-
 def admin_menu_keyboard():
     return ReplyKeyboardMarkup(
     keyboard=[
@@ -83,6 +61,7 @@ def admin_menu_keyboard():
 [KeyboardButton(text="✅ Підтвердити вечір"), KeyboardButton(text="🏁 Завершити вечір")],
 [KeyboardButton(text="❌ Скасувати івент"), KeyboardButton(text="📣 Повідомлення")],
 [KeyboardButton(text="☣️ UNDERGROUND")],
+[KeyboardButton(text="⏳ CHRONOS", web_app=WebAppInfo(url=os.getenv("CHRONOS_WEBAPP_URL", "")))],
     ],
         resize_keyboard=True
     )
@@ -93,6 +72,7 @@ def player_menu_keyboard():
             [KeyboardButton(text="📅 Активні події")],
             [KeyboardButton(text="💳 Оплатити ігри")],
             [KeyboardButton(text="☣️ UNDERGROUND")],
+            [KeyboardButton(text="⏳ CHRONOS", web_app=WebAppInfo(url=os.getenv("CHRONOS_WEBAPP_URL", "")))],
             ],
         resize_keyboard=True
     )
@@ -1507,7 +1487,6 @@ async def handle(request):
 
 async def start_all():
     await init_db()
-    await configure_chronos_menu_button()
     app = web.Application(middlewares=[telegram_auth_middleware], client_max_size=9 * 1024 * 1024)
     register_chronos_routes(app)
     app.router.add_get('/', handle)
