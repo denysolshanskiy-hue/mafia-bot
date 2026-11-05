@@ -110,6 +110,7 @@ jobs:
               "assets/chronos-v3/home/notifications.svg",
               "assets/chronos-v3/home/home-hero-poster-v02.webp",
               "assets/chronos-v3/home/notification-button-v01.webp",
+              "assets/chronos-v3/home/progress-panel-v01.webp",
           ):
               if not (miniapp_dir / asset).is_file():
                   raise SystemExit(f"Missing Mini App asset: {asset}")
@@ -118,7 +119,7 @@ jobs:
 
           index_html = (miniapp_dir / "index.html").read_text(encoding="utf-8")
           visual_css = (miniapp_dir / "assets/app-visual-v2.css").read_text(encoding="utf-8")
-          if 'href="assets/app-visual-v2.css?v=chronos-v3-button-02"' not in index_html:
+          if 'href="assets/app-visual-v2.css?v=chronos-v3-progress-01"' not in index_html:
               raise SystemExit("Visual v2 stylesheet is not loaded by index.html")
 
           for referenced_asset in ("chronos-core.svg", "chronos-tower.svg"):
@@ -127,11 +128,11 @@ jobs:
               if not (miniapp_dir / "assets" / referenced_asset).is_file():
                   raise SystemExit(f"Missing CSS-referenced asset: {referenced_asset}")
 
-          if 'href="assets/app-visual-v3.css?v=chronos-v3-button-02"' not in index_html:
+          if 'href="assets/app-visual-v3.css?v=chronos-v3-progress-01"' not in index_html:
               raise SystemExit("CHRONOS v3 visual stylesheet is not loaded")
           visual_v3 = (miniapp_dir / "assets/app-visual-v3.css").read_text(encoding="utf-8")
           visual_v4 = (miniapp_dir / "assets/app-visual-v4.css").read_text(encoding="utf-8")
-          if 'href="assets/app-visual-v4.css?v=chronos-v3-button-02"' not in index_html:
+          if 'href="assets/app-visual-v4.css?v=chronos-v3-progress-01"' not in index_html:
               raise SystemExit("CHRONOS v4 Home stylesheet is not loaded")
           if "#screen-home .home-progress-card" not in visual_v4 or "#screen-home .home-hero-copy h1" not in visual_v4:
               raise SystemExit("CHRONOS Home screen composition rules are missing")
@@ -151,6 +152,13 @@ jobs:
               raise SystemExit("Static fake unread notification dot must not be rendered")
           if "#screen-home .home-enter-button img" not in visual_v4:
               raise SystemExit("Generated CHRONOS enter button image styling is missing")
+          progress_asset = "assets/chronos-v3/home/progress-panel-v01.webp"
+          if 'url("chronos-v3/home/progress-panel-v01.webp")' not in visual_v4 or not (miniapp_dir / progress_asset).is_file():
+              raise SystemExit("Generated CHRONOS final progress panel artwork is missing")
+          if '#screen-home .home-progress-card h2{display:none!important}' not in visual_v4:
+              raise SystemExit("Progress title must be baked into the generated panel, not duplicated in HTML")
+          if '#screen-home .home-progress-card>strong{margin:25px 0 8px}' not in visual_v4:
+              raise SystemExit("Live season percentage must remain positioned beneath the generated title")
           if 'aspect-ratio:2 / 3' not in visual_v4 or 'background-size:contain' not in visual_v4:
               raise SystemExit("CHRONOS poster must preserve its portrait ratio without cropping")
           for selector in (".home-hero", ".home-stats", "#screen-tower .tower-layout", ".floor-card", ".topbar"):
