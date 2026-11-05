@@ -86,9 +86,36 @@ jobs:
               raise SystemExit(f"Missing routes: {sorted(missing)}")
 
           miniapp_dir = Path("mafia_bot/miniapp")
-          for asset in ("index.html", "assets/app.css", "assets/app.js", "assets/modules.js"):
+          for asset in (
+              "index.html",
+              "assets/app.css",
+              "assets/app-visual-v2.css",
+              "assets/app.js",
+              "assets/modules.js",
+              "assets/chronos-core.svg",
+              "assets/chronos-hall.svg",
+              "assets/chronos-tower.svg",
+          ):
               if not (miniapp_dir / asset).is_file():
                   raise SystemExit(f"Missing Mini App asset: {asset}")
+
+          import re
+          import xml.etree.ElementTree as ET
+
+          index_html = (miniapp_dir / "index.html").read_text(encoding="utf-8")
+          visual_css = (miniapp_dir / "assets/app-visual-v2.css").read_text(encoding="utf-8")
+          if "assets/app-visual-v2.css?v=chronos-visual-8" not in index_html:
+              raise SystemExit("Visual v2 stylesheet is not loaded by index.html")
+
+          for referenced_asset in re.findall(r'url\\(["\\']?([^)"\\']+)', visual_css):
+              if referenced_asset.startswith(("data:", "http://", "https://")):
+                  continue
+              resolved = (miniapp_dir / "assets" / referenced_asset).resolve()
+              if not resolved.is_file():
+                  raise SystemExit(f"Missing CSS-referenced asset: {referenced_asset}")
+
+          for svg_name in ("chronos-core.svg", "chronos-hall.svg", "chronos-tower.svg"):
+              ET.parse(miniapp_dir / "assets" / svg_name)
           for migration in (
               "001_chronos_foundation.sql",
               "002_active_registration_unique.sql",
