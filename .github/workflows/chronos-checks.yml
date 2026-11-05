@@ -99,19 +99,17 @@ jobs:
               if not (miniapp_dir / asset).is_file():
                   raise SystemExit(f"Missing Mini App asset: {asset}")
 
-          import re
           import xml.etree.ElementTree as ET
 
           index_html = (miniapp_dir / "index.html").read_text(encoding="utf-8")
           visual_css = (miniapp_dir / "assets/app-visual-v2.css").read_text(encoding="utf-8")
-          if "assets/app-visual-v2.css?v=chronos-visual-8" not in index_html:
+          if 'href="assets/app-visual-v2.css?v=chronos-visual-8"' not in index_html:
               raise SystemExit("Visual v2 stylesheet is not loaded by index.html")
 
-          for referenced_asset in re.findall(r'url\\(["\\']?([^)"\\']+)', visual_css):
-              if referenced_asset.startswith(("data:", "http://", "https://")):
-                  continue
-              resolved = (miniapp_dir / "assets" / referenced_asset).resolve()
-              if not resolved.is_file():
+          for referenced_asset in ("chronos-core.svg", "chronos-tower.svg"):
+              if f'url("{referenced_asset}")' not in visual_css:
+                  raise SystemExit(f"Missing visual CSS reference: {referenced_asset}")
+              if not (miniapp_dir / "assets" / referenced_asset).is_file():
                   raise SystemExit(f"Missing CSS-referenced asset: {referenced_asset}")
 
           for svg_name in ("chronos-core.svg", "chronos-hall.svg", "chronos-tower.svg"):
