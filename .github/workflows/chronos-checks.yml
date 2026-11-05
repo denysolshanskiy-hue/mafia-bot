@@ -117,7 +117,7 @@ jobs:
 
           index_html = (miniapp_dir / "index.html").read_text(encoding="utf-8")
           visual_css = (miniapp_dir / "assets/app-visual-v2.css").read_text(encoding="utf-8")
-          if 'href="assets/app-visual-v2.css?v=chronos-v3-home-01"' not in index_html:
+          if 'href="assets/app-visual-v2.css?v=chronos-v3-poster-02"' not in index_html:
               raise SystemExit("Visual v2 stylesheet is not loaded by index.html")
 
           for referenced_asset in ("chronos-core.svg", "chronos-tower.svg"):
@@ -126,14 +126,16 @@ jobs:
               if not (miniapp_dir / "assets" / referenced_asset).is_file():
                   raise SystemExit(f"Missing CSS-referenced asset: {referenced_asset}")
 
-          if 'href="assets/app-visual-v3.css?v=chronos-v3-home-01"' not in index_html:
+          if 'href="assets/app-visual-v3.css?v=chronos-v3-poster-02"' not in index_html:
               raise SystemExit("CHRONOS v3 visual stylesheet is not loaded")
           visual_v3 = (miniapp_dir / "assets/app-visual-v3.css").read_text(encoding="utf-8")
           visual_v4 = (miniapp_dir / "assets/app-visual-v4.css").read_text(encoding="utf-8")
-          if 'href="assets/app-visual-v4.css?v=chronos-v3-home-01"' not in index_html:
+          if 'href="assets/app-visual-v4.css?v=chronos-v3-poster-02"' not in index_html:
               raise SystemExit("CHRONOS v4 Home stylesheet is not loaded")
           if "#screen-home .home-progress-card" not in visual_v4 or "#screen-home .home-hero-copy h1" not in visual_v4:
               raise SystemExit("CHRONOS Home screen composition rules are missing")
+          if 'home-hero-poster-v02.webp' not in visual_v4 or '#screen-home .home-hero-copy h1{display:none!important}' not in visual_v4:
+              raise SystemExit("Generated CHRONOS poster or baked-title rule is missing")
           for selector in (".home-hero", ".home-stats", "#screen-tower .tower-layout", ".floor-card", ".topbar"):
               if selector not in visual_v3:
                   raise SystemExit(f"Missing responsive visual rule: {selector}")
