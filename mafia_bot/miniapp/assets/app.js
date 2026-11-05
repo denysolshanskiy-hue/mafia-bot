@@ -131,17 +131,29 @@
   }
 
   function showScreen(name) {
+    const nextScreen = $$(".screen").find(el => el.dataset.screen === name);
+    if (!nextScreen) {
+      toast("Цей розділ зараз недоступний.");
+      return false;
+    }
     state.currentScreen = name;
-    $(".screen").forEach(el => el.classList.toggle("active", el.dataset.screen === name));
+    $$(".screen").forEach(el => el.classList.toggle("active", el === nextScreen));
     const activeNav = name === "event-detail" ? "events" : name;
-    $(".nav-item").forEach(el => el.classList.toggle("active", el.dataset.nav === activeNav));
+    $$(".nav-item").forEach(el => {
+      const active = el.dataset.nav === activeNav;
+      el.classList.toggle("active", active);
+      if (active) el.setAttribute("aria-current", "page");
+      else el.removeAttribute("aria-current");
+    });
     const shell = $("#app-shell");
     if (shell) shell.classList.toggle("detail-open", name === "event-detail");
     if (name === "room") renderRoom();
-    if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
-    window.scrollTo({ top: 0, behavior: "instant" });
+    try {
+      if (tg?.HapticFeedback?.selectionChanged) tg.HapticFeedback.selectionChanged();
+    } catch (_) {}
+    try { window.scrollTo(0, 0); } catch (_) {}
+    return true;
   }
-
   function currentProfileName() {
     return state.profile?.display_name || "Гість системи";
   }
@@ -527,7 +539,8 @@
       if (detailAction.dataset.eventAction === "register") return registerForEvent(state.currentEventId);
       if (detailAction.dataset.eventAction === "cancel") return cancelEventRegistration(state.currentEventId);
     }
-    const nav = event.target.closest("[data-nav]");
+    const navTarget = event.target instanceof Element ? event.target : event.target?.parentElement;
+    const nav = navTarget?.closest("[data-nav]");
     if (nav) {
       event.preventDefault();
       showScreen(nav.dataset.nav);
@@ -550,6 +563,35 @@
       renderEvents();
     }
   });
+
+
+  const bottomNav = $(".bottom-nav");
+  if (bottomNav) {
+    let lastNavActivation = 0;
+    let lastNavTarget = "";
+    const activateBottomNav = (event) => {
+      const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+      const item = target?.closest(".nav-item[data-nav]");
+      if (!item || !item.dataset.nav) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const now = Date.now();
+      const key = item.dataset.nav;
+      if (key === lastNavTarget && now - lastNavActivation < 400) return;
+      lastNavTarget = key;
+      lastNavActivation = now;
+      if (!showScreen(key)) return;
+      closeModal();
+      try {
+        const loader = window.ChronosModules?.loadModule;
+        if (typeof loader === "function") loader(key);
+      } catch (error) {
+        toast(error.message || "Не вдалося відкрити розділ.");
+      }
+    };
+    bottomNav.addEventListener("pointerup", activateBottomNav);
+    bottomNav.addEventListener("click", activateBottomNav);
+  }
 
   $("#refresh-button").addEventListener("click", refreshData);
   $("#modal-close").addEventListener("click", closeModal);
