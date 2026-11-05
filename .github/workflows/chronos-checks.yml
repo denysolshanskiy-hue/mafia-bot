@@ -153,7 +153,7 @@ jobs:
           if "#screen-home .home-enter-button img" not in visual_v4:
               raise SystemExit("Generated CHRONOS enter button image styling is missing")
           progress_asset = "assets/chronos-v3/home/progress-panel-v01.webp"
-          if progress_asset not in visual_v4 or not (miniapp_dir / progress_asset).is_file():
+          if 'url("chronos-v3/home/progress-panel-v01.webp")' not in visual_v4 or not (miniapp_dir / progress_asset).is_file():
               raise SystemExit("Generated CHRONOS final progress panel artwork is missing")
           if '#screen-home .home-progress-card h2{display:none!important}' not in visual_v4:
               raise SystemExit("Progress title must be baked into the generated panel, not duplicated in HTML")
