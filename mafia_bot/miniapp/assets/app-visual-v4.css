@@ -213,3 +213,47 @@
 #screen-home .home-progress-card:before{display:none!important}
 #screen-home .home-progress-card h2{display:none!important}
 #screen-home .home-progress-card>strong{margin:25px 0 8px}
+
+
+/* CHRONOS Player ID — generated frame asset; identity image slot stays empty until profile wiring. */
+#screen-home .home-player-card{
+  position:relative;
+  isolation:isolate;
+  border:0;
+  background:#070d1c url("chronos-v3/home/player-id-frame-v01.webp") center/100% 100% no-repeat;
+  box-shadow:0 8px 22px rgba(0,0,0,.3);
+}
+#screen-home .home-player-card:before{display:none!important}
+#screen-home .home-player-card:after{
+  content:"";
+  position:absolute;
+  z-index:0;
+  inset:9px 8px;
+  border-radius:10px;
+  background:linear-gradient(135deg,rgba(5,18,35,.98),rgba(8,13,30,.97) 58%,rgba(29,10,35,.94));
+  pointer-events:none;
+}
+#screen-home .home-player-card>*{position:relative;z-index:1}
+#screen-home .home-player-avatar{
+  flex-basis:48px;
+  width:48px;
+  height:52px;
+  border:1px solid rgba(0,211,255,.62);
+  border-radius:9px;
+  background:linear-gradient(145deg,rgba(0,205,255,.12),rgba(12,20,43,.88) 58%,rgba(255,63,164,.1));
+  box-shadow:inset 0 0 16px rgba(0,211,255,.1),0 0 12px rgba(0,211,255,.13);
+}
+#screen-home .home-player-avatar:before,
+#screen-home .home-player-avatar:after,
+#screen-home .home-player-avatar i{display:none!important}
+#screen-home .home-player-avatar b{opacity:0!important}
+#screen-home .home-player-avatar img{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  border-radius:inherit;
+}
