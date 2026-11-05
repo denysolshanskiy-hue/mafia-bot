@@ -605,3 +605,37 @@ button.event-list-card:active { transform:scale(.987); }
   .event-fact b { font-size:7px; }
   .event-detail-topbar .event-status-pill { max-width:104px; }
 }
+
+/* Identity presets and live seats inside the KMC arena scene */
+.event-detail-stage { aspect-ratio:1000/680; min-height:210px; }
+.event-detail-stage>img { object-position:center center; }
+.event-stage-seats { position:absolute; inset:0; z-index:3; pointer-events:none; }
+.event-stage-seat {
+  position:absolute; display:flex; flex-direction:column; align-items:center; gap:2px;
+  width:52px; transform:translate(-50%,-50%); text-align:center;
+}
+.stage-avatar,.stage-empty-avatar {
+  width:31px; height:31px; display:grid; place-items:center; border-radius:50%;
+  border:1px solid rgba(171,226,239,.78); color:#f2fbff;
+  background:radial-gradient(circle at 35% 25%,rgba(130,225,238,.38),rgba(32,42,73,.96) 72%);
+  box-shadow:0 0 12px rgba(85,198,221,.32); font:700 8px var(--mono);
+}
+.event-stage-seat small {
+  max-width:54px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  padding:2px 4px; border-radius:4px; color:#f0e9ff; background:rgba(7,10,20,.82);
+  font:5px var(--mono); letter-spacing:.04em;
+}
+.stage-empty-avatar {
+  width:24px; height:24px; border-style:dashed; border-color:rgba(180,190,211,.58);
+  color:#aeb9cb; background:rgba(12,17,30,.62); box-shadow:none; font-size:13px;
+}
+.avatar-european_male,.avatar-european_female { border-color:rgba(114,205,235,.8); background:radial-gradient(circle at 35% 25%,rgba(143,223,242,.42),rgba(33,48,77,.96) 72%); }
+.avatar-dark_male,.avatar-dark_female { border-color:rgba(191,139,255,.86); background:radial-gradient(circle at 35% 25%,rgba(203,156,255,.4),rgba(53,34,82,.96) 72%); }
+.avatar-asian_male,.avatar-asian_female { border-color:rgba(96,226,211,.86); background:radial-gradient(circle at 35% 25%,rgba(118,239,218,.4),rgba(22,64,73,.96) 72%); }
+.avatar-android_male,.avatar-android_female { border-color:rgba(235,202,130,.86); background:radial-gradient(circle at 35% 25%,rgba(255,219,144,.42),rgba(71,52,38,.96) 72%); }
+@media (max-width:380px) {
+  .stage-avatar { width:27px; height:27px; font-size:7px; }
+  .event-stage-seat { width:43px; }
+  .event-stage-seat small { max-width:44px; font-size:4px; }
+  .stage-empty-avatar { width:21px; height:21px; font-size:11px; }
+}
