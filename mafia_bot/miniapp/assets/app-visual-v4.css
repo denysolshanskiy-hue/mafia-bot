@@ -257,3 +257,19 @@
   object-fit:cover;
   border-radius:inherit;
 }
+
+
+/* Player ID v02: frame-only vector artwork; all identity fields stay live HTML. */
+#screen-home .home-player-card{
+  border:0!important;
+  background:transparent url("chronos-v3/home/player-id-frame-v02.svg") center/100% 100% no-repeat!important;
+  box-shadow:none!important;
+}
+#screen-home .home-player-card:before,
+#screen-home .home-player-card:after{display:none!important;content:none!important}
+#screen-home .home-player-card>*{position:relative;z-index:1}
+#screen-home .home-player-avatar{
+  border:1px solid rgba(0,211,255,.52);
+  background:linear-gradient(145deg,rgba(0,205,255,.12),rgba(12,20,43,.7) 58%,rgba(255,63,164,.1));
+  box-shadow:inset 0 0 16px rgba(0,211,255,.1),0 0 12px rgba(0,211,255,.13);
+}
