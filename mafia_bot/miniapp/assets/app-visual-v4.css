@@ -90,3 +90,52 @@
 @media(min-width:520px){#screen-home .home-hero{min-height:440px}#screen-home .home-hero-copy{max-width:360px;padding:28px 24px 72px}#screen-home .home-hero-copy h1{font-size:49px}#screen-home .home-progress-card,#screen-home .home-player-card{min-height:150px;padding:15px}#screen-home .home-module-grid{gap:11px}#screen-home .home-module-tile{min-height:145px}}
 @media(max-width:370px){#screen-home.home-screen{padding-left:10px;padding-right:10px}#screen-home .home-hero{min-height:366px}#screen-home .home-hero-copy{max-width:255px;padding:20px 13px 58px}#screen-home .home-chronos-lockup b{font-size:22px}#screen-home .home-hero-copy h1{font-size:33px}#screen-home .home-status-row{gap:6px}#screen-home .home-progress-card,#screen-home .home-player-card{min-height:128px;padding:9px}#screen-home .home-player-avatar{flex-basis:39px;width:39px;height:44px}#screen-home .home-player-data strong{font-size:10px}#screen-home .home-module-grid{gap:6px}#screen-home .home-module-tile{min-height:102px;padding-bottom:8px}#screen-home .home-module-tile>span{font-size:6.5px}.bottom-nav .nav-item small{font-size:5px}}
 @media(prefers-reduced-motion:reduce){#screen-home .home-progress-track span,#screen-home .home-module-tile{transition:none}}
+
+
+/* CHRONOS poster hero v2 — the generated artwork owns the title typography. */
+#screen-home .home-hero{
+  aspect-ratio:3/4;
+  min-height:440px;
+  max-height:560px;
+  height:auto;
+  background:#071323 url("chronos-v3/home/home-hero-poster-v02.webp") center center / 100% 100% no-repeat;
+}
+#screen-home .home-hero-art,
+#screen-home .home-hero-shade{display:none!important}
+#screen-home .home-hero-brand{
+  position:absolute;inset:12px 12px auto;
+  z-index:4;height:0;padding:0;border:0;background:none;
+  display:block;pointer-events:none;
+}
+#screen-home .home-kmc-mark,
+#screen-home .home-kmc-name,
+#screen-home .home-brand-bars{display:none!important}
+#screen-home .home-notice-button{
+  position:absolute;right:0;top:0;pointer-events:auto;
+  background:rgba(5,12,26,.62);
+  backdrop-filter:blur(8px);
+}
+#screen-home .home-hero-copy{
+  position:absolute;left:16px;right:16px;bottom:51px;
+  z-index:3;max-width:none;width:auto;padding:0;margin:0;
+}
+#screen-home .home-chronos-lockup,
+#screen-home .home-season-tag,
+#screen-home .home-hero-copy h1,
+#screen-home .home-hero-copy p{display:none!important}
+#screen-home .home-enter-button{
+  min-width:176px;height:43px;width:max-content;
+  margin:0;
+  border-radius:9px;
+  box-shadow:0 7px 24px rgba(0,0,0,.32),0 0 18px rgba(0,195,255,.24);
+}
+#screen-home .home-hero-foot{z-index:3;left:16px;right:16px;bottom:13px}
+@media(max-width:370px){
+  #screen-home .home-hero{min-height:400px;max-height:500px}
+  #screen-home .home-hero-copy{left:13px;right:13px;bottom:48px}
+  #screen-home .home-enter-button{height:40px;min-width:164px}
+}
+@media(min-width:520px){
+  #screen-home .home-hero{min-height:500px;max-height:620px}
+  #screen-home .home-hero-copy{left:22px;bottom:58px}
+}
