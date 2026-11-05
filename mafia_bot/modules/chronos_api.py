@@ -1,6 +1,7 @@
 """Authenticated CHRONOS Mini App API, mounted on the existing aiohttp server."""
 
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -17,6 +18,8 @@ try:
 except ModuleNotFoundError:
     from mafia_bot.modules.chronos_auth import validate_init_data
 
+
+logger = logging.getLogger(__name__)
 
 API_PREFIX = "/api/chronos"
 MINIAPP_DIR = Path(__file__).resolve().parents[1] / "miniapp"
@@ -83,8 +86,10 @@ async def telegram_auth_middleware(request, handler):
         return _json({"error": "admin_test_access_only"}, 403)
 
     conn = None
+    access_check_stage = "database_connect"
     try:
         conn = await get_connection()
+        access_check_stage = "admin_lookup"
         test_admin = await conn.fetchrow(
             """
             SELECT role, is_active
@@ -117,7 +122,13 @@ async def telegram_auth_middleware(request, handler):
         return _json({"error": "chronos_database_not_configured"}, 503)
     except asyncpg.UndefinedTableError:
         return _json({"error": "database_not_ready"}, 503)
-    except Exception:
+    except Exception as exc:
+        # Log only safe diagnostics: never include exception text, DSN, or credentials.
+        logger.error(
+            "CHRONOS access check failed: stage=%s error_type=%s",
+            access_check_stage,
+            type(exc).__name__,
+        )
         # Fail closed: database/auth lookup failures must never expose season data.
         return _json({"error": "access_check_unavailable"}, 503)
     finally:
