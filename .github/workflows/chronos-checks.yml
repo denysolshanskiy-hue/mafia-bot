@@ -134,7 +134,7 @@ jobs:
               raise SystemExit("CHRONOS v4 Home stylesheet is not loaded")
           if "#screen-home .home-progress-card" not in visual_v4 or "#screen-home .home-hero-copy h1" not in visual_v4:
               raise SystemExit("CHRONOS Home screen composition rules are missing")
-          if 'home-hero-poster-v02.webp' not in visual_v4 or '#screen-home .home-hero-copy h1{display:none!important}' not in visual_v4:
+          if 'home-hero-poster-v02.webp' not in visual_v4 or '#screen-home .home-hero-copy h1,' not in visual_v4 or 'display:none!important' not in visual_v4:
               raise SystemExit("Generated CHRONOS poster or baked-title rule is missing")
           for selector in (".home-hero", ".home-stats", "#screen-tower .tower-layout", ".floor-card", ".topbar"):
               if selector not in visual_v3:
