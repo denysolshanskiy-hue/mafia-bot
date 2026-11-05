@@ -3,12 +3,14 @@ import os
 from aiohttp import web
 from aiogram import Bot, Dispatcher, types, F
 from modules.keyboards import admin_menu_keyboard, player_menu_keyboard
+from modules.chronos_api import register_chronos_routes, telegram_auth_middleware
 from aiogram.filters import CommandStart
 from aiogram.types import (
     InlineKeyboardMarkup,
     InlineKeyboardButton,
     ReplyKeyboardMarkup,
     KeyboardButton,
+    WebAppInfo,
 )
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -51,6 +53,16 @@ class InviteCallback(CallbackData, prefix="invite"):
 
 # ================== KEYBOARDS ==================
 
+def chronos_webapp_row():
+    """Show the Mini App button only when a valid HTTPS URL is configured."""
+    from urllib.parse import urlparse
+
+    url = os.getenv("CHRONOS_WEBAPP_URL", "").strip()
+    parsed = urlparse(url)
+    if parsed.scheme != "https" or not parsed.netloc:
+        return []
+    return [[KeyboardButton(text="⏳ CHRONOS", web_app=WebAppInfo(url=url))]]
+
 def admin_menu_keyboard():
     return ReplyKeyboardMarkup(
     keyboard=[
@@ -58,7 +70,8 @@ def admin_menu_keyboard():
 [KeyboardButton(text="💳 Оплатити ігри"), KeyboardButton(text="🛠 Адмін: список + скасовані")],
 [KeyboardButton(text="✅ Підтвердити вечір"), KeyboardButton(text="🏁 Завершити вечір")],
 [KeyboardButton(text="❌ Скасувати івент"), KeyboardButton(text="📣 Повідомлення")],
-[KeyboardButton(text="☣️ UNDERGROUND")]  # ← ОКРЕМИЙ РЯДОК
+[KeyboardButton(text="☣️ UNDERGROUND")],
+        *chronos_webapp_row(),
     ],
         resize_keyboard=True
     )
@@ -68,7 +81,8 @@ def player_menu_keyboard():
         keyboard=[
             [KeyboardButton(text="📅 Активні події")],
             [KeyboardButton(text="💳 Оплатити ігри")],
-            [KeyboardButton(text="☣️ UNDERGROUND")]
+            [KeyboardButton(text="☣️ UNDERGROUND")],
+            *chronos_webapp_row(),
         ],
         resize_keyboard=True
     )
@@ -1483,7 +1497,8 @@ async def handle(request):
 
 async def start_all():
     await init_db()
-    app = web.Application()
+    app = web.Application(middlewares=[telegram_auth_middleware], client_max_size=9 * 1024 * 1024)
+    register_chronos_routes(app)
     app.router.add_get('/', handle)
     runner = web.AppRunner(app)
     await runner.setup()

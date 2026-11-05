@@ -10,6 +10,18 @@ async def get_connection():
     """Створює підключення до бази даних Neon (PostgreSQL)"""
     return await asyncpg.connect(DATABASE_URL)
 
+
+class ChronosDatabaseNotConfigured(RuntimeError):
+    """Raised when the isolated CHRONOS database URL is missing."""
+
+
+async def get_chronos_connection():
+    """Open CHRONOS staging only; never fall back to the bot database."""
+    url = os.environ.get("CHRONOS_DATABASE_URL", "").strip()
+    if not url:
+        raise ChronosDatabaseNotConfigured("CHRONOS_DATABASE_URL is not configured")
+    return await asyncpg.connect(url)
+
 async def cancel_event_in_db(event_id):
     conn = await get_connection()
     try:

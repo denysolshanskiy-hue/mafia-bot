@@ -1,0 +1,101 @@
+name: CHRONOS backend checks
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/chronos-miniapp-api
+      - codex/chronos-production-integration
+  pull_request:
+    paths:
+      - "mafia_bot/**"
+      - ".github/workflows/chronos-checks.yml"
+
+jobs:
+  python-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install API runtime dependencies
+        run: python -m pip install aiohttp asyncpg
+
+      - name: Compile Python modules
+        run: python -m compileall -q mafia_bot
+
+      - name: Check Mini App JavaScript syntax
+        run: |
+          node --check mafia_bot/miniapp/assets/app.js
+          node --check mafia_bot/miniapp/assets/modules.js
+
+      - name: Run unit tests
+        env:
+          PYTHONPATH: mafia_bot
+        run: python -m unittest discover -s mafia_bot/tests -v
+
+      - name: Build production Docker image
+        run: docker build --tag chronos-mafia-bot:${{ github.sha }} .
+
+      - name: Verify aiohttp route registration and economy migration
+        env:
+          PYTHONPATH: mafia_bot
+        run: |
+          python - <<'PY'
+          from aiohttp import web
+          from modules.chronos_api import register_chronos_routes, telegram_auth_middleware
+          from pathlib import Path
+
+          app = web.Application(middlewares=[telegram_auth_middleware])
+          register_chronos_routes(app)
+          expected = {
+              "/api/chronos/me",
+              "/api/chronos/events",
+              "/api/chronos/events/{event_id}",
+              "/api/chronos/events/{event_id}/register",
+              "/api/chronos/events/{event_id}/cancel",
+              "/api/chronos/identity",
+              "/api/chronos/identity/avatar",
+              "/api/chronos/identity/appearance",
+              "/api/chronos/store",
+              "/api/chronos/store/{item_id}/buy",
+              "/api/chronos/store/{item_id}/equip",
+              "/api/chronos/operations",
+              "/api/chronos/rankings",
+              "/api/chronos/games",
+              "/api/chronos/games/{game_code}",
+              "/api/chronos/predictions",
+              "/api/chronos/predictions/markets/open",
+              "/api/chronos/admin/overview",
+              "/api/chronos/admin/imports/upload",
+              "/api/chronos/admin/season-bonus/calculate",
+              "/api/chronos/admin/economy/reconcile",
+              "/api/chronos/admin/economy/report",
+              "/miniapp",
+              "/miniapp/",
+              "/miniapp/assets",
+          }
+          registered = {resource.canonical for resource in app.router.resources()}
+          missing = expected - registered
+          if missing:
+              raise SystemExit(f"Missing routes: {sorted(missing)}")
+
+          miniapp_dir = Path("mafia_bot/miniapp")
+          for asset in ("index.html", "assets/app.css", "assets/app.js", "assets/modules.js"):
+              if not (miniapp_dir / asset).is_file():
+                  raise SystemExit(f"Missing Mini App asset: {asset}")
+          for migration in (
+              "001_chronos_foundation.sql",
+              "002_active_registration_unique.sql",
+              "003_chronos_platform.sql",
+              "004_chronos_economy.sql",
+          ):
+              if not (Path("mafia_bot/migrations") / migration).is_file():
+                  raise SystemExit(f"Missing migration: {migration}")
+          print("CHRONOS player/admin routes, Mini App assets and 4 migrations verified")
+          PY
