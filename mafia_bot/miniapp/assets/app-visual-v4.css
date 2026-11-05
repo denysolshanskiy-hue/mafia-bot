@@ -139,3 +139,29 @@
   #screen-home .home-hero{min-height:500px;max-height:620px}
   #screen-home .home-hero-copy{left:22px;bottom:58px}
 }
+
+
+/* Poster fit refinement: preserve original portrait artwork proportions on mobile. */
+#screen-home .home-hero{
+  aspect-ratio:2 / 3;
+  min-height:0;
+  max-height:none;
+  height:auto;
+  background-color:#071323;
+  background-image:url("chronos-v3/home/home-hero-poster-v02.webp");
+  background-position:center top;
+  background-size:contain;
+  background-repeat:no-repeat;
+}
+#screen-home .home-hero-copy{bottom:42px}
+#screen-home .home-enter-button{min-height:43px}
+#screen-home .home-notice-button{right:0;top:0}
+@media(max-width:370px){
+  #screen-home .home-hero{aspect-ratio:2 / 3;min-height:0;max-height:none}
+  #screen-home .home-hero-copy{left:13px;right:13px;bottom:38px}
+  #screen-home .home-enter-button{height:40px;min-width:164px}
+}
+@media(min-width:520px){
+  #screen-home .home-hero{aspect-ratio:2 / 3;min-height:0;max-height:none}
+  #screen-home .home-hero-copy{left:22px;bottom:46px}
+}
