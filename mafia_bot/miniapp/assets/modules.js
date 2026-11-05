@@ -580,12 +580,16 @@
     const options = data.available_bot_events || [];
     $("#admin-content").innerHTML = (data.slots || []).map((slot) => {
       const optionsHtml = options.map((e) => '<option value="' + e.event_id + '">' + esc(e.title) + ' · #' + e.event_id + ' · ' + esc(fmtDate(e.event_date)) + '</option>').join("");
+      const eventDate = slot.event_date || slot.planned_date || "";
+      const eventTitle = slot.bot_event_id ? (slot.bot_event_title || slot.title || "") : (slot.title || "");
       return '<article class="admin-row"><div class="panel-top"><span class="panel-code">' + esc(slot.slot_code) + ' · #' + slot.sequence_no + '</span><span class="status-chip">' + esc(slot.slot_type) + '</span></div>' +
         '<h3>' + esc(slot.title) + '</h3><p>' + (slot.bot_event_id ? 'BOT EVENT: #' + slot.bot_event_id + ' · ' + esc(slot.bot_event_title || "") : "ЩЕ НЕ ПРИВʼЯЗАНО ДО ПОДІЇ БОТА") + '</p>' +
         '<div class="form-field"><label>ПЛАНОВА ДАТА</label><input type="date" class="inline-input" data-slot-date="' + slot.slot_id + '" value="' + (slot.planned_date || "") + '"></div>' +
         '<div class="form-field"><label>НАЗВА СЛОТУ</label><input class="inline-input" data-slot-title="' + slot.slot_id + '" value="' + esc(slot.title) + '"></div>' +
         '<div class="row-actions"><button class="secondary-button" data-save-slot="' + slot.slot_id + '">ЗБЕРЕГТИ СЛОТ</button>' +
-        (!slot.bot_event_id ? '<select class="inline-input" data-slot-event="' + slot.slot_id + '"><option value="">ОБРАТИ CHRONOS-ПОДІЮ</option>' + optionsHtml + '</select><button class="secondary-button" data-link-slot="' + slot.slot_id + '">ПРИВʼЯЗАТИ</button>' : '') +
+        (!slot.bot_event_id ? '<div class="form-field"><label>СТВОРИТИ CHRONOS-ПОДІЮ У STAGING</label><input class="inline-input" data-event-title="' + slot.slot_id + '" value="' + esc(eventTitle) + '" placeholder="Назва події"><input type="date" class="inline-input" data-event-date="' + slot.slot_id + '" value="' + esc(eventDate) + '"><input type="time" class="inline-input" data-event-time="' + slot.slot_id + '" value="18:00"><button class="secondary-button" data-create-slot-event="' + slot.slot_id + '"' + (slot.status === "cancelled" ? ' disabled' : '') + '>СТВОРИТИ Й ПРИВʼЯЗАТИ</button></div>' +
+          '<div class="form-field"><label>АБО ПРИВ’ЯЗАТИ НАЯВНУ CHRONOS-ПОДІЮ</label><select class="inline-input" data-slot-event="' + slot.slot_id + '"><option value="">ОБРАТИ CHRONOS-ПОДІЮ</option>' + optionsHtml + '</select><button class="secondary-button" data-link-slot="' + slot.slot_id + '">ПРИВʼЯЗАТИ</button></div>' :
+          '<div class="form-field"><label>РЕДАГУВАТИ CHRONOS-ПОДІЮ У STAGING</label><input class="inline-input" data-event-title="' + slot.slot_id + '" value="' + esc(eventTitle) + '"><input type="date" class="inline-input" data-event-date="' + slot.slot_id + '" value="' + esc(eventDate) + '"><input type="time" class="inline-input" data-event-time="' + slot.slot_id + '" value="' + esc(slot.event_time || "18:00") + '"><select class="inline-input" data-event-status="' + slot.slot_id + '"><option value="active"' + (slot.bot_status === "active" ? ' selected' : '') + '>ACTIVE</option><option value="closed"' + (slot.bot_status === "closed" ? ' selected' : '') + '>CLOSED</option></select><button class="secondary-button" data-update-slot-event="' + slot.slot_id + '">ЗБЕРЕГТИ ПОДІЮ</button></div>') +
         (slot.slot_type !== "regular" ? '<button class="secondary-button" data-generate-invitations="' + slot.slot_id + '">СФОРМУВАТИ TOP-10 ЗАПРОШЕНЬ</button>' : '') +
         (slot.bot_status === "closed" ? '<button class="secondary-button" data-close-attendance="' + slot.slot_id + '">ЗАКРИТИ ВІДВІДУВАННЯ</button>' : '') +
         '</div></article>';
@@ -608,6 +612,19 @@
     try {
       await api("/admin/slots/" + id + "/link", { method: "POST", body: { event_id: Number(select.value) } });
       toast("Подію прив’язано.");
+      await loadAdminSchedule();
+    } catch (error) { toast(error.message); }
+  }
+
+  async function saveSlotEvent(id, create) {
+    const title = $('[data-event-title="' + id + '"]');
+    const eventDate = $('[data-event-date="' + id + '"]');
+    const eventTime = $('[data-event-time="' + id + '"]');
+    const body = { title: title.value, event_date: eventDate.value, event_time: eventTime.value };
+    if (!create) body.status = $('[data-event-status="' + id + '"]').value;
+    try {
+      await api("/admin/slots/" + id + (create ? "/event" : "/event/update"), { method: "POST", body });
+      toast(create ? "Подію створено й прив’язано у staging." : "Подію збережено у staging.");
       await loadAdminSchedule();
     } catch (error) { toast(error.message); }
   }
@@ -1069,6 +1086,12 @@
 
     const link = event.target.closest("[data-link-slot]");
     if (link) return linkSlot(link.dataset.linkSlot);
+
+    const createEvent = event.target.closest("[data-create-slot-event]");
+    if (createEvent) return saveSlotEvent(createEvent.dataset.createSlotEvent, true);
+
+    const updateEvent = event.target.closest("[data-update-slot-event]");
+    if (updateEvent) return saveSlotEvent(updateEvent.dataset.updateSlotEvent, false);
 
     const generate = event.target.closest("[data-generate-invitations]");
     if (generate) {

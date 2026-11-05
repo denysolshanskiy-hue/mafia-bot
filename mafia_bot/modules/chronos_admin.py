@@ -143,6 +143,134 @@ async def link_slot_to_bot_event(request):
         await conn.close()
 
 
+async def create_slot_event(request):
+    """Create and bind a bot event using only the isolated CHRONOS database."""
+    actor_id=request["telegram_user"]["id"]
+    slot_id=int(request.match_info["slot_id"])
+    try:
+        payload=await request.json()
+    except (ValueError,json.JSONDecodeError):
+        return json_response({"error":"invalid_json"},400)
+    allowed={"title","event_date","event_time"}
+    if not isinstance(payload,dict) or set(payload)-allowed:
+        return json_response({"error":"invalid_event_payload"},400)
+    title=payload.get("title")
+    if title is not None and (not isinstance(title,str) or not title.strip() or len(title.strip())>120):
+        return json_response({"error":"invalid_event_title"},400)
+    event_date=None
+    if payload.get("event_date"):
+        try:
+            event_date=date.fromisoformat(payload["event_date"])
+        except (TypeError,ValueError):
+            return json_response({"error":"event_date_must_be_YYYY_MM_DD"},400)
+        if event_date.isoformat()!=payload["event_date"]:
+            return json_response({"error":"event_date_must_be_YYYY_MM_DD"},400)
+    event_time=payload.get("event_time")
+    if event_time is not None and (not isinstance(event_time,str) or len(event_time)!=5 or event_time[2] != ":" or not event_time[:2].isdigit() or not event_time[3:].isdigit() or int(event_time[:2])>23 or int(event_time[3:])>59):
+        return json_response({"error":"event_time_must_be_HH_MM"},400)
+    from database import get_chronos_connection, ChronosDatabaseNotConfigured
+    try:
+        conn=await get_chronos_connection()
+    except ChronosDatabaseNotConfigured:
+        return json_response({"error":"chronos_database_not_configured"},503)
+    try:
+        error=await require_admin(request,conn)
+        if error:
+            return error
+        async with conn.transaction():
+            slot=await conn.fetchrow("SELECT * FROM chronos.event_slots WHERE slot_id=$1 FOR UPDATE",slot_id)
+            if not slot:
+                return json_response({"error":"slot_not_found"},404)
+            if slot["status"]=="cancelled":
+                return json_response({"error":"slot_cancelled"},409)
+            if slot["bot_event_id"] is not None:
+                return json_response({"error":"slot_already_linked"},409)
+            title=(title or slot["title"]).strip()
+            event_date=event_date or slot["planned_date"]
+            if event_date is None or event_time is None:
+                return json_response({"error":"event_date_and_time_required"},400)
+            event_id=await conn.fetchval(
+                """INSERT INTO public.events
+                   (title,event_date,event_time,status,created_by,event_type,streak_warning_sent)
+                   VALUES($1,$2,$3,'active',$4,'chronos',FALSE) RETURNING event_id""",
+                title,event_date,event_time,actor_id,
+            )
+            await conn.execute(
+                "UPDATE chronos.event_slots SET bot_event_id=$2,title=$3,planned_date=$4,updated_at=NOW() WHERE slot_id=$1",
+                slot_id,event_id,title,event_date,
+            )
+            await audit(conn,actor_id,"chronos_event_created","event_slot",slot_id,{"bot_event_id":event_id,"title":title})
+        return json_response({"created":True,"slot_id":slot_id,"event_id":event_id},201)
+    except asyncpg.UndefinedTableError:
+        return json_response({"error":"database_not_ready"},503)
+    except Exception:
+        return json_response({"error":"chronos_operation_unavailable"},503)
+    finally:
+        await conn.close()
+
+
+async def update_slot_event(request):
+    """Edit only the staging CHRONOS event already linked to a slot."""
+    actor_id=request["telegram_user"]["id"]
+    slot_id=int(request.match_info["slot_id"])
+    try:
+        payload=await request.json()
+    except (ValueError,json.JSONDecodeError):
+        return json_response({"error":"invalid_json"},400)
+    allowed={"title","event_date","event_time","status"}
+    if not isinstance(payload,dict) or not payload or set(payload)-allowed:
+        return json_response({"error":"invalid_event_update"},400)
+    title=payload.get("title")
+    if title is not None and (not isinstance(title,str) or not title.strip() or len(title.strip())>120):
+        return json_response({"error":"invalid_event_title"},400)
+    event_date=None
+    if "event_date" in payload:
+        try:
+            event_date=date.fromisoformat(payload["event_date"])
+        except (TypeError,ValueError):
+            return json_response({"error":"event_date_must_be_YYYY_MM_DD"},400)
+        if event_date.isoformat()!=payload["event_date"]:
+            return json_response({"error":"event_date_must_be_YYYY_MM_DD"},400)
+    event_time=payload.get("event_time")
+    if event_time is not None and (not isinstance(event_time,str) or len(event_time)!=5 or event_time[2] != ":" or not event_time[:2].isdigit() or not event_time[3:].isdigit() or int(event_time[:2])>23 or int(event_time[3:])>59):
+        return json_response({"error":"event_time_must_be_HH_MM"},400)
+    if "status" in payload and payload["status"] not in ("active","closed"):
+        return json_response({"error":"invalid_event_status"},400)
+    from database import get_chronos_connection, ChronosDatabaseNotConfigured
+    try:
+        conn=await get_chronos_connection()
+    except ChronosDatabaseNotConfigured:
+        return json_response({"error":"chronos_database_not_configured"},503)
+    try:
+        error=await require_admin(request,conn)
+        if error:
+            return error
+        async with conn.transaction():
+            slot=await conn.fetchrow("SELECT * FROM chronos.event_slots WHERE slot_id=$1 FOR UPDATE",slot_id)
+            if not slot:
+                return json_response({"error":"slot_not_found"},404)
+            if slot["bot_event_id"] is None:
+                return json_response({"error":"slot_event_not_linked"},409)
+            event=await conn.fetchrow("SELECT event_id,event_type FROM public.events WHERE event_id=$1 FOR UPDATE",slot["bot_event_id"])
+            if not event or event["event_type"]!="chronos":
+                return json_response({"error":"event_must_be_chronos"},409)
+            await conn.execute(
+                """UPDATE public.events SET
+                   title=COALESCE($2,title), event_date=COALESCE($3,event_date),
+                   event_time=COALESCE($4,event_time), status=COALESCE($5,status)
+                   WHERE event_id=$1""",
+                event["event_id"],title.strip() if title is not None else None,event_date,event_time,payload.get("status"),
+            )
+            await audit(conn,actor_id,"chronos_event_updated","event_slot",slot_id,payload)
+        return json_response({"updated":True,"slot_id":slot_id,"event_id":event["event_id"]})
+    except asyncpg.UndefinedTableError:
+        return json_response({"error":"database_not_ready"},503)
+    except Exception:
+        return json_response({"error":"chronos_operation_unavailable"},503)
+    finally:
+        await conn.close()
+
+
 async def _run_tesseract(image_data: bytes):
     if not shutil.which("tesseract"):
         return "", "tesseract_not_installed"
@@ -1933,6 +2061,8 @@ def register_admin_routes(app):
     app.router.add_get("/api/chronos/admin/overview",admin_overview)
     app.router.add_get("/api/chronos/admin/slots",admin_slots)
     app.router.add_post("/api/chronos/admin/slots/{slot_id:\\d+}",update_planned_slot)
+    app.router.add_post("/api/chronos/admin/slots/{slot_id:\\d+}/event",create_slot_event)
+    app.router.add_post("/api/chronos/admin/slots/{slot_id:\\d+}/event/update",update_slot_event)
     app.router.add_post("/api/chronos/admin/season/status",set_season_status)
     app.router.add_post("/api/chronos/admin/slots/{slot_id:\\d+}/link",link_slot_to_bot_event)
     app.router.add_post("/api/chronos/admin/slots/{slot_id:\\d+}/invitations",generate_invitations)

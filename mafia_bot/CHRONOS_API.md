@@ -68,7 +68,7 @@ Run these manually in a staging Neon branch first, after confirming the existing
 
 Do not execute database.init_db() as a production migration. It contains a legacy DDL definition and is not a schema migration tool.
 
-**Schema compatibility check:** CHRONOS reads the referenced `public.users`, `public.events`, and `public.registrations` tables in the database selected by `CHRONOS_DATABASE_URL` (staging). Confirm there that required columns and foreign-key targets exist. The ordinary bot continues to use `DATABASE_URL`; production schema checks must be reviewed separately before any release. The CHRONOS API reads staging events marked `event_type=chronos`. The legacy bot event-creation handler still writes to `DATABASE_URL`, so do not create CHRONOS test events through it; a staging-only event-creation path is a separate prerequisite for exercising event-linking features.
+**Database isolation:** CHRONOS admin event creation and editing are exposed only through authenticated `/api/chronos/admin/slots/{slot_id}/event` endpoints and use `get_chronos_connection()` exclusively. Creation inserts the event into staging and binds it to the slot within one transaction. The ordinary Telegram bot event creator continues to use `DATABASE_URL` and is unchanged. If `CHRONOS_DATABASE_URL` is absent, these admin operations fail closed; they never fall back to the bot database.
 
 ## Environment variables
 
