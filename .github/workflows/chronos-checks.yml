@@ -162,6 +162,9 @@ jobs:
               raise SystemExit("Progress title must be baked into the generated panel, not duplicated in HTML")
           if '#screen-home .home-progress-card>strong{margin:25px 0 8px}' not in visual_v4:
               raise SystemExit("Live season percentage must remain positioned beneath the generated title")
+          event_frame_asset = "assets/chronos-v3/home/event-card-frame-v01.svg"
+          if 'url("chronos-v3/home/event-card-frame-v01.svg")' not in visual_v4 or not (miniapp_dir / event_frame_asset).is_file():
+              raise SystemExit("CHRONOS home event card frame asset is missing")
           player_asset = "assets/chronos-v3/home/player-id-frame-v02.svg"
           if 'url("chronos-v3/home/player-id-frame-v02.svg")' not in visual_v4 or not (miniapp_dir / player_asset).is_file():
               raise SystemExit("CHRONOS Player ID frame-only vector artwork is missing")
