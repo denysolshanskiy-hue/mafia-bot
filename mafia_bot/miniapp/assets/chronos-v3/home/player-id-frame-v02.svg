@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 310" fill="none">
+<defs>
+ <linearGradient id="cyan" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d8ffff"/><stop offset=".24" stop-color="#00eaff"/><stop offset=".72" stop-color="#007fae"/><stop offset="1" stop-color="#003b69"/></linearGradient>
+ <linearGradient id="pink" x1="1" y1="0" x2="0" y2="1"><stop stop-color="#ffe0fa"/><stop offset=".25" stop-color="#ff55d4"/><stop offset=".7" stop-color="#a91b91"/><stop offset="1" stop-color="#50104f"/></linearGradient>
+ <linearGradient id="mix" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#00eaff"/><stop offset=".46" stop-color="#00bde8"/><stop offset=".56" stop-color="#a43fbd"/><stop offset="1" stop-color="#ff3bbd"/></linearGradient>
+ <filter id="glow" x="-30%" y="-40%" width="160%" height="180%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <filter id="soft" x="-30%" y="-40%" width="160%" height="180%"><feGaussianBlur stdDeviation="1.4"/></filter>
+</defs>
+<!-- Outer angular silhouette -->
+<path d="M24 26H145L157 36H263L276 26H396L410 42V268L395 284H278L265 274H155L142 284H25L10 268V42L24 26Z" stroke="url(#mix)" stroke-width="2.2" opacity=".9" filter="url(#glow)"/>
+<path d="M27 32H143L157 43H263L277 32H391L403 45V265L390 278H279L265 267H155L141 278H28L17 265V45L27 32Z" stroke="url(#mix)" stroke-width="1" opacity=".8"/>
+<!-- Inner angular trace, leaving the central content clear -->
+<path d="M39 55H166L177 64H243L254 55H380L390 65V245L380 255H257L245 246H175L163 255H40L30 245V65L39 55Z" stroke="url(#mix)" stroke-width="1" opacity=".34"/>
+<!-- Corner plates -->
+<path d="M29 45H119M29 45L21 53V80M391 45H301M391 45L399 53V80M29 265H119M29 265L21 257V230M391 265H301M391 265L399 257V230" stroke="url(#mix)" stroke-width="2" opacity=".72"/>
+<!-- Cyan/pink luminous edge highlights -->
+<path d="M25 28H143L155 38H207" stroke="url(#cyan)" stroke-width="3" stroke-linecap="round" filter="url(#glow)"/>
+<path d="M213 38H265L277 28H394" stroke="url(#pink)" stroke-width="3" stroke-linecap="round" filter="url(#glow)"/>
+<path d="M12 76V235M18 258L29 276H142" stroke="#00eaff" stroke-width="2" opacity=".8" filter="url(#glow)"/>
+<path d="M408 76V235M402 258L391 276H278" stroke="#ff42cb" stroke-width="2" opacity=".8" filter="url(#glow)"/>
+<path d="M158 278H205M215 278H263" stroke="url(#mix)" stroke-width="2" filter="url(#glow)"/>
+<!-- Technical hatch marks -->
+<path d="M335 47L350 32M347 47L362 32M359 47L374 32M46 262L60 248M58 262L72 248M70 262L84 248" stroke="url(#mix)" stroke-width="2" stroke-linecap="square" opacity=".82"/>
+<!-- Edge micro details -->
+<path d="M23 102V145M23 153V190M397 102V145M397 153V190" stroke="url(#mix)" stroke-width="1.2" opacity=".65"/>
+<path d="M33 88H48M33 93H44M372 88H387M376 93H387M33 217H48M33 222H44M372 217H387M376 222H387" stroke="url(#mix)" stroke-width="1" opacity=".5"/>
+</svg>
