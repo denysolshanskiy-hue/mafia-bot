@@ -290,8 +290,8 @@
     // Ten overlay positions correspond to the ten player chairs in chronos-hall.svg.
     // The host is a separate foreground figure, not a player seat.
     const positions = [
-      ["50%", "28.7%"], ["69%", "34.6%"], ["80.5%", "51.5%"], ["71.5%", "71.3%"], ["59%", "76.5%"],
-      ["41%", "76.5%"], ["28.5%", "71.3%"], ["19.5%", "51.5%"], ["31%", "34.6%"], ["50%", "80.1%"]
+      ["50%", "24.7%"], ["69%", "30.6%"], ["80.5%", "47.5%"], ["71.5%", "67.4%"], ["59%", "72.5%"],
+      ["41%", "72.5%"], ["28.5%", "67.4%"], ["19.5%", "47.5%"], ["31%", "30.6%"], ["50%", "76.2%"]
     ];
     return positions.map((point, index) => {
       const player = (roster || [])[index];
@@ -378,7 +378,7 @@
       '</div>' +
       '<div class="event-detail-panel">' +
         '<div class="event-panel-heading"><div><span class="eyebrow">PLAYER ROSTER</span><h2>Місця за столом</h2></div><strong>' + Math.min(10, roster.length) + ' / 10</strong></div>' +
-        '<div class="event-seat-progress">' + Array.from({length: 10}, (_, index) => '<i class="' + (index < Math.min(10, count) ? "filled" : "") + '"></i>').join("") + '</div>' +
+        '<div class="event-seat-progress">' + Array.from({length: 10}, (_, index) => '<i class="' + (index < Math.min(10, roster.length) ? "filled" : "") + '"></i>').join("") + '</div>' +
         '<div class="event-seat-grid">' + playerMarkup + emptyMarkup + '</div>' + rotationMarkup +
       '</div>' +
       '<div class="event-detail-facts">' +
