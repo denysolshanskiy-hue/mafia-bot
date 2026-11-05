@@ -109,6 +109,7 @@ jobs:
               "assets/chronos-v3/home/store.svg",
               "assets/chronos-v3/home/notifications.svg",
               "assets/chronos-v3/home/home-hero-poster-v02.webp",
+              "assets/chronos-v3/home/notification-button-v01.webp",
           ):
               if not (miniapp_dir / asset).is_file():
                   raise SystemExit(f"Missing Mini App asset: {asset}")
@@ -117,7 +118,7 @@ jobs:
 
           index_html = (miniapp_dir / "index.html").read_text(encoding="utf-8")
           visual_css = (miniapp_dir / "assets/app-visual-v2.css").read_text(encoding="utf-8")
-          if 'href="assets/app-visual-v2.css?v=chronos-v3-button-01"' not in index_html:
+          if 'href="assets/app-visual-v2.css?v=chronos-v3-button-02"' not in index_html:
               raise SystemExit("Visual v2 stylesheet is not loaded by index.html")
 
           for referenced_asset in ("chronos-core.svg", "chronos-tower.svg"):
@@ -126,11 +127,11 @@ jobs:
               if not (miniapp_dir / "assets" / referenced_asset).is_file():
                   raise SystemExit(f"Missing CSS-referenced asset: {referenced_asset}")
 
-          if 'href="assets/app-visual-v3.css?v=chronos-v3-button-01"' not in index_html:
+          if 'href="assets/app-visual-v3.css?v=chronos-v3-button-02"' not in index_html:
               raise SystemExit("CHRONOS v3 visual stylesheet is not loaded")
           visual_v3 = (miniapp_dir / "assets/app-visual-v3.css").read_text(encoding="utf-8")
           visual_v4 = (miniapp_dir / "assets/app-visual-v4.css").read_text(encoding="utf-8")
-          if 'href="assets/app-visual-v4.css?v=chronos-v3-button-01"' not in index_html:
+          if 'href="assets/app-visual-v4.css?v=chronos-v3-button-02"' not in index_html:
               raise SystemExit("CHRONOS v4 Home stylesheet is not loaded")
           if "#screen-home .home-progress-card" not in visual_v4 or "#screen-home .home-hero-copy h1" not in visual_v4:
               raise SystemExit("CHRONOS Home screen composition rules are missing")
@@ -141,6 +142,13 @@ jobs:
               raise SystemExit("Generated CHRONOS enter button asset is missing")
           if 'aria-label="Увійти до зали"' not in index_html or 'data-nav="room"' not in index_html:
               raise SystemExit("CHRONOS entrance CTA must remain an accessible, clickable Hall button")
+          notice_asset = "assets/chronos-v3/home/notification-button-v01.webp"
+          if notice_asset not in index_html or not (miniapp_dir / notice_asset).is_file():
+              raise SystemExit("Generated CHRONOS notification control artwork is missing")
+          if 'aria-label="Відкрити сповіщення"' not in index_html or 'data-nav="notifications"' not in index_html:
+              raise SystemExit("Notification artwork must remain an accessible clickable control")
+          if '#screen-home .home-notice-button i{' in visual_v4:
+              raise SystemExit("Static fake unread notification dot must not be rendered")
           if "#screen-home .home-enter-button img" not in visual_v4:
               raise SystemExit("Generated CHRONOS enter button image styling is missing")
           if 'aspect-ratio:2 / 3' not in visual_v4 or 'background-size:contain' not in visual_v4:
