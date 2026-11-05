@@ -201,7 +201,7 @@
     const kicker = live ? "LIVE OPERATION" : planned ? "NEXT IN CHRONOLOGY" : "CHRONOS / SEASON";
     const note = live ? "Поточна подія сезону" : planned ? "Наступний запланований вечір" : "Нова подія з'явиться тут після публікації організатором";
     const action = live ? '<button class="home-next-arrow" type="button" data-event-id="' + escapeHtml(live.event_id) + '" aria-label="Відкрити подію">↗</button>' : '<button class="home-next-arrow" type="button" data-nav="events" aria-label="Відкрити календар">↗</button>';
-    container.innerHTML = '<img class="home-next-art" src="assets/chronos-v3/home/hall.svg" alt="Футуристична ігрова зала KMC">' +
+    container.innerHTML = '<img class="home-next-art" src="assets/chronos-hall.svg" alt="Футуристична ігрова зала KMC">' +
       '<div class="home-next-info"><span class="home-next-kicker">' + kicker + '</span><h3>' + escapeHtml(title) + '</h3><p>' + escapeHtml(note) + '</p><span class="home-next-date">' + escapeHtml(date) + '</span></div>' + action;
   }
 
