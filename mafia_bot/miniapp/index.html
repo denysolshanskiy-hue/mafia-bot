@@ -167,20 +167,29 @@
         <div class="tower-legend"><span><i class="legend-open"></i> БАЗОВИЙ ОГЛЯД</span><span><i class="legend-locked"></i> УМОВА ВІДКРИТТЯ</span></div>
       </section>
 
-      <section class="screen" id="screen-events" data-screen="events">
-        <div class="page-intro">
-          <div class="eyebrow">MISSION CONTROL <span class="eyebrow-line"></span> LIVE FEED</div>
-          <h1>Календар<br><em>операцій.</em></h1>
-          <p>Реальні події створюються в Telegram-боті. Тут вони з'являються автоматично.</p>
+      <section class="screen events-screen" id="screen-events" data-screen="events">
+        <div class="page-intro events-intro">
+          <div class="eyebrow"><span class="pulse-dot"></span> CHRONOS NETWORK <span class="eyebrow-line"></span> EVENT LOG</div>
+          <h1>Наступна<br><em>точка часу.</em></h1>
+          <p>Усі ігрові вечори KMC в одному місці. Обирай подію, переглядай склад і підтверджуй участь.</p>
+        </div>
+        <div class="events-overview">
+          <div class="events-overview-main"><span>СИНХРОНІЗОВАНО З KMC</span><strong id="event-total">—</strong><small>ПОДІЙ У ХРОНОЛОГІЇ</small></div>
+          <div class="events-overview-side"><i></i><span>LIVE FEED</span><b>АКТИВНИЙ</b></div>
+        </div>
+        <div class="events-toolbar">
+          <div><div class="eyebrow">MISSION SELECT</div><h2>Календар подій</h2></div>
+          <span class="section-code">01 / EVENTS</span>
         </div>
         <div class="filter-tabs" role="tablist" aria-label="Типи подій">
           <button class="filter-tab active" data-filter="all">УСІ <span id="event-count">0</span></button>
           <button class="filter-tab" data-filter="live">ВІДКРИТІ</button>
-          <button class="filter-tab" data-filter="planned">СКОРО</button>
+          <button class="filter-tab" data-filter="planned">ЗАПЛАНОВАНІ</button>
         </div>
         <div id="events-list" class="events-list">
           <div class="empty-state"><span class="empty-symbol">⌁</span><b>Завантажуємо календар</b><small>Синхронізація з ботом...</small></div>
         </div>
+        <p class="events-footnote">Дані оновлюються з основного Telegram-бота KMC. Статус реєстрації та склад учасників — у картці конкретної події.</p>
       </section>
 
       <section class="screen" id="screen-profile" data-screen="profile">
