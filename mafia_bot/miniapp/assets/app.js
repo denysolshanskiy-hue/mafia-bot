@@ -132,8 +132,8 @@
 
   function showScreen(name) {
     state.currentScreen = name;
-    $(".screen").forEach(el => el.classList.toggle("active", el.dataset.screen === name));
-    $(".nav-item").forEach(el => el.classList.toggle("active", el.dataset.nav === name));
+    $$(".screen").forEach(el => el.classList.toggle("active", el.dataset.screen === name));
+    $$(".nav-item").forEach(el => el.classList.toggle("active", el.dataset.nav === name));
     if (name === "room") renderRoom();
     if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
     window.scrollTo({ top: 0, behavior: "smooth" });
