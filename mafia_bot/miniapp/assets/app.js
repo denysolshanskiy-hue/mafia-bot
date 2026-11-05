@@ -184,20 +184,27 @@
   function eventCard(event, planned = false) {
     const date = splitDate(planned ? event.planned_date : event.event_date);
     const code = planned ? event.slot_code : (event.slot_code || ("EVENT " + event.event_id));
+    const count = Number(event.active_count) || 0;
     const subtitle = planned
-      ? (event.planned_date ? formatDate(event.planned_date) : "ДАТУ НЕ ВИЗНАЧЕНО") + " · СКОРО"
-      : formatDate(event.event_date, event.event_time) + " · " + (Number(event.active_count) || 0) + " ГРАВЦІВ";
+      ? (event.planned_date ? formatDate(event.planned_date) : "ДАТУ НЕ ВИЗНАЧЕНО")
+      : formatDate(event.event_date, event.event_time);
     return `
-      <article class="event-card ${planned ? "planned" : ""}">
-        <div class="event-date-box"><b>${escapeHtml(date[0])}</b><small>${escapeHtml(date[1])}</small></div>
-        <div class="event-copy">
-          <small>${escapeHtml(code)} · ${planned ? "PLANNED" : "LIVE"}</small>
-          <h3>${escapeHtml(event.title)}</h3>
-          <p>${escapeHtml(subtitle)}</p>
+      <article class="event-card chronos-event-card ${planned ? "planned" : "live-event"}">
+        <div class="event-card-top"><span class="event-status"><i></i>${planned ? "ЗАПЛАНОВАНО" : "РЕЄСТРАЦІЯ ВІДКРИТА"}</span><span class="event-code">${escapeHtml(code || "KMC EVENT")}</span></div>
+        <div class="event-card-body">
+          <div class="event-date-box"><b>${escapeHtml(date[0])}</b><small>${escapeHtml(date[1])}</small></div>
+          <div class="event-copy">
+            <h3>${escapeHtml(event.title || "Ігровий вечір KMC")}</h3>
+            <p class="event-date-line">${escapeHtml(subtitle)}</p>
+            <div class="event-participants"><span class="participants-icon">◉</span><strong>${planned ? "—" : count}</strong><small>${planned ? "УЧАСНИКИ ЩЕ НЕ ВІДОБРАЖАЮТЬСЯ" : count === 1 ? "ГРАВЕЦЬ У СПИСКУ" : "ГРАВЦІВ У СПИСКУ"}</small></div>
+          </div>
         </div>
-        ${planned
-          ? '<button class="event-action" data-nav="tower" aria-label="Переглянути поверхи">↗</button>'
-          : `<button class="event-action" data-event-id="${event.event_id}" aria-label="Деталі події">↗</button>`}
+        <div class="event-card-bottom">
+          <span>${planned ? "ОЧІКУЄ НАСТАННЯ ДАТИ" : "ПЕРЕГЛЯНЬ СКЛАД ТА СТАТУС"}</span>
+          ${planned
+            ? '<span class="event-action event-action-muted" aria-hidden="true">···</span>'
+            : `<button class="event-action" data-event-id="${event.event_id}" aria-label="Деталі події">↗</button>`}
+        </div>
       </article>`;
   }
 
@@ -206,6 +213,8 @@
     const filteredPlanned = state.filter === "live" ? [] : state.planned;
     const allCount = state.events.length + state.planned.length;
     $("#event-count").textContent = String(allCount);
+    const total = $("#event-total");
+    if (total) total.textContent = String(allCount).padStart(2, "0");
     const pieces = [
       ...filteredLive.map(event => eventCard(event, false)),
       ...filteredPlanned.map(event => eventCard(event, true))
