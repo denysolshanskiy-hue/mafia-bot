@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="740" height="240" viewBox="0 0 740 240" fill="none">
+<defs>
+ <linearGradient id="edge" x1="8" y1="0" x2="730" y2="240" gradientUnits="userSpaceOnUse"><stop stop-color="#00E8FF"/><stop offset=".43" stop-color="#1A9EFF"/><stop offset=".68" stop-color="#B54BFF"/><stop offset="1" stop-color="#FF35B7"/></linearGradient>
+ <linearGradient id="panel" x1="0" y1="0" x2="740" y2="240" gradientUnits="userSpaceOnUse"><stop stop-color="#071B2C" stop-opacity=".94"/><stop offset=".53" stop-color="#09142B" stop-opacity=".96"/><stop offset="1" stop-color="#1A0D2A" stop-opacity=".96"/></linearGradient>
+ <linearGradient id="split" x1="300" y1="0" x2="360" y2="240" gradientUnits="userSpaceOnUse"><stop stop-color="#00E5FF" stop-opacity=".9"/><stop offset="1" stop-color="#FF3CB4" stop-opacity=".75"/></linearGradient>
+ <filter id="glow" x="-20%" y="-30%" width="140%" height="160%" color-interpolation-filters="sRGB"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<path d="M28 8H185L199 15H518L533 8H710L732 30V208L710 232H532L518 225H200L185 232H28L8 211V30L28 8Z" fill="url(#panel)" stroke="url(#edge)" stroke-width="2.4" filter="url(#glow)"/>
+<path d="M34 18H181L196 25H520L536 18H704L721 35V203L704 222H536L520 215H196L181 222H34L19 205V35L34 18Z" stroke="url(#edge)" stroke-opacity=".68" stroke-width="1.1"/>
+<path d="M304 20L286 220" stroke="url(#split)" stroke-width="1.5" stroke-opacity=".7"/>
+<path d="M43 28H147M593 28H691M43 212H144M596 212H690" stroke="url(#edge)" stroke-width="1.2" stroke-opacity=".62"/>
+<path d="M42 36L26 52V187L42 204M698 36L714 52V187L698 204" stroke="url(#edge)" stroke-opacity=".48"/>
+<path d="M53 20L44 31M66 20L57 31M79 20L70 31M92 20L83 31M650 20L641 31M663 20L654 31M676 20L667 31M689 20L680 31" stroke="#00DFFF" stroke-width="2.3" stroke-linecap="round" opacity=".8"/>
+<path d="M650 219L659 208M663 219L672 208M676 219L685 208M689 219L698 208" stroke="#FF43B9" stroke-width="2.3" stroke-linecap="round" opacity=".85"/>
+<path d="M11 70V170M729 70V170" stroke="url(#edge)" stroke-width="2" opacity=".55"/>
+<path d="M188 8L196 15H518L526 8" stroke="#A4F8FF" stroke-width="1.2" opacity=".75"/>
+<path d="M188 232L196 225H518L526 232" stroke="#FF8BD0" stroke-width="1.2" opacity=".65"/>
+</svg>
