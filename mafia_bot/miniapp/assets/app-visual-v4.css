@@ -202,3 +202,14 @@
 @media(min-width:520px){
   #screen-home .home-enter-button{width:200px;max-width:48vw;height:auto;min-width:0;min-height:0}
 }
+
+
+/* Generated CHRONOS progress panel with baked-in title; metrics remain live HTML. */
+#screen-home .home-progress-card{
+  border:0;
+  background:#070d1c url("chronos-v3/home/progress-panel-v01.webp") center/100% 100% no-repeat;
+  box-shadow:0 8px 20px rgba(0,0,0,.28);
+}
+#screen-home .home-progress-card:before{display:none!important}
+#screen-home .home-progress-card h2{display:none!important}
+#screen-home .home-progress-card>strong{margin:25px 0 8px}
