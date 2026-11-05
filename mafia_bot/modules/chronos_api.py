@@ -295,11 +295,13 @@ async def get_event(request):
     try:
         event = await conn.fetchrow(
             """
-            SELECT event_id, title, event_date, event_time
-            FROM public.events
-            WHERE event_id = $1
-              AND event_type = 'chronos'
-              AND status = 'active'
+            SELECT e.event_id, e.title, e.event_date, e.event_time,
+                   s.slot_type, s.sequence_no, s.slot_code
+            FROM public.events e
+            LEFT JOIN chronos.event_slots s ON s.bot_event_id = e.event_id
+            WHERE e.event_id = $1
+              AND e.event_type = 'chronos'
+              AND e.status = 'active'
             """,
             event_id,
         )
@@ -359,6 +361,9 @@ async def get_event(request):
                 "title": event["title"],
                 "event_date": _date(event["event_date"]),
                 "event_time": event["event_time"],
+                "slot_type": event["slot_type"],
+                "sequence_no": event["sequence_no"],
+                "slot_code": event["slot_code"],
                 "is_registered": is_registered,
                 "active_count": len(roster),
             },
