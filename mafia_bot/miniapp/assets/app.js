@@ -3,7 +3,9 @@
 
   const tg = window.Telegram?.WebApp;
   const state = {
-    initData: tg?.initData || "",
+    // Telegram may populate initData as the WebView finishes initializing.
+    // Refresh it after tg.ready() immediately before the first auth decision.
+    initData: "",
     profile: null,
     season: null,
     events: [],
@@ -357,6 +359,7 @@
     if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
   }
 
+  state.initData = tg?.initData || "";
   if (!state.initData) {
     showSoonScreen();
   } else {
