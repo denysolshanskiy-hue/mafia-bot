@@ -311,7 +311,7 @@
     const event = data.event || {};
     const roster = data.roster || [];
     const listEvent = (state.events || []).find(item => Number(item.event_id) === Number(event.event_id));
-    const type = eventSlotType(listEvent || {});
+    const type = event.slot_type || eventSlotType(listEvent || {});
     const count = Math.max(Number(event.active_count) || 0, roster.length);
     const registered = Boolean(event.is_registered);
     const profileComplete = Boolean(state.profile && state.profile.profile_complete);
