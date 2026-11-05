@@ -62,7 +62,7 @@ def admin_menu_keyboard():
 [KeyboardButton(text="✅ Підтвердити вечір"), KeyboardButton(text="🏁 Завершити вечір")],
 [KeyboardButton(text="❌ Скасувати івент"), KeyboardButton(text="📣 Повідомлення")],
 [KeyboardButton(text="☣️ UNDERGROUND")],
-[KeyboardButton(text="⏳ CHRONOS", web_app=WebAppInfo(url=os.getenv("CHRONOS_WEBAPP_URL", "")))],
+[KeyboardButton(text="⏳ CHRONOS")],
     ],
         resize_keyboard=True
     )
@@ -73,7 +73,7 @@ def player_menu_keyboard():
             [KeyboardButton(text="📅 Активні події")],
             [KeyboardButton(text="💳 Оплатити ігри")],
             [KeyboardButton(text="☣️ UNDERGROUND")],
-            [KeyboardButton(text="⏳ CHRONOS", web_app=WebAppInfo(url=os.getenv("CHRONOS_WEBAPP_URL", "")))],
+            [KeyboardButton(text="⏳ CHRONOS")],
             ],
         resize_keyboard=True
     )
@@ -117,6 +117,27 @@ def cancel_keyboard(event_id: int):
                 )
             ]
         ]
+    )
+
+# ================== CHRONOS MINI APP LAUNCH ==================
+@dp.message(F.text == "⏳ CHRONOS")
+async def open_chronos(message: types.Message):
+    if message.chat.type != "private":
+        return
+
+    webapp_url = os.getenv("CHRONOS_WEBAPP_URL", "").strip()
+    if not webapp_url:
+        await message.answer("❌ CHRONOS наразі недоступний: не налаштовано адресу Mini App.")
+        return
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="⏳ ВІДКРИТИ CHRONOS", web_app=WebAppInfo(url=webapp_url))]
+        ]
+    )
+    await message.answer(
+        "⏳ CHRONOS готовий до запуску. Натисніть кнопку нижче:",
+        reply_markup=keyboard,
     )
 
 # ================== START / NICKNAME ==================
