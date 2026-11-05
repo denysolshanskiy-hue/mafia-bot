@@ -10,13 +10,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/app.css?v=chronos-visual-13">
-  <link rel="stylesheet" href="assets/app-visual-v2.css?v=chronos-visual-13">
-  <link rel="stylesheet" href="assets/app-visual-v3.css?v=chronos-visual-13">
-  <link rel="stylesheet" href="assets/app-visual-v4.css?v=chronos-visual-13">
+  <link rel="stylesheet" href="assets/app.css?v=chronos-v3-home-01">
+  <link rel="stylesheet" href="assets/app-visual-v2.css?v=chronos-v3-home-01">
+  <link rel="stylesheet" href="assets/app-visual-v3.css?v=chronos-v3-home-01">
+  <link rel="stylesheet" href="assets/app-visual-v4.css?v=chronos-v3-home-01">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script defer src="assets/app.js?v=chronos-visual-13"></script>
-  <script defer src="assets/modules.js?v=chronos-visual-13"></script>
+  <script defer src="assets/app.js?v=chronos-v3-home-01"></script>
+  <script defer src="assets/modules.js?v=chronos-v3-home-01"></script>
 </head>
 <body>
   <div class="ambient ambient-a"></div>
@@ -44,87 +44,51 @@
 
     <main id="app-main">
       <section class="screen active home-screen" id="screen-home" data-screen="home">
-        <div class="home-hero">
+        <section class="home-hero" aria-label="CHRONOS — Хранителі часу">
           <div class="home-hero-art" aria-hidden="true">
             <img class="home-hero-tile home-hero-tile-tl" src="assets/chronos-v2/backgrounds/home/home-hero-city-v01-tl.webp" alt="">
             <img class="home-hero-tile home-hero-tile-tr" src="assets/chronos-v2/backgrounds/home/home-hero-city-v01-tr.webp" alt="">
             <img class="home-hero-tile home-hero-tile-bl" src="assets/chronos-v2/backgrounds/home/home-hero-city-v01-bl.webp" alt="">
             <img class="home-hero-tile home-hero-tile-br" src="assets/chronos-v2/backgrounds/home/home-hero-city-v01-br.webp" alt="">
-            <span class="home-orbit home-orbit-a"></span><span class="home-orbit home-orbit-b"></span>
           </div>
-          <div class="home-hero-top">
-            <span class="home-hero-kicker"><i></i> CHRONOS NETWORK</span>
-            <span class="home-hero-code">KMC / 2026</span>
+          <div class="home-hero-shade" aria-hidden="true"></div>
+          <div class="home-hero-brand"><div class="home-kmc-mark">KMC</div><div class="home-kmc-name">KREMENCHUK<br>MAFIA CLUB</div><span class="home-brand-bars"><i></i><i></i><i></i></span>
+            <button class="home-notice-button" type="button" data-nav="notifications" aria-label="Сповіщення"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg><i></i></button>
           </div>
           <div class="home-hero-copy">
-            <div class="home-hero-overline">ХРАНИТЕЛІ ЧАСУ · СЕЗОН 01</div>
-            <h1>Твій час.<br><em>Твоя історія.</em></h1>
-            <p>Місто змінюється. Твій вибір визначає, що буде далі.</p>
-            <button class="primary-button home-hero-action" type="button" data-nav="room">
-              <span>УВІЙТИ ДО ЗАЛИ</span><b aria-hidden="true">↗</b>
-            </button>
+            <div class="home-chronos-lockup"><span class="home-chronos-symbol"><i></i><i></i><i></i></span><span><b>CHRONOS</b><small>ХРАНИТЕЛІ ЧАСУ</small></span></div>
+            <div class="home-season-tag"><span></span> СЕЗОН 01</div>
+            <h1>ТВІЙ ЧАС.<br>ТВОЯ <em>ІСТОРІЯ.</em></h1>
+            <p>Рейтинговий сезон KMC. Ігрові вечори, прогрес, нагороди та шлях до фіналу.</p>
+            <button class="home-enter-button" type="button" data-nav="room"><span>УВІЙТИ ДО ЗАЛИ</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></button>
           </div>
-          <div class="home-hero-bottom">
-            <span class="home-season-state"><i></i><b id="season-state">SEASON PREVIEW</b></span>
-            <span>NEO-NOIR <i>·</i> KMC</span>
-          </div>
-        </div>
-
-        <section class="home-progress-panel" aria-label="Прогрес сезону">
-          <div class="home-progress-head">
-            <div><span class="home-panel-kicker">SEASON PROTOCOL / 01</span><h2>Шлях до фіналу</h2></div>
-            <strong class="home-progress-value" id="home-sync-percent">—%</strong>
-          </div>
-          <div class="home-progress-track" role="progressbar" aria-label="Загальний прогрес сезону" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="home-sync-track">
-            <span id="home-sync-meter"></span>
-          </div>
-          <div class="home-progress-foot">
-            <span id="home-sync-status">ОЧІКУЄМО СИНХРОНІЗАЦІЮ</span><span>GLOBAL SYNC</span>
-          </div>
+          <div class="home-hero-foot"><span><i></i><b id="season-state">SEASON PREVIEW</b></span><span>KMC <b>·</b> CHRONOS NETWORK</span></div>
         </section>
-
-        <section class="home-operator-section">
-          <div class="home-section-head">
-            <div><span class="home-panel-kicker">PERSONAL ACCESS / 01</span><h2>Твоя ідентичність</h2></div>
-            <span class="home-section-index">OPERATOR ID</span>
-          </div>
-          <div class="welcome-card home-operator-card">
-            <div class="avatar-chip"><span id="avatar-initial">?</span><i></i></div>
-            <div class="welcome-copy">
-              <small>ОПЕРАТОР СИСТЕМИ</small><strong id="home-name">Гість системи</strong>
-              <span id="home-profile-note">Перевіряємо доступ...</span>
-            </div>
-            <button class="round-arrow" type="button" data-nav="profile" aria-label="Відкрити профіль">↗</button>
-          </div>
+        <section class="home-status-row" aria-label="Сезон та особистий профіль">
+          <article class="home-progress-card"><div class="home-card-kicker">SEASON SYNC <span>01</span></div><h2>Шлях до фіналу</h2><strong id="home-sync-percent">—%</strong>
+            <div class="home-progress-track" id="home-sync-track" role="progressbar" aria-label="Загальний прогрес сезону" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="home-sync-meter"></span></div>
+            <small id="home-sync-status">ОЧІКУЄМО СИНХРОНІЗАЦІЮ</small>
+          </article>
+          <button class="home-player-card" type="button" data-nav="profile" aria-label="Відкрити профіль">
+            <span class="home-player-topline">PLAYER ID <i>● ONLINE</i></span>
+            <span class="home-player-main"><span class="home-player-avatar" id="home-player-avatar"><b id="avatar-initial">?</b><i></i></span><span class="home-player-data"><strong id="home-name">Гість системи</strong><small>ОПЕРАТОР KMC</small></span></span>
+            <span class="home-player-balance"><small>БАЛАНС</small><b id="home-balance">—</b></span><span class="home-player-foot" id="home-profile-note">ПЕРЕВІРКА ІДЕНТИЧНОСТІ</span>
+          </button>
         </section>
-
-        <section class="home-event-section">
-          <div class="home-section-head">
-            <div><span class="home-panel-kicker">LIVE OPERATIONS / 02</span><h2>Наступна подія</h2></div>
-            <button class="text-link" type="button" data-nav="events">УСІ ПОДІЇ <span>→</span></button>
-          </div>
-          <div id="home-event" class="event-feature home-event-card">
-            <div class="loading-line"></div><div class="loading-line short"></div>
-          </div>
+        <section class="home-next-section">
+          <div class="home-section-title"><span class="home-title-mark"></span><h2>НАСТУПНА ПОДІЯ</h2><span class="home-title-line"></span><button type="button" data-nav="events">УСІ <b>↗</b></button></div>
+          <div id="home-event" class="home-next-card"><img class="home-next-art" src="assets/chronos-v3/home/hall.svg" alt=""><div class="home-next-info"><span class="home-next-kicker">CHRONOS / LIVE EVENT</span><h3>Завантажуємо календар</h3><p>Синхронізація подій KMC...</p><span class="home-next-date">—</span></div></div>
         </section>
-
         <section class="home-modules-section">
-          <div class="home-section-head">
-            <div><span class="home-panel-kicker">SYSTEM MODULES / 03</span><h2>Швидкий доступ</h2></div>
-            <span class="home-section-index">CHRONOS OS</span>
-          </div>
-          <div class="module-grid home-module-grid">
-            <button class="module-tile room-module" type="button" data-nav="room"><span class="module-symbol">⌖</span><b>ІГРОВА ЗАЛА</b><small>KMC · LIVE ROOM</small></button>
-            <button class="module-tile" type="button" data-nav="tower"><span class="module-symbol">▥</span><b>ВЕЖА ЧАСУ</b><small>10 FLOORS · PROGRESS</small></button>
-            <button class="module-tile" type="button" data-nav="events"><span class="module-symbol">◫</span><b>ПОДІЇ</b><small>CALENDAR · FINALS</small></button>
-            <button class="module-tile" type="button" data-nav="simulations"><span class="module-symbol">⌘</span><b>СИМУЛЯЦІЇ</b><small>TRAINING PROTOCOLS</small></button>
-            <button class="module-tile" type="button" data-nav="operations"><span class="module-symbol">⌁</span><b>ОПЕРАЦІЇ</b><small>MISSIONS · FINALS</small></button>
-            <button class="module-tile" type="button" data-nav="rankings"><span class="module-symbol">↗</span><b>РЕЙТИНГИ</b><small>iMAFIA · TOP 10</small></button>
-            <button class="module-tile" type="button" data-nav="rewards"><span class="module-symbol">◇</span><b>НАГОРОДИ</b><small>ACHIEVEMENTS · VAULT</small></button>
-            <button class="module-tile" type="button" data-nav="store"><span class="module-symbol">▣</span><b>МАГАЗИН</b><small>ITEMS · INVENTORY</small></button>
-            <button class="module-tile" type="button" data-nav="market"><span class="module-symbol">◈</span><b>БІРЖА ПРОГНОЗІВ</b><small>LIVE PREDICTIONS</small></button>
-            <button class="module-tile" type="button" data-nav="notifications"><span class="module-symbol">⌗</span><b>СПОВІЩЕННЯ</b><small>SYSTEM MESSAGES</small></button>
-            <button class="module-tile admin-module" type="button" id="admin-shortcut" data-nav="admin" hidden><span class="module-symbol">⌬</span><b>ADMIN CONSOLE</b><small>SEASON CONTROL</small></button>
+          <div class="home-section-title"><span class="home-title-mark"></span><h2>СИСТЕМА СЕЗОНУ</h2><span class="home-title-line"></span></div>
+          <div class="home-module-grid">
+            <button class="home-module-tile" type="button" data-nav="room"><img src="assets/chronos-v3/home/hall.svg" alt=""><span>ІГРОВА ЗАЛА</span><small>KMC PLAYER ARENA</small></button>
+            <button class="home-module-tile" type="button" data-nav="market"><img src="assets/chronos-v3/home/market.svg" alt=""><span>БІРЖА ПРОГНОЗІВ</span><small>LIVE PREDICTIONS</small></button>
+            <button class="home-module-tile" type="button" data-nav="simulations"><img src="assets/chronos-v3/home/simulations.svg" alt=""><span>СИМУЛЯЦІЇ</span><small>TRAINING PROTOCOLS</small></button>
+            <button class="home-module-tile" type="button" data-nav="rewards"><img src="assets/chronos-v3/home/rewards.svg" alt=""><span>НАГОРОДИ</span><small>ACHIEVEMENT VAULT</small></button>
+            <button class="home-module-tile" type="button" data-nav="store"><img src="assets/chronos-v3/home/store.svg" alt=""><span>МАГАЗИН</span><small>ITEMS & INVENTORY</small></button>
+            <button class="home-module-tile" type="button" data-nav="notifications"><img src="assets/chronos-v3/home/notifications.svg" alt=""><span>СПОВІЩЕННЯ</span><small>SYSTEM MESSAGES</small></button>
+            <button class="home-module-tile admin-module" type="button" id="admin-shortcut" data-nav="admin" hidden><span class="home-module-admin-mark">⌘</span><span>ADMIN CONSOLE</span><small>SEASON CONTROL</small></button>
           </div>
         </section>
       </section>
@@ -343,11 +307,12 @@
     </main>
 
     <nav class="bottom-nav" aria-label="Основна навігація">
-      <button class="nav-item active" data-nav="home"><span class="nav-icon">⌂</span><small>ГОЛОВНА</small></button>
-      <button class="nav-item" data-nav="tower"><span class="nav-icon">▤</span><small>ВЕЖА</small></button>
-      <button class="nav-item nav-center" data-nav="events"><span class="nav-icon">⌁</span><small>ПОДІЇ</small></button>
-      <button class="nav-item" data-nav="market"><span class="nav-icon">◈</span><small>БІРЖА</small></button>
-      <button class="nav-item" data-nav="profile"><span class="nav-icon">◉</span><small>ПРОФІЛЬ</small></button>
+      <button class="nav-item active" data-nav="home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10H5V10m5 10v-6h4v6"/></svg><small>ГОЛОВНА</small></button>
+      <button class="nav-item" data-nav="events"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4m10-4v4M3 10h18"/></svg><small>ПОДІЇ</small></button>
+      <button class="nav-item" data-nav="tower"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 21 10 3h4l3 18M5 21h14M9 8h6m-7 5h8m-9 4h10"/></svg><small>ВЕЖА</small></button>
+      <button class="nav-item" data-nav="operations"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Zm-9 9 9 5 9-5m-18 5 9 5 9-5"/></svg><small>ОПЕРАЦІЇ</small></button>
+      <button class="nav-item" data-nav="rankings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0V4Zm0 2H4v3a4 4 0 0 0 4 4m8-7h4v3a4 4 0 0 1-4 4m-4 0v5m-4 3h8m-7-3h6"/></svg><small>РЕЙТИНГИ</small></button>
+      <button class="nav-item" data-nav="profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><small>ПРОФІЛЬ</small></button>
     </nav>
   </div>
 
