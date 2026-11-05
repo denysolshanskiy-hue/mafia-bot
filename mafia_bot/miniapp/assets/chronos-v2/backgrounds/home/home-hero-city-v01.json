@@ -1,0 +1,17 @@
+{
+  "asset_id": "chronos.home.hero.city.v01",
+  "screen": "home",
+  "role": "hero_background",
+  "version": 1,
+  "source": "approved generated cinematic cyberpunk city scene",
+  "source_dimensions": "940x1672",
+  "composition": "384x384 square crop, split into four 192x192 seamless WebP quadrants",
+  "tiles": {
+    "top_left": "home-hero-city-v01-tl.webp",
+    "top_right": "home-hero-city-v01-tr.webp",
+    "bottom_left": "home-hero-city-v01-bl.webp",
+    "bottom_right": "home-hero-city-v01-br.webp"
+  },
+  "palette": ["#00CFFF", "#FF3FA4", "#070B14"],
+  "notes": "Background art only. Live text, metrics, profile, event card and buttons remain HTML/CSS components."
+}
