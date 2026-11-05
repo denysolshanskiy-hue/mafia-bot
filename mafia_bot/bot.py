@@ -11,6 +11,7 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
     KeyboardButton,
     WebAppInfo,
+    MenuButtonDefault,
 )
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -1487,6 +1488,8 @@ async def handle(request):
 
 async def start_all():
     await init_db()
+    # Remove the persistent global CHRONOS menu button; keep the reply-keyboard button.
+    await bot.set_chat_menu_button(menu_button=MenuButtonDefault())
     app = web.Application(middlewares=[telegram_auth_middleware], client_max_size=9 * 1024 * 1024)
     register_chronos_routes(app)
     app.router.add_get('/', handle)
