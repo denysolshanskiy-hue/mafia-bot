@@ -102,6 +102,12 @@ jobs:
               "assets/chronos-v2/backgrounds/home/home-hero-city-v01.json",
               "assets/chronos-hall.svg",
               "assets/chronos-tower.svg",
+              "assets/chronos-v3/home/hall.svg",
+              "assets/chronos-v3/home/market.svg",
+              "assets/chronos-v3/home/simulations.svg",
+              "assets/chronos-v3/home/rewards.svg",
+              "assets/chronos-v3/home/store.svg",
+              "assets/chronos-v3/home/notifications.svg",
           ):
               if not (miniapp_dir / asset).is_file():
                   raise SystemExit(f"Missing Mini App asset: {asset}")
@@ -110,7 +116,7 @@ jobs:
 
           index_html = (miniapp_dir / "index.html").read_text(encoding="utf-8")
           visual_css = (miniapp_dir / "assets/app-visual-v2.css").read_text(encoding="utf-8")
-          if 'href="assets/app-visual-v2.css?v=chronos-visual-13"' not in index_html:
+          if 'href="assets/app-visual-v2.css?v=chronos-v3-home-01"' not in index_html:
               raise SystemExit("Visual v2 stylesheet is not loaded by index.html")
 
           for referenced_asset in ("chronos-core.svg", "chronos-tower.svg"):
@@ -119,13 +125,13 @@ jobs:
               if not (miniapp_dir / "assets" / referenced_asset).is_file():
                   raise SystemExit(f"Missing CSS-referenced asset: {referenced_asset}")
 
-          if 'href="assets/app-visual-v3.css?v=chronos-visual-13"' not in index_html:
+          if 'href="assets/app-visual-v3.css?v=chronos-v3-home-01"' not in index_html:
               raise SystemExit("CHRONOS v3 visual stylesheet is not loaded")
           visual_v3 = (miniapp_dir / "assets/app-visual-v3.css").read_text(encoding="utf-8")
           visual_v4 = (miniapp_dir / "assets/app-visual-v4.css").read_text(encoding="utf-8")
-          if 'href="assets/app-visual-v4.css?v=chronos-visual-13"' not in index_html:
+          if 'href="assets/app-visual-v4.css?v=chronos-v3-home-01"' not in index_html:
               raise SystemExit("CHRONOS v4 Home stylesheet is not loaded")
-          if "#screen-home .home-progress-panel" not in visual_v4 or "#screen-home .home-hero-copy h1" not in visual_v4:
+          if "#screen-home .home-progress-card" not in visual_v4 or "#screen-home .home-hero-copy h1" not in visual_v4:
               raise SystemExit("CHRONOS Home screen composition rules are missing")
           for selector in (".home-hero", ".home-stats", "#screen-tower .tower-layout", ".floor-card", ".topbar"):
               if selector not in visual_v3:
@@ -155,13 +161,20 @@ jobs:
               raise SystemExit("Absolute season units are still displayed in the admin overview")
           if 'class="home-hero"' not in index_html or 'id="home-event"' not in index_html:
               raise SystemExit("CHRONOS home dashboard or live event slot is missing")
+          for nav_target in ("home", "events", "tower", "operations", "rankings", "profile", "room", "market", "simulations", "rewards", "store", "notifications"):
+              if f'data-nav="{nav_target}"' not in index_html:
+                  raise SystemExit(f"Missing Home or bottom navigation target: {nav_target}")
+          if 'grid-template-columns:repeat(6,minmax(0,1fr))' not in (miniapp_dir / "assets/app-visual-v4.css").read_text(encoding="utf-8"):
+              raise SystemExit("Bottom navigation must have six unique destinations")
+          if 'id="home-balance"' not in index_html or 'home-balance' not in modules_js:
+              raise SystemExit("Live player balance is not bound to the Home dashboard")
           app_js = (miniapp_dir / "assets/app.js").read_text(encoding="utf-8")
           if 'bottomNav.addEventListener("pointerup"' not in app_js or 'bottomNav.addEventListener("click"' not in app_js:
               raise SystemExit("Bottom navigation touch/click handlers are missing")
           if "function resetAppScroll()" not in app_js or "document.documentElement.scrollTop = 0" not in app_js:
               raise SystemExit("Navigation must reset all Telegram WebView scroll roots")
 
-          for svg_name in ("chronos-core.svg", "chronos-hall.svg", "chronos-tower.svg"):
+          for svg_name in ("chronos-core.svg", "chronos-hall.svg", "chronos-tower.svg", "chronos-v3/home/hall.svg", "chronos-v3/home/market.svg", "chronos-v3/home/simulations.svg", "chronos-v3/home/rewards.svg", "chronos-v3/home/store.svg", "chronos-v3/home/notifications.svg"):
               ET.parse(miniapp_dir / "assets" / svg_name)
           for migration in (
               "001_chronos_foundation.sql",
