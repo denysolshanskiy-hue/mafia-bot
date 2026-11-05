@@ -1,40 +1,85 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 680" fill="none">
 <defs>
- <linearGradient id="wall" x1="500" y1="0" x2="500" y2="680" gradientUnits="userSpaceOnUse"><stop stop-color="#172e37"/><stop offset=".52" stop-color="#101b29"/><stop offset="1" stop-color="#080e17"/></linearGradient>
- <radialGradient id="center" cx="0" cy="0" r="1" gradientTransform="matrix(0 300 -420 0 500 350)" gradientUnits="userSpaceOnUse"><stop stop-color="#43dfd0" stop-opacity=".22"/><stop offset="1" stop-color="#43dfd0" stop-opacity="0"/></radialGradient>
- <linearGradient id="table" x1="160" y1="390" x2="850" y2="600" gradientUnits="userSpaceOnUse"><stop stop-color="#1b5c60"/><stop offset=".55" stop-color="#152d3a"/><stop offset="1" stop-color="#34274e"/></linearGradient>
- <linearGradient id="seat" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#477d80"/><stop offset="1" stop-color="#142431"/></linearGradient>
- <filter id="glow"><feGaussianBlur stdDeviation="18"/></filter>
+ <linearGradient id="wall" x1="500" y1="0" x2="500" y2="680" gradientUnits="userSpaceOnUse"><stop stop-color="#101b28"/><stop offset=".48" stop-color="#0c1722"/><stop offset="1" stop-color="#070d14"/></linearGradient>
+ <linearGradient id="glass" x1="160" y1="20" x2="840" y2="360" gradientUnits="userSpaceOnUse"><stop stop-color="#193c48"/><stop offset=".5" stop-color="#111e2c"/><stop offset="1" stop-color="#2a2144"/></linearGradient>
+ <radialGradient id="roomGlow" cx="0" cy="0" r="1" gradientTransform="matrix(0 360 -470 0 500 360)" gradientUnits="userSpaceOnUse"><stop stop-color="#4bdccc" stop-opacity=".23"/><stop offset=".7" stop-color="#5c54aa" stop-opacity=".09"/><stop offset="1" stop-color="#0a111b" stop-opacity="0"/></radialGradient>
+ <linearGradient id="tableRim" x1="160" y1="390" x2="850" y2="575" gradientUnits="userSpaceOnUse"><stop stop-color="#54e8d6"/><stop offset=".48" stop-color="#376a79"/><stop offset="1" stop-color="#9b7cf0"/></linearGradient>
+ <linearGradient id="tableSurface" x1="300" y1="340" x2="710" y2="540" gradientUnits="userSpaceOnUse"><stop stop-color="#1e4851"/><stop offset=".52" stop-color="#142d3a"/><stop offset="1" stop-color="#231e3b"/></linearGradient>
+ <linearGradient id="chair" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#345e6a"/><stop offset=".4" stop-color="#172b39"/><stop offset="1" stop-color="#0b1621"/></linearGradient>
+ <linearGradient id="hostJacket" x1="420" y1="550" x2="580" y2="680" gradientUnits="userSpaceOnUse"><stop stop-color="#253f4b"/><stop offset=".55" stop-color="#101d2a"/><stop offset="1" stop-color="#070e17"/></linearGradient>
+ <filter id="blur"><feGaussianBlur stdDeviation="26"/></filter>
+ <filter id="softGlow"><feGaussianBlur stdDeviation="8"/></filter>
+ <pattern id="grid" width="34" height="34" patternUnits="userSpaceOnUse"><path d="M34 0H0V34" stroke="#8beee4" stroke-opacity=".08"/></pattern>
+ <g id="seat">
+  <path d="M-31 -7Q-31 -39 0 -42Q31 -39 31 -7V26H-31V-7Z" fill="url(#chair)" stroke="#6fe6dc" stroke-opacity=".62" stroke-width="2"/>
+  <path d="M-23 20V53M23 20V53M-23 53H23" stroke="#6bded5" stroke-opacity=".42" stroke-width="5" stroke-linecap="round"/>
+  <path d="M-20 -7Q0 -19 20 -7" stroke="#b1fff2" stroke-opacity=".24" stroke-width="2"/>
+  <path d="M-25 9H25" stroke="#6fe6dc" stroke-opacity=".18"/>
+  <circle cx="0" cy="-27" r="3" fill="#75f5e7" fill-opacity=".85"/>
+ </g>
 </defs>
-<rect width="1000" height="680" rx="24" fill="url(#wall)"/><rect width="1000" height="680" rx="24" fill="url(#center)"/>
-<path d="M0 0h1000v280L500 390 0 280V0Z" fill="#1c3540" fill-opacity=".42"/>
-<path d="M0 0 500 180 1000 0M0 280 500 390 1000 280" stroke="#70e6db" stroke-opacity=".24" stroke-width="2"/>
-<path d="M80 0v286M920 0v286M220 0v332M780 0v332" stroke="#5bd9d0" stroke-opacity=".13"/>
-<path d="M0 560 500 430 1000 560V680H0V560Z" fill="#0a111b"/>
-<ellipse cx="500" cy="490" rx="340" ry="120" fill="#40dccc" fill-opacity=".12" filter="url(#glow)"/>
-<ellipse cx="500" cy="470" rx="330" ry="112" fill="#0d1c27" stroke="#5ee6d9" stroke-opacity=".55" stroke-width="3"/>
-<ellipse cx="500" cy="465" rx="260" ry="76" fill="url(#table)" stroke="#8df5e8" stroke-opacity=".42" stroke-width="2"/>
-<ellipse cx="500" cy="465" rx="215" ry="56" stroke="#a58bff" stroke-opacity=".4" stroke-dasharray="5 9"/>
-<path d="M500 410v110M285 465h430" stroke="#78e8dd" stroke-opacity=".18"/>
-<circle cx="500" cy="465" r="36" fill="#0a1721" stroke="#83f4e6" stroke-opacity=".8"/>
-<path d="M500 442 520 465 500 488 480 465 500 442Z" fill="#55ddcf" fill-opacity=".2" stroke="#9cfff2"/>
-<g stroke="#66e7dc" stroke-opacity=".32" stroke-width="2">
- <path d="M500 84v104M480 104h40M480 154h40"/>
- <path d="M500 84 430 0M500 84 570 0"/>
+<rect width="1000" height="680" fill="url(#wall)"/>
+<rect width="1000" height="680" fill="url(#roomGlow)"/>
+<rect width="1000" height="680" fill="url(#grid)"/>
+<path d="M0 0H1000V285L500 405L0 285V0Z" fill="url(#glass)" fill-opacity=".62"/>
+<path d="M0 0L500 165L1000 0M0 285L500 405L1000 285" stroke="#82eee3" stroke-opacity=".2" stroke-width="2"/>
+<path d="M105 0V310M255 0V350M745 0V350M895 0V310" stroke="#6adbd2" stroke-opacity=".12" stroke-width="2"/>
+<g opacity=".9">
+ <path d="M170 40V258L420 338V120L170 40Z" fill="#0a1722" fill-opacity=".55" stroke="#5de0d5" stroke-opacity=".23"/>
+ <path d="M190 58V244L400 311V129L190 58Z" fill="#152f3c" fill-opacity=".48"/>
+ <path d="M600 120V338L830 258V40L600 120Z" fill="#0a1722" fill-opacity=".55" stroke="#a18aff" stroke-opacity=".22"/>
+ <path d="M620 129V311L810 244V58L620 129Z" fill="#25223d" fill-opacity=".38"/>
 </g>
+<path d="M500 0V164M480 30H520M470 85H530" stroke="#81f4e8" stroke-opacity=".38" stroke-width="2"/>
+<path d="M500 0L460 70H540L500 0Z" fill="#69e9dc" fill-opacity=".08"/>
+<circle cx="500" cy="165" r="6" fill="#7ff3e7"/>
+<circle cx="500" cy="165" r="22" stroke="#7ff3e7" stroke-opacity=".16"/>
+<path d="M500 165V280" stroke="#65e3d7" stroke-opacity=".22" stroke-dasharray="3 8"/>
+<path d="M0 470L500 345L1000 470V680H0V470Z" fill="#080f18"/>
+<path d="M0 470L500 345L1000 470M0 545L500 420L1000 545M0 620L500 495L1000 620" stroke="#5dded5" stroke-opacity=".1"/>
+<path d="M110 680L400 405M280 680L455 390M720 680L545 390M890 680L600 405" stroke="#6ce2d8" stroke-opacity=".08"/>
+<ellipse cx="500" cy="470" rx="390" ry="170" fill="#47d9d0" fill-opacity=".09" filter="url(#blur)"/>
+<!-- Ten player chairs -->
 <g>
- <g transform="translate(500 260)"><path d="M-39 0Q-39 -34 0 -34Q39 -34 39 0V38H-39V0Z" fill="url(#seat)" stroke="#70e6dc" stroke-opacity=".7" stroke-width="2"/><path d="M-28 38v28M28 38v28M-28 66h56" stroke="#70e6dc" stroke-opacity=".6" stroke-width="4"/></g>
- <g transform="translate(690 302) rotate(35)"><path d="M-39 0Q-39 -34 0 -34Q39 -34 39 0V38H-39V0Z" fill="url(#seat)" stroke="#70e6dc" stroke-opacity=".65" stroke-width="2"/><path d="M-28 38v28M28 38v28M-28 66h56" stroke="#70e6dc" stroke-opacity=".55" stroke-width="4"/></g>
- <g transform="translate(810 430) rotate(75)"><path d="M-39 0Q-39 -34 0 -34Q39 -34 39 0V38H-39V0Z" fill="url(#seat)" stroke="#70e6dc" stroke-opacity=".65" stroke-width="2"/><path d="M-28 38v28M28 38v28M-28 66h56" stroke="#70e6dc" stroke-opacity=".55" stroke-width="4"/></g>
- <g transform="translate(690 590) rotate(145)"><path d="M-39 0Q-39 -34 0 -34Q39 -34 39 0V38H-39V0Z" fill="url(#seat)" stroke="#a68cff" stroke-opacity=".65" stroke-width="2"/><path d="M-28 38v28M28 38v28M-28 66h56" stroke="#a68cff" stroke-opacity=".55" stroke-width="4"/></g>
- <g transform="translate(500 625) rotate(180)"><path d="M-39 0Q-39 -34 0 -34Q39 -34 39 0V38H-39V0Z" fill="url(#seat)" stroke="#a68cff" stroke-opacity=".65" stroke-width="2"/><path d="M-28 38v28M28 38v28M-28 66h56" stroke="#a68cff" stroke-opacity=".55" stroke-width="4"/></g>
- <g transform="translate(310 590) rotate(215)"><path d="M-39 0Q-39 -34 0 -34Q39 -34 39 0V38H-39V0Z" fill="url(#seat)" stroke="#a68cff" stroke-opacity=".65" stroke-width="2"/><path d="M-28 38v28M28 38v28M-28 66h56" stroke="#a68cff" stroke-opacity=".55" stroke-width="4"/></g>
- <g transform="translate(190 430) rotate(285)"><path d="M-39 0Q-39 -34 0 -34Q39 -34 39 0V38H-39V0Z" fill="url(#seat)" stroke="#70e6dc" stroke-opacity=".65" stroke-width="2"/><path d="M-28 38v28M28 38v28M-28 66h56" stroke="#70e6dc" stroke-opacity=".55" stroke-width="4"/></g>
- <g transform="translate(310 302) rotate(325)"><path d="M-39 0Q-39 -34 0 -34Q39 -34 39 0V38H-39V0Z" fill="url(#seat)" stroke="#70e6dc" stroke-opacity=".65" stroke-width="2"/><path d="M-28 38v28M28 38v28M-28 66h56" stroke="#70e6dc" stroke-opacity=".55" stroke-width="4"/></g>
- <g transform="translate(810 340) rotate(90)"><path d="M-39 0Q-39 -34 0 -34Q39 -34 39 0V38H-39V0Z" fill="url(#seat)" stroke="#70e6dc" stroke-opacity=".65" stroke-width="2"/><path d="M-28 38v28M28 38v28M-28 66h56" stroke="#70e6dc" stroke-opacity=".55" stroke-width="4"/></g>
- <g transform="translate(190 340) rotate(270)"><path d="M-39 0Q-39 -34 0 -34Q39 -34 39 0V38H-39V0Z" fill="url(#seat)" stroke="#70e6dc" stroke-opacity=".65" stroke-width="2"/><path d="M-28 38v28M28 38v28M-28 66h56" stroke="#70e6dc" stroke-opacity=".55" stroke-width="4"/></g>
+ <g transform="translate(500 195)"><use href="#seat"/></g>
+ <g transform="translate(690 235) rotate(30)"><use href="#seat"/></g>
+ <g transform="translate(805 350) rotate(78)"><use href="#seat"/></g>
+ <g transform="translate(715 485) rotate(140)"><use href="#seat"/></g>
+ <g transform="translate(590 520) rotate(165)"><use href="#seat"/></g>
+ <g transform="translate(410 520) rotate(195)"><use href="#seat"/></g>
+ <g transform="translate(285 485) rotate(220)"><use href="#seat"/></g>
+ <g transform="translate(195 350) rotate(282)"><use href="#seat"/></g>
+ <g transform="translate(310 235) rotate(330)"><use href="#seat"/></g>
+ <g transform="translate(500 545) rotate(180)"><use href="#seat"/></g>
 </g>
-<g fill="#7df1e5"><circle cx="500" cy="216" r="4"/><circle cx="750" cy="270" r="3"/><circle cx="244" cy="280" r="3"/></g>
-<text x="500" y="42" text-anchor="middle" fill="#d8f7f3" font-family="monospace" font-size="15" letter-spacing="6">KMC · CHRONOS HALL</text>
-<text x="500" y="650" text-anchor="middle" fill="#a5c5ca" font-family="monospace" font-size="11" letter-spacing="3">10 SEATS · WAITING FOR PLAYERS</text>
+<!-- Holographic table -->
+<ellipse cx="500" cy="470" rx="390" ry="170" fill="#40d8cf" fill-opacity=".11" filter="url(#softGlow)"/>
+<ellipse cx="500" cy="416" rx="350" ry="124" fill="#07131e" stroke="url(#tableRim)" stroke-width="8"/>
+<ellipse cx="500" cy="409" rx="315" ry="99" fill="url(#tableSurface)" stroke="#8ff7e9" stroke-opacity=".48" stroke-width="2"/>
+<ellipse cx="500" cy="409" rx="280" ry="75" stroke="#a58cff" stroke-opacity=".38" stroke-dasharray="7 10" stroke-width="2"/>
+<ellipse cx="500" cy="409" rx="242" ry="58" stroke="#83efe4" stroke-opacity=".18"/>
+<path d="M500 312V506M205 409H795" stroke="#9cf8ec" stroke-opacity=".1"/>
+<path d="M350 352L650 466M650 352L350 466" stroke="#8af3e8" stroke-opacity=".08"/>
+<circle cx="500" cy="409" r="44" fill="#091721" stroke="#8df6e8" stroke-opacity=".75" stroke-width="2"/>
+<circle cx="500" cy="409" r="31" stroke="#a58bff" stroke-opacity=".45"/>
+<path d="M500 383L526 409L500 435L474 409L500 383Z" fill="#67e8dc" fill-opacity=".18" stroke="#a4fff3" stroke-width="1.5"/>
+<path d="M500 368V344M500 450V474M458 409H434M542 409H566" stroke="#a7fff2" stroke-opacity=".45" stroke-width="2"/>
+<g fill="#a6fff3"><circle cx="500" cy="409" r="3"/><circle cx="390" cy="405" r="2"/><circle cx="610" cy="405" r="2"/><circle cx="470" cy="365" r="2"/><circle cx="530" cy="453" r="2"/></g>
+<!-- Host, seated separately in the foreground and facing the players -->
+<g>
+ <ellipse cx="500" cy="655" rx="105" ry="18" fill="#3dd9d0" fill-opacity=".14" filter="url(#softGlow)"/>
+ <path d="M390 680V635Q395 585 435 572L465 562H535L565 572Q605 585 610 635V680H390Z" fill="#08121c" stroke="#5bded3" stroke-opacity=".34" stroke-width="2"/>
+ <path d="M414 680V638Q420 596 458 584L482 575H518L542 584Q580 596 586 638V680" fill="url(#hostJacket)" stroke="#6ce7dc" stroke-opacity=".24"/>
+ <path d="M456 579Q454 557 475 548H525Q546 557 544 579L530 599H470L456 579Z" fill="#152b37" stroke="#78e9df" stroke-opacity=".48" stroke-width="2"/>
+ <path d="M471 554Q500 541 529 554" stroke="#a6fff3" stroke-opacity=".23" stroke-width="2"/>
+ <path d="M500 591V646" stroke="#5ee1d7" stroke-opacity=".45" stroke-width="2"/>
+ <path d="M470 615L500 628L530 615" stroke="#8a83cb" stroke-opacity=".55" stroke-width="2" fill="none"/>
+ <path d="M464 680L476 628M536 680L524 628" stroke="#5cddd3" stroke-opacity=".16" stroke-width="3"/>
+ <text x="500" y="667" text-anchor="middle" fill="#9ff6e9" font-family="monospace" font-size="9" letter-spacing="3">HOST</text>
+</g>
+<path d="M38 42H186M38 50H108M814 630H962M892 638H962" stroke="#7fece2" stroke-opacity=".3"/>
+<text x="40" y="34" fill="#b0d9dc" font-family="monospace" font-size="10" letter-spacing="3">KMC / CHRONOS HALL</text>
+<text x="960" y="34" text-anchor="end" fill="#a7a2d7" font-family="monospace" font-size="9" letter-spacing="2">LIVE TABLE</text>
+<text x="40" y="648" fill="#83b4b8" font-family="monospace" font-size="9" letter-spacing="2">10 PLAYER SEATS</text>
+<text x="960" y="648" text-anchor="end" fill="#d9c48c" font-family="monospace" font-size="9" letter-spacing="2">HOST · BACK VIEW</text>
 </svg>

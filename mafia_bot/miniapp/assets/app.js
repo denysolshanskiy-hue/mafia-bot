@@ -241,7 +241,7 @@
     const registered = Boolean(event.is_registered);
     const statusText = registered ? "ТИ ЗАРЕЄСТРОВАНИЙ" : (state.season && state.season.status === "active" ? "РЕЄСТРАЦІЯ ВІДКРИТА" : "РЕЄСТРАЦІЯ ЗАКРИТА");
     const statusClass = registered ? "joined" : (state.season && state.season.status === "active" ? "open" : "closed");
-    const countText = count <= 10 ? count + " / 10" : String(count) + " УЧАСНИКІВ";
+    const countText = String(count) + " УЧАСНИКІВ";
     return '<button type="button" class="event-list-card real-event-card ' + (isFinal ? "final-card" : "regular-card") + '" data-event-id="' + Number(event.event_id) + '">' +
       eventArtwork(type) +
       '<div class="event-card-copy">' +
@@ -287,9 +287,11 @@
   }
 
   function stageSeatMarkup(roster) {
+    // Ten overlay positions correspond to the ten player chairs in chronos-hall.svg.
+    // The host is a separate foreground figure, not a player seat.
     const positions = [
-      ["50%", "38.2%"], ["69%", "44.4%"], ["81%", "63.2%"], ["69%", "86.8%"], ["50%", "91.9%"],
-      ["31%", "86.8%"], ["19%", "63.2%"], ["31%", "44.4%"], ["81%", "50%"], ["19%", "50%"]
+      ["50%", "24.7%"], ["69%", "30.6%"], ["80.5%", "47.5%"], ["71.5%", "67.4%"], ["59%", "72.5%"],
+      ["41%", "72.5%"], ["28.5%", "67.4%"], ["19.5%", "47.5%"], ["31%", "30.6%"], ["50%", "76.2%"]
     ];
     return positions.map((point, index) => {
       const player = (roster || [])[index];
@@ -330,10 +332,22 @@
       const base = String(player.avatar_base || "default").replace(/[^a-z0-9_-]/gi, "");
       return '<div class="event-seat occupied"><span class="seat-avatar avatar-' + base + '">' + escapeHtml(initials) + '</span><b>' + escapeHtml(name) + '</b><small>МІСЦЕ ' + String(index + 1).padStart(2, "0") + '</small></div>';
     }).join("");
-    const emptyCount = Math.max(0, 10 - Math.min(10, count));
+    const emptyCount = Math.max(0, 10 - Math.min(10, roster.length));
     const emptyMarkup = Array.from({length: emptyCount}, (_, index) =>
-      '<div class="event-seat empty-seat"><span class="seat-avatar">＋</span><b>Вільне місце</b><small>МІСЦЕ ' + String(Math.min(10, count) + index + 1).padStart(2, "0") + '</small></div>'
+      '<div class="event-seat empty-seat"><span class="seat-avatar">＋</span><b>Вільне місце</b><small>МІСЦЕ ' + String(Math.min(10, roster.length) + index + 1).padStart(2, "0") + '</small></div>'
     ).join("");
+    const rotationPlayers = roster.slice(10);
+    const rotationMarkup = rotationPlayers.length
+      ? '<div class="event-rotation-panel">' +
+          '<div class="event-rotation-heading"><span>ІНШІ ЗАРЕЄСТРОВАНІ</span><b>+' + rotationPlayers.length + '</b></div>' +
+          '<p>Поза десятьма місцями за столом. Учасники можуть змінюватися між партіями вечора.</p>' +
+          '<div class="event-rotation-list">' + rotationPlayers.map((player) => {
+            const name = String(player.display_name || "Гравець");
+            const initials = name.trim().split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join("").toUpperCase() || "?";
+            const base = String(player.avatar_base || "default").replace(/[^a-z0-9_-]/gi, "");
+            return '<span class="rotation-player"><i class="rotation-avatar avatar-' + base + '">' + escapeHtml(initials) + '</i><b>' + escapeHtml(name) + '</b></span>';
+          }).join("") + '</div></div>'
+      : "";
     let helperText = "Список учасників синхронізується з Telegram-ботом KMC.";
     if (registered) helperText = "Твоя участь підтверджена. Склад вечора оновлюється з основної системи KMC.";
     else if (!profileComplete) helperText = "Щоб зареєструватися, спочатку заверши профіль через /start у боті KMC.";
@@ -355,7 +369,7 @@
         '<div class="event-stage-shade"></div>' +
         '<div class="event-stage-seats">' + stageSeatMarkup(roster) + '</div>' +
         '<div class="event-stage-top"><span>◉ KMC PLAYER ARENA</span><b>CHRONOS · ' + (type === "regular" ? "REGULAR" : "FINAL") + '</b></div>' +
-        '<div class="event-stage-bottom"><span>LIVE EVENT VIEW</span><strong>' + String(count).padStart(2, "0") + ' <small>/ 10 PLAYERS</small></strong></div>' +
+        '<div class="event-stage-bottom"><span>LIVE EVENT VIEW</span><strong>' + String(count).padStart(2, "0") + ' <small>ЗАРЕЄСТРОВАНО</small></strong><span class="stage-seat-capacity">10 МІСЦЬ В ОДНІЙ ГРІ</span></div>' +
       '</div>' +
       '<div class="event-facts">' +
         '<div class="event-fact"><span>▦</span><small>ДАТА</small><b>' + escapeHtml(dateText) + '</b></div>' +
@@ -363,9 +377,9 @@
         '<div class="event-fact"><span>⌖</span><small>МІСЦЕ</small><b>' + escapeHtml(venueText) + '</b></div>' +
       '</div>' +
       '<div class="event-detail-panel">' +
-        '<div class="event-panel-heading"><div><span class="eyebrow">PLAYER ROSTER</span><h2>Учасники вечора</h2></div><strong>' + String(count) + ' / 10</strong></div>' +
-        '<div class="event-seat-progress">' + Array.from({length: 10}, (_, index) => '<i class="' + (index < Math.min(10, count) ? "filled" : "") + '"></i>').join("") + '</div>' +
-        '<div class="event-seat-grid">' + playerMarkup + emptyMarkup + '</div>' +
+        '<div class="event-panel-heading"><div><span class="eyebrow">PLAYER ROSTER</span><h2>Місця за столом</h2></div><strong>' + Math.min(10, roster.length) + ' / 10</strong></div>' +
+        '<div class="event-seat-progress">' + Array.from({length: 10}, (_, index) => '<i class="' + (index < Math.min(10, roster.length) ? "filled" : "") + '"></i>').join("") + '</div>' +
+        '<div class="event-seat-grid">' + playerMarkup + emptyMarkup + '</div>' + rotationMarkup +
       '</div>' +
       '<div class="event-detail-facts">' +
         '<div class="event-info-row"><span class="event-info-icon">♛</span><div><small>ФОРМАТ</small><b>' + escapeHtml(formatText) + '</b></div></div>' +
