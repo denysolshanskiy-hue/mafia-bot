@@ -108,6 +108,7 @@ jobs:
               "assets/chronos-v3/home/rewards.svg",
               "assets/chronos-v3/home/store.svg",
               "assets/chronos-v3/home/notifications.svg",
+              "assets/chronos-v3/home/home-hero-poster-v02.webp",
           ):
               if not (miniapp_dir / asset).is_file():
                   raise SystemExit(f"Missing Mini App asset: {asset}")
