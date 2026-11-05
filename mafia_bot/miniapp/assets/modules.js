@@ -126,7 +126,10 @@
       if ($("#home-name")) $("#home-name").textContent = name;
       if ($("#profile-name")) $("#profile-name").textContent = name;
       if ($("#avatar-initial")) $("#avatar-initial").textContent = name.trim().slice(0, 1).toUpperCase() || "?";
-      if ($("#home-profile-note")) $("#home-profile-note").textContent = p.profile_complete ? "Профіль синхронізовано з KMC" : "Потрібно завершити /start у боті";
+      if ($("#home-profile-note")) $("#home-profile-note").textContent = p.profile_complete ? "ПРОФІЛЬ СИНХРОНІЗОВАНО" : "ЗАВЕРШИ /START У БОТІ";
+      const balances = p.balances || {};
+      const balanceKey = balances.CR != null ? "CR" : balances.EX != null ? "EX" : null;
+      if ($("#home-balance")) $("#home-balance").textContent = balanceKey ? Number(balances[balanceKey] || 0).toLocaleString("uk-UA") + " " + balanceKey : "—";
       if ($("#profile-telegram")) $("#profile-telegram").textContent = p.profile_complete ? "KMC PLAYER REGISTRY" : "PROFILE NOT LINKED";
       if ($("#profile-role")) $("#profile-role").textContent = p.role === "admin" ? "ADMIN" : "INITIATE";
       if ($("#profile-title")) $("#profile-title").textContent = p.active_title ? String(p.active_title).toUpperCase() : "TELEGRAM · KMC";
@@ -1037,6 +1040,7 @@
         await loadIdentity();
         await loadAppearanceOptions();
       }
+      if (name === "home") await loadIdentity();
       if (name === "tower" || name === "home") {
         const data = await api("/events");
         S.season = data.season;
