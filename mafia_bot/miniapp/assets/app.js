@@ -193,30 +193,16 @@
   }
 
   function renderHomeEvent() {
-    const live = state.events[0];
-    const planned = state.planned[0];
-    const container = $("#home-event");
-
-    if (live) {
-      container.innerHTML = `
-        <div class="event-tag">LIVE OPERATION</div>
-        <h3>${escapeHtml(live.title)}</h3>
-        <p>${escapeHtml(formatDate(live.event_date, live.event_time))} &nbsp;·&nbsp; ${Number(live.active_count) || 0} УЧАСНИКІВ</p>
-        <button class="event-open" data-event-id="${live.event_id}" aria-label="Відкрити подію">↗</button>`;
-      return;
-    }
-    if (planned) {
-      container.innerHTML = `
-        <div class="event-tag" style="color:var(--violet)">NEXT IN CHRONOLOGY</div>
-        <h3>${escapeHtml(planned.title)}</h3>
-        <p>${escapeHtml(planned.planned_date ? formatDate(planned.planned_date) : "ДАТУ ЩЕ НЕ ВИЗНАЧЕНО")} &nbsp;·&nbsp; СКОРО</p>
-        <button class="event-open" data-nav="events" aria-label="Відкрити календар">↗</button>`;
-      return;
-    }
-    container.innerHTML = `
-      <div class="event-tag">NO ACTIVE OPERATION</div>
-      <h3>Хронологія очікує</h3>
-      <p>Коли бот створить CHRONOS-подію, вона автоматично з'явиться тут.</p>`;
+    const live = state.events[0], planned = state.planned[0], container = $("#home-event");
+    if (!container) return;
+    const item = live || planned;
+    const title = item ? (item.title || "Вечір KMC") : "Хронологія очікує";
+    const date = live ? formatDate(live.event_date, live.event_time) : planned && planned.planned_date ? formatDate(planned.planned_date) : "ДАТУ ЩЕ НЕ ВИЗНАЧЕНО";
+    const kicker = live ? "LIVE OPERATION" : planned ? "NEXT IN CHRONOLOGY" : "CHRONOS / SEASON";
+    const note = live ? "Поточна подія сезону" : planned ? "Наступний запланований вечір" : "Нова подія з'явиться тут після публікації організатором";
+    const action = live ? '<button class="home-next-arrow" type="button" data-event-id="' + escapeHtml(live.event_id) + '" aria-label="Відкрити подію">↗</button>' : '<button class="home-next-arrow" type="button" data-nav="events" aria-label="Відкрити календар">↗</button>';
+    container.innerHTML = '<img class="home-next-art" src="assets/chronos-hall.svg" alt="Футуристична ігрова зала KMC">' +
+      '<div class="home-next-info"><span class="home-next-kicker">' + kicker + '</span><h3>' + escapeHtml(title) + '</h3><p>' + escapeHtml(note) + '</p><span class="home-next-date">' + escapeHtml(date) + '</span></div>' + action;
   }
 
   function renderTower() {
