@@ -286,6 +286,27 @@
     $$(".filter-tab").forEach(el => el.classList.toggle("active", el.dataset.filter === state.filter));
   }
 
+  function stageSeatMarkup(roster) {
+    const positions = [
+      ["50%", "38.2%"], ["69%", "44.4%"], ["81%", "63.2%"], ["69%", "86.8%"], ["50%", "91.9%"],
+      ["31%", "86.8%"], ["19%", "63.2%"], ["31%", "44.4%"], ["81%", "50%"], ["19%", "50%"]
+    ];
+    return positions.map((point, index) => {
+      const player = (roster || [])[index];
+      const position = 'style="left:' + point[0] + ';top:' + point[1] + ';"';
+      if (!player) {
+        return '<div class="event-stage-seat empty" ' + position + '><span class="stage-empty-avatar">＋</span></div>';
+      }
+      const name = String(player.display_name || "Гравець");
+      const initials = name.trim().split(/\s+/).slice(0, 2).map(part => part.charAt(0)).join("").toUpperCase() || "?";
+      const base = String(player.avatar_base || "european_male").replace(/[^a-z0-9_-]/gi, "");
+      return '<div class="event-stage-seat filled" ' + position + '>' +
+        '<span class="stage-avatar avatar-' + base + '">' + escapeHtml(initials) + '</span>' +
+        '<small>' + escapeHtml(name) + '</small>' +
+      '</div>';
+    }).join("");
+  }
+
   function renderEventDetail(data) {
     const event = data.event || {};
     const roster = data.roster || [];
@@ -332,6 +353,7 @@
       '<div class="event-detail-stage">' +
         '<img src="assets/chronos-hall.svg" alt="Ігрова зала KMC із круглим столом та десятьма місцями">' +
         '<div class="event-stage-shade"></div>' +
+        '<div class="event-stage-seats">' + stageSeatMarkup(roster) + '</div>' +
         '<div class="event-stage-top"><span>◉ KMC PLAYER ARENA</span><b>CHRONOS · ' + (type === "regular" ? "REGULAR" : "FINAL") + '</b></div>' +
         '<div class="event-stage-bottom"><span>LIVE EVENT VIEW</span><strong>' + String(count).padStart(2, "0") + ' <small>/ 10 PLAYERS</small></strong></div>' +
       '</div>' +
