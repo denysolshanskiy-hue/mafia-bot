@@ -1,0 +1,8 @@
+/* CHRONOS / Ratings section atmospheric artwork */
+#screen-rankings{position:relative;isolation:isolate;overflow:hidden;}
+#screen-rankings::before{content:"";position:absolute;z-index:0;pointer-events:none;inset:0 0 auto;height:760px;background-image:linear-gradient(180deg,rgba(5,10,16,.12) 0%,rgba(5,10,16,.28) 42%,rgba(5,10,16,.9) 84%,#080d12 100%),url("chronos-v3/ratings/chronos-rating-bg.webp");background-repeat:no-repeat;background-position:center top;background-size:100% 100%,100% auto;opacity:.92;}
+#screen-rankings>*{position:relative;z-index:1;}
+#screen-rankings .page-intro{padding-top:6px;}
+#screen-rankings .wallet-strip{background:linear-gradient(100deg,rgba(10,31,35,.76),rgba(8,14,22,.88));backdrop-filter:blur(8px);}
+#screen-rankings .empty-state{background:rgba(6,13,20,.48);backdrop-filter:blur(7px);}
+@media(min-width:600px){#screen-rankings::before{background-size:100% 100%,min(100%,560px) auto;}}
