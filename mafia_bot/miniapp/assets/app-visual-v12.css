@@ -4,3 +4,8 @@
 #screen-room .room-hero-banner img{display:block;width:100%;height:auto;aspect-ratio:640/372;object-fit:cover;object-position:center}
 #screen-room .hall-event-card{margin-top:0}
 #screen-room .room-intro,#screen-room .hall-scene{display:none!important}
+
+#screen-room .room-hero-banner{min-height:220px}
+#screen-room .room-hero-banner img{width:100%;height:auto;aspect-ratio:640/372;object-fit:cover;object-position:center}
+#screen-room .room-hero-banner.fallback{background:linear-gradient(135deg,#061c32,#10132b 52%,#210d31)}
+#screen-room .room-hero-banner.fallback img{width:100%;aspect-ratio:1/1;object-fit:cover;opacity:.72}
