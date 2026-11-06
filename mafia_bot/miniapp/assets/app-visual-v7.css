@@ -1,0 +1,21 @@
+/* CHRONOS avatar collection — European base portraits */
+#screen-profile .avatar-person.european_male,
+#screen-profile .avatar-person.european_female{display:block;width:126px;height:126px;border-radius:50%;overflow:hidden;background-image:url("chronos-v3/avatars/european-pair.webp");background-repeat:no-repeat;background-size:200% 100%;border:1px solid rgba(0,229,239,.56);box-shadow:0 0 24px rgba(0,220,245,.22),0 0 48px rgba(255,55,164,.08),inset 0 0 14px rgba(0,0,0,.24)}
+#screen-profile .avatar-person.european_male{background-position:left center}
+#screen-profile .avatar-person.european_female{background-position:right center}
+#screen-profile .avatar-person.european_male:before,
+#screen-profile .avatar-person.european_female:before,
+#screen-profile .avatar-person.european_male span,
+#screen-profile .avatar-person.european_female span,
+#screen-profile .avatar-person.european_male i,
+#screen-profile .avatar-person.european_female i{display:none}
+#screen-profile .profile-avatar:has(.avatar-person.european_male) .avatar-scan,
+#screen-profile .profile-avatar:has(.avatar-person.european_female) .avatar-scan{display:none}
+#screen-profile .mini-avatar.european{width:48px;height:48px;border-radius:50%;background-image:url("chronos-v3/avatars/european-pair.webp");background-repeat:no-repeat;background-size:200% 100%;border:1px solid rgba(0,220,239,.42);box-shadow:0 0 12px rgba(0,210,240,.12)}
+#screen-profile .mini-avatar.european:not(.female){background-position:left center}
+#screen-profile .mini-avatar.european.female{background-position:right center}
+#screen-profile .mini-avatar.european:before,#screen-profile .mini-avatar.european:after{display:none}
+#screen-profile .avatar-choice[data-avatar="european_male"],
+#screen-profile .avatar-choice[data-avatar="european_female"]{border-color:rgba(0,220,239,.34);background:linear-gradient(145deg,rgba(7,32,44,.9),rgba(10,17,30,.96))}
+#screen-profile .avatar-choice[data-avatar="european_male"].selected,
+#screen-profile .avatar-choice[data-avatar="european_female"].selected{border-color:#00e5e9;box-shadow:0 0 16px rgba(0,225,239,.2),inset 0 0 12px rgba(0,225,239,.1)}
