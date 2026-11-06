@@ -102,11 +102,13 @@
     const towerBar = $("#sync-meter");
     const towerLabel = $("#sync-percent");
     const towerStatus = $("#sync-status-label");
+    const towerTrack = $("#screen-tower .sync-track");
     const homeBar = $("#home-sync-meter");
     const homeLabel = $("#home-sync-percent");
     const homeStatus = $("#home-sync-status");
     const homeTrack = $("#home-sync-track");
     if (towerBar) towerBar.style.width = percent + "%";
+    if (towerTrack) towerTrack.setAttribute("aria-valuenow", String(percent));
     if (towerLabel) towerLabel.textContent = formatted;
     if (towerStatus) towerStatus.textContent = statusText;
     if (homeBar) homeBar.style.width = percent + "%";
