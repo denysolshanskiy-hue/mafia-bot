@@ -207,7 +207,7 @@
 
   function renderTower() {
     $("#tower-floors").innerHTML = floors.map(floor => `
-      <button class="floor-card ${floor.accent}" data-floor-id="${floor.id}">
+      <button class="floor-card ${floor.accent}" data-floor-id="${floor.id}" style="--floor-bg-position:${((floor.id - 1) * 100 / 9).toFixed(3)}%">
         <span class="floor-number">${String(floor.id).padStart(2, "0")}</span>
         <span class="floor-info"><strong>${escapeHtml(floor.name)}</strong><small>${escapeHtml(floor.code)} · ${escapeHtml(floor.rule)}</small></span>
         <span class="floor-arrow">›</span>
