@@ -497,3 +497,93 @@
 #screen-tower .milestone-strip span:nth-child(3).reached:after,
 #screen-tower .milestone-strip span:nth-child(4).reached:after{border-color:rgba(255,150,240,.95);box-shadow:0 0 9px rgba(255,80,220,.9),0 0 22px rgba(255,65,210,.62)}
 @media(max-width:390px){#screen-tower .milestone-strip{margin:12px 0 14px}}
+
+
+/* CHRONOS Tower — live neon season progress HUD.
+   The numeric value and fill width are updated by the existing season sync logic. */
+#screen-tower .tower-status{
+  position:relative;isolation:isolate;overflow:hidden;
+  box-sizing:border-box;width:100%;min-height:204px;
+  margin:16px 0 21px;padding:19px 18px 15px;
+  border:1px solid rgba(68,220,238,.48);border-radius:19px;
+  background:
+    radial-gradient(ellipse at 9% 100%,rgba(0,224,255,.16),transparent 43%),
+    radial-gradient(ellipse at 94% 82%,rgba(255,48,198,.14),transparent 43%),
+    linear-gradient(112deg,rgba(7,24,35,.98),rgba(8,15,29,.98) 58%,rgba(23,11,34,.98));
+  box-shadow:0 0 0 1px rgba(0,210,255,.08),0 0 20px rgba(0,211,255,.10),0 0 24px rgba(255,48,198,.08),0 12px 28px rgba(0,0,0,.32);
+}
+#screen-tower .tower-status:before{
+  content:"";position:absolute;z-index:-1;inset:5px;border:1px solid rgba(116,194,220,.15);
+  border-radius:14px;pointer-events:none;
+}
+#screen-tower .tower-status:after{
+  content:"";position:absolute;z-index:-1;left:0;right:0;top:0;height:2px;
+  background:linear-gradient(90deg,#29efff 0%,rgba(53,157,255,.72) 42%,#ff42d2 100%);
+  box-shadow:0 0 12px rgba(0,224,255,.65),0 0 16px rgba(255,55,206,.42);
+}
+#screen-tower .tower-status-top{position:relative;z-index:1;min-height:23px}
+#screen-tower .tower-status-top span{
+  color:#a3c5d0;font:500 9px var(--mono);letter-spacing:.2em;
+}
+#screen-tower .tower-status-top b{
+  display:flex;align-items:center;gap:7px;color:#65f3ee;
+  font:600 13px var(--mono);letter-spacing:.12em;
+  text-shadow:0 0 12px rgba(0,238,255,.45);
+}
+#screen-tower .tower-status-top b i{
+  display:block;width:7px;height:7px;border-radius:50%;background:#56f5eb;
+  box-shadow:0 0 8px #56f5eb,0 0 16px rgba(86,245,235,.75);
+}
+#screen-tower .tower-status-reading{
+  position:relative;display:flex;align-items:center;justify-content:flex-end;
+  min-height:61px;margin:0 1px 4px;overflow:hidden;
+}
+#screen-tower .tower-status-cityline{
+  position:absolute;left:0;right:0;bottom:0;height:36px;opacity:.8;pointer-events:none;
+  background:
+    linear-gradient(180deg,transparent,rgba(0,220,255,.055)),
+    repeating-linear-gradient(90deg,transparent 0 5%,rgba(42,215,255,.10) 5.2% 5.5%,transparent 5.8% 9%);
+  mask-image:linear-gradient(90deg,transparent,#000 15%,#000 85%,transparent);
+}
+#screen-tower .tower-status-reading strong{
+  position:relative;z-index:1;display:block;
+  color:#8bf8f2;font:800 clamp(30px,8vw,43px)/1 var(--sans);
+  letter-spacing:-.045em;font-variant-numeric:tabular-nums;
+  text-shadow:0 0 9px rgba(0,234,255,.65),0 0 24px rgba(0,207,255,.34),0 0 32px rgba(255,57,205,.18);
+}
+#screen-tower .sync-track{
+  position:relative;box-sizing:border-box;height:13px;margin:0 1px 11px;padding:2px;
+  overflow:hidden;border:1px solid rgba(92,192,218,.42);border-radius:20px;
+  background:linear-gradient(90deg,rgba(5,25,39,.98),rgba(15,19,38,.98) 58%,rgba(31,13,37,.98));
+  box-shadow:inset 0 0 10px rgba(0,0,0,.65),0 0 12px rgba(0,205,255,.07);
+}
+#screen-tower .sync-track:before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,rgba(0,228,255,.09),transparent 52%,rgba(255,48,202,.08));
+}
+#screen-tower .sync-track span{
+  position:relative;z-index:1;display:block;width:0;height:100%;min-width:0;
+  border-radius:20px;
+  background:linear-gradient(90deg,#20eaff 0%,#3baeff 48%,#b66cff 76%,#ff48ce 100%);
+  box-shadow:0 0 8px rgba(0,234,255,.95),0 0 17px rgba(0,205,255,.58),0 0 22px rgba(255,58,207,.38);
+  transition:width .75s cubic-bezier(.2,.75,.25,1);
+}
+#screen-tower .sync-track span:after{
+  content:"";position:absolute;right:0;top:50%;width:7px;height:7px;
+  transform:translate(1px,-50%);border-radius:50%;background:#fff;
+  box-shadow:0 0 7px #fff,0 0 13px #28efff,0 0 20px #ff4bd4;
+}
+#screen-tower .tower-status-bottom{
+  position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;gap:10px;
+  color:#7795a3;font:8px var(--mono);letter-spacing:.14em;
+}
+#screen-tower .tower-status-bottom span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#screen-tower .tower-status-unit{flex:0 0 auto;color:#607f91;font-size:7px;letter-spacing:.16em}
+@media(max-width:390px){
+  #screen-tower .tower-status{min-height:184px;margin:14px 0 18px;padding:16px 14px 13px;border-radius:16px}
+  #screen-tower .tower-status-reading{min-height:54px}
+  #screen-tower .tower-status-reading strong{font-size:34px}
+  #screen-tower .sync-track{height:12px}
+  #screen-tower .tower-status-top span{font-size:8px}
+  #screen-tower .tower-status-bottom{font-size:7px}
+}
