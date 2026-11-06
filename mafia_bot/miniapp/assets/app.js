@@ -99,35 +99,26 @@
   }
 
   function renderRoom() {
-    const title = $("#hall-session-title");
-    const note = $("#hall-session-note");
+    const title = $("#hall-session-title"), note = $("#hall-session-note");
     if (!title || !note) return;
-    const live = state.events[0];
-    const planned = state.planned[0];
+    const live = state.events[0], planned = state.planned[0];
+    const date = live ? formatDate(live.event_date, live.event_time) : (planned?.planned_date ? formatDate(planned.planned_date) : "");
     if (live) {
       title.textContent = live.title || "Поточний вечір KMC";
-      note.textContent = "Подія відкрита · " + (Number(live.active_count) || 0) + " учасників у реєстрації.";
-      const button = document.querySelector("#screen-room [data-nav='events']");
-      if (button) {
-        button.dataset.eventId = String(live.event_id);
-        button.dataset.nav = "";
-        button.textContent = "ПЕРЕГЛЯНУТИ СКЛАД ↗";
-      }
-      return;
-    }
-    if (planned) {
+      note.textContent = date + " · " + (Number(live.active_count) || 0) + " учасників у реєстрації";
+    } else if (planned) {
       title.textContent = planned.title || "Наступний вечір";
-      note.textContent = planned.planned_date ? "Заплановано на " + formatDate(planned.planned_date) + ". Реєстрація відкривається через Telegram-бот." : "Подію заплановано. Дату та реєстрацію організатор повідомить у Telegram.";
+      note.textContent = planned.planned_date ? "Заплановано на " + date + ". Реєстрація відкривається через Telegram-бот." : "Подію заплановано. Дату та реєстрацію організатор повідомить у Telegram.";
     } else {
       title.textContent = "Зала очікує на вечір";
       note.textContent = "Коли організатор відкриє подію, тут з'явиться її актуальний стан.";
     }
-    const button = document.querySelector("#screen-room [data-event-id]");
-    if (button) {
-      button.removeAttribute("data-event-id");
-      button.dataset.nav = "events";
-      button.textContent = "ПЕРЕЙТИ ДО ПОДІЙ ↗";
-    }
+    ["#hall-register-action", "#hall-roster-action"].forEach(selector => {
+      const button = $(selector); if (!button) return;
+      if (live?.event_id) { button.dataset.eventId = String(live.event_id); delete button.dataset.nav; }
+      else { button.removeAttribute("data-event-id"); button.dataset.nav = "events"; }
+    });
+    const history = $("#hall-history-action"); if (history) history.dataset.nav = "events";
   }
 
   function resetAppScroll() {

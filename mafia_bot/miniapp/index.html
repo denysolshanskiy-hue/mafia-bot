@@ -21,7 +21,9 @@
   <link rel="stylesheet" href="assets/app-visual-v5.css?v=ratings-tower-art-01">
   <link rel="stylesheet" href="assets/app-visual-v7.css?v=european-avatar-assets-01">
   <link rel="stylesheet" href="assets/app-visual-v8.css?v=asian-avatar-assets-01">
-  <link rel="stylesheet" href="assets/app-visual-v9.css?v=black-avatar-assets-01">\n  <link rel="stylesheet" href="assets/app-visual-v10.css?v=android-avatar-assets-01">\n</head>
+  <link rel="stylesheet" href="assets/app-visual-v9.css?v=black-avatar-assets-01">
+  <link rel="stylesheet" href="assets/app-visual-v10.css?v=android-avatar-assets-01">
+</head>
 <body>
   <div class="ambient ambient-a"></div>
   <div class="ambient ambient-b"></div>
@@ -106,15 +108,19 @@
           <img src="assets/chronos-hall.svg" alt="Футуристична ігрова зала CHRONOS із центральним столом та десятьма місцями">
           <div class="hall-scene-overlay"><span class="hall-live-dot"></span><span>KMC PLAYER ARENA</span><b>10 МІСЦЬ</b></div>
         </div>
-        <div class="hall-control">
-          <div><div class="eyebrow">LIVE SESSION</div><h2 id="hall-session-title">Зала очікує на вечір</h2><p id="hall-session-note">Коли організатор відкриє подію, тут з'явиться її актуальний стан.</p></div>
-          <button class="primary-button" data-nav="events">ПЕРЕЙТИ ДО ПОДІЙ <span>↗</span></button>
-        </div>
-        <div class="hall-feature-grid">
-          <div class="hall-feature"><span>01</span><b>Реєстрація</b><small>Через Telegram-бот</small></div>
-          <div class="hall-feature"><span>02</span><b>Склад вечора</b><small>Підтверджені гравці</small></div>
-          <div class="hall-feature"><span>03</span><b>Хронологія</b><small>Історія сезону</small></div>
-        </div>
+        <section class="hall-event-card" aria-label="Подія ігрової зали">
+          <div class="hall-event-art" aria-hidden="true"></div><div class="hall-event-shade" aria-hidden="true"></div>
+          <div class="hall-event-content">
+            <div class="hall-event-kicker"><span>ІГРОВА ЗАЛА</span><i></i><small>LIVE SESSION</small></div>
+            <h2 id="hall-session-title">Зала очікує на вечір</h2>
+            <p id="hall-session-note">Коли організатор відкриє подію, тут з'явиться її актуальний стан.</p>
+            <div class="hall-event-actions">
+              <button type="button" class="hall-event-action" id="hall-register-action" data-nav="events"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12ZM5 28c1.2-5 5.1-7.5 11-7.5M25 18v10M20 23h10"/></svg><b>РЕЄСТРАЦІЯ</b></button>
+              <button type="button" class="hall-event-action" id="hall-roster-action" data-nav="events"><svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="9" r="4"/><circle cx="6" cy="13" r="3"/><circle cx="26" cy="13" r="3"/><path d="M7 27c.6-5 3.5-7.5 9-7.5s8.4 2.5 9 7.5M1 27c.3-3.8 2.2-5.8 6-6M31 27c-.3-3.8-2.2-5.8-6-6"/></svg><b>СКЛАД ВЕЧОРА</b></button>
+              <button type="button" class="hall-event-action" id="hall-history-action" data-nav="events"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M5 12a12 12 0 1 1-1 8M5 4v8h8M16 8v9l6 3"/></svg><b>ХРОНОЛОГІЯ</b></button>
+            </div>
+          </div>
+        </section>
       </section>
 
       <section class="screen" id="screen-tower" data-screen="tower">

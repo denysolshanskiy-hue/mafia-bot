@@ -1,0 +1,17 @@
+/* CHRONOS — Game Hall event module */
+#screen-room .hall-event-card{position:relative;isolation:isolate;overflow:hidden;margin-top:14px;min-height:318px;border:1px solid rgba(0,229,239,.55);border-radius:18px;background:linear-gradient(145deg,#07131d 0%,#09111d 56%,#170d22 100%);box-shadow:0 14px 38px rgba(0,0,0,.32),0 0 22px rgba(0,220,239,.1),inset 0 0 24px rgba(0,225,239,.05);clip-path:polygon(0 13px,13px 0,calc(100% - 13px) 0,100% 13px,100% calc(100% - 13px),calc(100% - 13px) 100%,13px 100%,0 calc(100% - 13px))}
+#screen-room .hall-event-art{position:absolute;z-index:-2;inset:74px 0 83px;background:url("chronos-v3/hall/event-card-art.svg") center/cover no-repeat;opacity:.96}
+#screen-room .hall-event-shade{position:absolute;z-index:-1;inset:0;background:linear-gradient(90deg,rgba(4,11,19,.72),rgba(4,11,19,.08) 78%),linear-gradient(180deg,rgba(4,11,19,.2),transparent 40%,rgba(4,10,18,.96) 82%)}
+#screen-room .hall-event-content{padding:17px 14px 13px;display:flex;flex-direction:column;min-height:318px}
+#screen-room .hall-event-kicker{display:flex;align-items:center;gap:9px;color:#56f3ec;font:9px var(--mono);letter-spacing:.17em;text-transform:uppercase}
+#screen-room .hall-event-kicker i{width:3px;height:3px;border-radius:50%;background:#ec43c6;box-shadow:0 0 8px #ec43c6}
+#screen-room .hall-event-kicker small{color:#8aa2b3;font:8px var(--mono);letter-spacing:.14em}
+#screen-room .hall-event-content h2{max-width:90%;margin:13px 0 5px;color:#f0f7fa;font-size:clamp(18px,5vw,24px);line-height:1.12;font-weight:800;letter-spacing:-.04em;text-shadow:0 2px 16px #06101a;overflow-wrap:anywhere}
+#screen-room .hall-event-content p{min-height:28px;max-width:96%;margin:0 0 15px;color:#a5b7c2;font-size:10px;line-height:1.5;text-shadow:0 1px 8px #06101a}
+#screen-room .hall-event-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:auto}
+#screen-room .hall-event-action{min-width:0;min-height:83px;padding:10px 5px 9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;border:1px solid rgba(0,225,239,.76);border-radius:12px 5px 12px 5px;background:linear-gradient(150deg,rgba(4,19,29,.96),rgba(5,12,22,.92));color:#eafcff;box-shadow:inset 0 0 18px rgba(0,220,239,.08),0 0 13px rgba(0,220,239,.08);transition:transform .16s,border-color .16s,box-shadow .16s}
+#screen-room .hall-event-action:after{content:"";width:34%;height:2px;margin-top:1px;background:linear-gradient(90deg,#00e8f0,#df36cb);box-shadow:0 0 8px rgba(0,225,239,.7)}
+#screen-room .hall-event-action:active{transform:scale(.96);border-color:#ff43c9;box-shadow:0 0 18px rgba(255,50,193,.22)}
+#screen-room .hall-event-action svg{width:27px;height:27px;fill:none;stroke:#20eff1;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;filter:drop-shadow(0 0 5px rgba(0,225,239,.45))}
+#screen-room .hall-event-action b{font-size:clamp(7px,2.1vw,9px);line-height:1.25;letter-spacing:.055em;text-align:center;overflow-wrap:anywhere}
+@media(max-width:360px){#screen-room .hall-event-content{padding:14px 10px 11px}#screen-room .hall-event-actions{gap:5px}#screen-room .hall-event-action{min-height:76px;padding-left:3px;padding-right:3px}}
