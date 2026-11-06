@@ -115,7 +115,7 @@
     if (homeLabel) homeLabel.textContent = formatted;
     if (homeStatus) homeStatus.textContent = statusText;
     if (homeTrack) homeTrack.setAttribute("aria-valuenow", String(percent));
-    $("#milestone-strip [data-milestone]").forEach((node) => {
+    $$$("#milestone-strip [data-milestone]").forEach((node) => {
       node.classList.toggle("reached", percent >= Number(node.dataset.milestone));
     });
   }
