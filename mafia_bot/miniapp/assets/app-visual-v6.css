@@ -1,0 +1,40 @@
+/* CHRONOS / Identity Center visual system */
+#screen-profile{position:relative;isolation:isolate;overflow:hidden;padding-bottom:26px;}
+#screen-profile::before{content:"";position:absolute;z-index:0;pointer-events:none;inset:0 0 auto;height:980px;background-image:linear-gradient(180deg,rgba(4,10,16,.12) 0%,rgba(4,10,16,.38) 34%,rgba(4,10,16,.88) 74%,#080d12 100%),url("chronos-v3/identity/chronos-identity-background.webp");background-repeat:no-repeat;background-position:center top;background-size:100% 100%,100% auto;opacity:.94;}
+#screen-profile>*{position:relative;z-index:1;}
+#screen-profile .page-intro{padding:6px 0 22px;}
+#screen-profile .page-intro p{max-width:360px;color:#a5bac5;}
+#screen-profile .profile-card{border:1px solid rgba(0,218,238,.42);border-radius:17px;padding:16px 15px 18px;background:radial-gradient(ellipse at 50% 36%,rgba(0,197,220,.17),transparent 46%),linear-gradient(145deg,rgba(5,26,38,.91),rgba(5,13,24,.96) 58%,rgba(24,12,35,.93));box-shadow:inset 0 1px rgba(255,255,255,.06),inset 0 0 34px rgba(0,208,235,.06),0 14px 34px rgba(0,0,0,.34);backdrop-filter:blur(9px);}
+#screen-profile .profile-card:before{background-image:linear-gradient(rgba(0,218,238,.055) 1px,transparent 1px),linear-gradient(90deg,rgba(0,218,238,.055) 1px,transparent 1px),radial-gradient(ellipse at 50% 40%,rgba(0,216,255,.12),transparent 54%);background-size:24px 24px,24px 24px,100% 100%;mask-image:linear-gradient(black,rgba(0,0,0,.75) 68%,transparent 100%);}
+#screen-profile .profile-card:after{content:"";position:absolute;z-index:0;top:0;left:14%;right:14%;height:2px;background:linear-gradient(90deg,transparent,#00e5f5 35%,#ff3fa4 72%,transparent);box-shadow:0 0 13px rgba(0,218,255,.55);pointer-events:none;}
+#screen-profile .profile-card>*{z-index:1;}
+#screen-profile .profile-card-top{color:#9bb5c2;}
+#screen-profile .record-live{color:#8df8ed;text-shadow:0 0 12px rgba(0,225,220,.4);}
+#screen-profile .record-live i{width:7px;height:7px;border-radius:50%;background:#00f0df;box-shadow:0 0 11px #00f0df;}
+#screen-profile .profile-avatar{margin-top:24px;margin-bottom:15px;}
+#screen-profile .avatar-halo{border:1px dashed rgba(0,226,239,.62);box-shadow:0 0 34px rgba(0,208,255,.16),inset 0 0 26px rgba(0,208,255,.1);}
+#screen-profile .avatar-person:before{background:linear-gradient(135deg,#d8faff,#4a9aa6 65%,#344c70);box-shadow:0 0 24px rgba(0,222,255,.28);}
+#screen-profile .avatar-person span{background:linear-gradient(130deg,#0a9ca9,#122e48 62%,#39204c);border:1px solid rgba(0,223,255,.55);box-shadow:inset 0 0 18px rgba(0,220,255,.12);}
+#screen-profile .avatar-person i{background:#00f0ec;box-shadow:0 0 14px #00e8ff;}
+#screen-profile .avatar-scan{background:rgba(0,231,240,.8);box-shadow:0 0 14px #00e5f5;}
+#screen-profile .profile-name{text-shadow:0 0 18px rgba(0,214,255,.16);}
+#screen-profile .profile-subtitle{color:#9ab3c2;}
+#screen-profile .profile-divider{background:linear-gradient(90deg,rgba(0,222,245,.42),rgba(126,160,190,.22),rgba(255,63,164,.28));}
+#screen-profile .profile-data div{border-color:rgba(105,176,201,.25);}
+#screen-profile .profile-data small{color:#86a6b8;}
+#screen-profile .profile-data b{color:#e0f3fa;}
+#screen-profile .notice-card,#screen-profile .profile-customizer{position:relative;overflow:hidden;border:1px solid rgba(0,205,230,.24);border-radius:13px;background:linear-gradient(125deg,rgba(8,28,42,.88),rgba(9,15,28,.94) 62%,rgba(31,13,37,.78));box-shadow:inset 0 1px rgba(255,255,255,.035),0 8px 22px rgba(0,0,0,.2);backdrop-filter:blur(8px);}
+#screen-profile .notice-card{margin-top:14px;padding:14px;}
+#screen-profile .notice-mark{border-color:rgba(0,224,239,.48);background:rgba(0,220,239,.08);box-shadow:0 0 12px rgba(0,220,239,.08);}
+#screen-profile .notice-card b{color:#e4f6fb;}
+#screen-profile .notice-card p{color:#9ab0bf;}
+#screen-profile .profile-customizer{margin-top:14px;padding:15px;}
+#screen-profile .profile-customizer:before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,#00d8f5 0 46%,#ff3fa4 100%);opacity:.8;}
+#screen-profile .profile-customizer>*{position:relative;z-index:1;}
+#screen-profile .profile-customizer h3{color:#e7f6fb;}
+#screen-profile .avatar-choice{border-color:rgba(0,204,230,.2);background:linear-gradient(145deg,rgba(10,34,48,.86),rgba(12,17,31,.95));box-shadow:inset 0 1px rgba(255,255,255,.035);}
+#screen-profile .avatar-choice.active,#screen-profile .avatar-choice.selected{border-color:rgba(0,231,239,.72);box-shadow:0 0 15px rgba(0,213,239,.12),inset 0 0 14px rgba(0,213,239,.08);}
+#screen-profile .identity-controls select{border-color:rgba(0,204,230,.22);background:rgba(5,16,27,.92);}
+#screen-profile .identity-controls label{color:#a5bdc8;}
+#screen-profile .muted-note{color:#8aa3b2;}
+@media(min-width:600px){#screen-profile::before{background-size:100% 100%,min(100%,620px) auto;}}
