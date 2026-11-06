@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 500" role="img" aria-labelledby="title desc">
+<title id="title">Вежа часу — CHRONOS</title><desc id="desc">Неонова футуристична вежа з десятьма рівнями, синіми та рожевими світловими кільцями.</desc>
+<defs>
+ <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#061321"/><stop offset=".55" stop-color="#0b1830"/><stop offset="1" stop-color="#200d2d"/></linearGradient>
+ <linearGradient id="neon" x1="0" x2="1"><stop stop-color="#00eaff"/><stop offset=".48" stop-color="#367dff"/><stop offset="1" stop-color="#ff39cb"/></linearGradient>
+ <linearGradient id="txt" x1="0" x2="1"><stop stop-color="#24eaff"/><stop offset=".58" stop-color="#7c9dff"/><stop offset="1" stop-color="#ff4dcc"/></linearGradient>
+ <radialGradient id="cyan"><stop stop-color="#00eaff" stop-opacity=".36"/><stop offset="1" stop-color="#00eaff" stop-opacity="0"/></radialGradient>
+ <radialGradient id="pink"><stop stop-color="#ff39cb" stop-opacity=".3"/><stop offset="1" stop-color="#ff39cb" stop-opacity="0"/></radialGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="12"/></filter>
+ <filter id="soft"><feGaussianBlur stdDeviation="3"/></filter>
+</defs>
+<rect width="1440" height="500" fill="url(#bg)"/>
+<ellipse cx="1040" cy="220" rx="490" ry="300" fill="url(#cyan)"/><ellipse cx="1270" cy="260" rx="360" ry="280" fill="url(#pink)"/>
+<g opacity=".18" stroke="#43cde9"><path d="M0 80H1440M0 160H1440M0 240H1440M0 320H1440M0 400H1440M80 0V500M160 0V500M240 0V500M320 0V500M400 0V500M480 0V500M560 0V500M640 0V500M720 0V500M800 0V500M880 0V500M960 0V500M1040 0V500M1120 0V500M1200 0V500M1280 0V500M1360 0V500"/></g>
+<g opacity=".5" fill="#071226" stroke="#1c7397" stroke-width="2"><path d="M760 500V250l60-60v-90l70-70 72 70v90l70 60v250Z"/><path d="M1030 500V190l52-45 50 45v310M1210 500V270l48-38 46 38v230M1370 500V180l38-30 32 30v320"/></g>
+<g stroke="url(#neon)" fill="none" stroke-width="5" opacity=".9"><path d="M980 0V500M1020 0V500M1060 0V500"/><path d="M790 140Q1050 20 1320 140M760 205Q1050 70 1350 205M810 270Q1050 155 1300 270"/></g>
+<g fill="none" stroke="url(#neon)" stroke-width="11" opacity=".25" filter="url(#glow)"><ellipse cx="1050" cy="122" rx="310" ry="72"/><ellipse cx="1050" cy="240" rx="370" ry="78"/></g>
+<g fill="none" stroke="url(#neon)" stroke-width="3"><ellipse cx="1050" cy="122" rx="310" ry="72"/><ellipse cx="1050" cy="240" rx="370" ry="78"/></g>
+<g stroke="#7aefff" stroke-width="2" opacity=".6"><path d="M1050 0V500M930 45L930 500M1170 45V500M870 315H1230M900 370H1200M930 425H1170"/></g>
+<g fill="#9df8ff"><circle cx="1050" cy="122" r="7"/><circle cx="1050" cy="240" r="6"/><circle cx="1050" cy="350" r="5"/></g>
+<g opacity=".35" stroke="url(#neon)" stroke-width="2"><path d="M0 450H1440M0 466H1440M0 482H1440"/></g>
+<path d="M38 58H58V442H38Z" fill="url(#neon)"/>
+<g font-family="Arial, sans-serif"><text x="88" y="88" font-size="19" letter-spacing="7" fill="#9cecf4">CHRONOS / CHRONOLOGY TOWER</text><path d="M88 110H610" stroke="url(#neon)" stroke-width="2"/>
+<text x="80" y="260" font-size="116" font-weight="800" letter-spacing="-5" fill="#061321" opacity=".9">ВЕЖА</text><text x="76" y="255" font-size="116" font-weight="800" letter-spacing="-5" fill="url(#txt)">ВЕЖА</text>
+<text x="80" y="382" font-size="116" font-weight="800" letter-spacing="-5" fill="#061321" opacity=".9">ЧАСУ</text><text x="76" y="377" font-size="116" font-weight="800" letter-spacing="-5" fill="url(#txt)">ЧАСУ</text>
+<text x="88" y="452" font-size="15" letter-spacing="4" fill="#a6c4d8">10 FLOORS  /  ONE CHRONOLOGY</text></g>
+<path d="M0 0H1440V500H0Z" fill="none" stroke="url(#neon)" stroke-width="3" opacity=".8"/>
+</svg>

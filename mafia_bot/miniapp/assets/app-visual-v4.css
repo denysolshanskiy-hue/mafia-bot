@@ -463,3 +463,14 @@
   #screen-events .planned-card .event-card-kicker .event-status-pill{padding:4px 5px;font-size:5px}
   #screen-events .planned-card .planned-event-title{font-size:16px}
 }
+
+/* CHRONOS Tower screen title artwork */
+#screen-tower .tower-page-intro{margin:0 0 20px;padding:0}
+#screen-tower .tower-header-art{
+ display:block;width:100%;height:auto;aspect-ratio:1440/500;object-fit:cover;
+ border:1px solid rgba(40,222,255,.42);border-radius:15px;
+ box-shadow:0 0 0 1px rgba(255,50,210,.14),0 12px 34px rgba(0,0,0,.3),0 0 24px rgba(0,210,255,.12);
+}
+#screen-tower .tower-page-intro p{
+ margin:14px 0 0;color:#aab9c8;font-size:11px;line-height:1.65;max-width:620px;
+}
