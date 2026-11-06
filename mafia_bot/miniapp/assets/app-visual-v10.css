@@ -1,0 +1,13 @@
+/* CHRONOS — Android avatar portraits */
+#screen-profile .avatar-person.android_male,
+#screen-profile .avatar-person.android_female{display:block;width:126px;height:126px;border-radius:50%;overflow:hidden;background-repeat:no-repeat;background-size:cover;background-position:center;border:1px solid rgba(0,229,239,.68);box-shadow:0 0 26px rgba(0,220,245,.28),0 0 48px rgba(255,55,164,.13),inset 0 0 14px rgba(0,0,0,.24)}
+#screen-profile .avatar-person.android_male{background-image:url("chronos-v3/avatars/android_male.webp")}
+#screen-profile .avatar-person.android_female{background-image:url("chronos-v3/avatars/android_female.webp")}
+#screen-profile .avatar-person.android_male:before,#screen-profile .avatar-person.android_female:before,#screen-profile .avatar-person.android_male span,#screen-profile .avatar-person.android_female span,#screen-profile .avatar-person.android_male i,#screen-profile .avatar-person.android_female i{display:none}
+#screen-profile .profile-avatar:has(.avatar-person.android_male) .avatar-scan,#screen-profile .profile-avatar:has(.avatar-person.android_female) .avatar-scan{display:none}
+#screen-profile .mini-avatar.android{width:43px;height:43px;aspect-ratio:1;border-radius:50%;background-repeat:no-repeat;background-size:cover;background-position:center;border:1px solid rgba(0,220,239,.55);box-shadow:0 0 14px rgba(0,210,240,.2)}
+#screen-profile .mini-avatar.android:not(.female){background-image:url("chronos-v3/avatars/android_male.webp")}
+#screen-profile .mini-avatar.android.female{background-image:url("chronos-v3/avatars/android_female.webp")}
+#screen-profile .mini-avatar.android:before,#screen-profile .mini-avatar.android:after{display:none}
+#screen-profile .avatar-choice[data-avatar="android_male"],#screen-profile .avatar-choice[data-avatar="android_female"]{border-color:rgba(0,220,239,.4);background:linear-gradient(145deg,rgba(7,32,44,.92),rgba(10,17,30,.98))}
+#screen-profile .avatar-choice[data-avatar="android_male"].selected,#screen-profile .avatar-choice[data-avatar="android_female"].selected{border-color:#00e5e9;box-shadow:0 0 18px rgba(0,225,239,.24),inset 0 0 13px rgba(0,225,239,.12)}
