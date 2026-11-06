@@ -381,3 +381,18 @@
   #screen-home .home-next-info{padding:8px 19px 8px 1px}
   #screen-home .home-next-arrow{right:11px;bottom:11px}
 }
+
+
+/* CHRONOS Events page hero — generated banner asset, no duplicate overlaid copy. */
+#screen-events .events-page-head{
+  position:relative;width:100%;min-height:0;height:auto;aspect-ratio:640 / 288;
+  margin:0 0 13px;padding:0;overflow:hidden;border:0;border-radius:0;
+  background:#07101c url("chronos-v3/home/events-hero-v01.webp") center / 100% 100% no-repeat;
+  box-shadow:none;
+}
+#screen-events .events-page-head:after{display:none}
+#screen-events .events-page-head>*{
+  position:absolute!important;width:1px!important;height:1px!important;padding:0!important;
+  margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;
+  white-space:nowrap!important;border:0!important;
+}

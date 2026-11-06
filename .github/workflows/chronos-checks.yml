@@ -135,7 +135,7 @@ jobs:
               raise SystemExit("CHRONOS v3 visual stylesheet is not loaded")
           visual_v3 = (miniapp_dir / "assets/app-visual-v3.css").read_text(encoding="utf-8")
           visual_v4 = (miniapp_dir / "assets/app-visual-v4.css").read_text(encoding="utf-8")
-          if 'href="assets/app-visual-v4.css?v=chronos-v3-event-card-03"' not in index_html:
+          if 'href="assets/app-visual-v4.css?v=chronos-v3-events-hero-01"' not in index_html:
               raise SystemExit("CHRONOS v4 Home stylesheet is not loaded")
           if "#screen-home .home-progress-card" not in visual_v4 or "#screen-home .home-hero-copy h1" not in visual_v4:
               raise SystemExit("CHRONOS Home screen composition rules are missing")
