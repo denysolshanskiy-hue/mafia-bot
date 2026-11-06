@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="assets/app.css?v=chronos-v3-player-id-02">
   <link rel="stylesheet" href="assets/app-visual-v2.css?v=chronos-v3-player-id-02">
   <link rel="stylesheet" href="assets/app-visual-v3.css?v=chronos-v3-player-id-02">
-  <link rel="stylesheet" href="assets/app-visual-v4.css?v=chronos-tower-header-05">
+  <link rel="stylesheet" href="assets/app-visual-v4.css?v=chronos-progress-hud-01">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script defer src="assets/app.js?v=chronos-v3-player-id-02"></script>
   <script defer src="assets/modules.js?v=chronos-v3-player-id-02"></script>
@@ -127,11 +127,20 @@
           <span data-milestone="75">75% <small>OVERDRIVE</small></span>
           <span data-milestone="100">100% <small>FINAL</small></span>
         </div>
-        <div class="tower-status">
-          <div class="tower-status-top"><span>ПРОГРЕС СЕЗОНУ</span><b>SYNC</b></div>
-          <div class="sync-track"><span id="sync-meter"></span></div>
-          <div class="tower-status-bottom"><span id="sync-status-label">СИСТЕМА ОЧІКУЄ РЕЗУЛЬТАТИ ІГОР</span><span id="sync-percent">0%</span></div>
-        </div>
+        <section class="tower-status" aria-label="Динамічний прогрес сезону">
+          <div class="tower-status-top">
+            <span>ПРОГРЕС СЕЗОНУ</span>
+            <b><i aria-hidden="true"></i> SYNC</b>
+          </div>
+          <div class="tower-status-reading">
+            <span class="tower-status-cityline" aria-hidden="true"></span>
+            <strong id="sync-percent" aria-live="polite">0.0%</strong>
+          </div>
+          <div class="sync-track" role="progressbar" aria-label="Поточний прогрес сезону" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span id="sync-meter"></span>
+          </div>
+          <div class="tower-status-bottom"><span id="sync-status-label">СИСТЕМА ОЧІКУЄ РЕЗУЛЬТАТИ ІГОР</span><span class="tower-status-unit">SEASON SYNC</span></div>
+        </section>
         <div class="tower-layout">
           <div class="tower-spine"><span></span></div>
           <div id="tower-floors" class="tower-floors"></div>
