@@ -472,3 +472,28 @@
 #screen-tower .tower-page-intro{padding:0 0 17px}
 #screen-tower .tower-page-intro p{max-width:560px}
 @media(max-width:390px){#screen-tower .tower-hero-banner{aspect-ratio:2.85/1;margin-bottom:14px;border-radius:10px}#screen-tower .tower-hero-banner:after{inset:4px;border-radius:7px}}
+
+
+/* CHRONOS Tower — season progress artwork; milestone state remains data-driven. */
+#screen-tower .milestone-strip{
+  position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;
+  width:100%;aspect-ratio:3/1;margin:14px 0 16px;padding:0;overflow:hidden;
+  border:0;border-radius:0;
+  background:#050b18 url("chronos-v3/home/season-progress-v01.webp") center / 100% 100% no-repeat;
+  box-shadow:0 8px 24px rgba(0,0,0,.28),0 0 20px rgba(0,210,255,.10),0 0 20px rgba(255,45,200,.09);
+}
+#screen-tower .milestone-strip span{
+  position:relative;min-width:0;padding:0;border:0;border-radius:0;
+  background:transparent!important;color:transparent!important;font-size:0;line-height:0;
+}
+#screen-tower .milestone-strip span small{display:none!important}
+#screen-tower .milestone-strip span.reached:after{
+  content:"";position:absolute;left:50%;bottom:13%;width:48%;height:13%;
+  transform:translateX(-50%);border:1px solid rgba(165,255,255,.9);border-radius:50%;
+  background:rgba(0,232,255,.12);box-shadow:0 0 9px rgba(0,238,255,.9),0 0 22px rgba(0,225,255,.62),inset 0 0 8px rgba(255,255,255,.6);
+  pointer-events:none;
+}
+#screen-tower .milestone-strip span:nth-child(2).reached:after{border-color:rgba(165,190,255,.95);box-shadow:0 0 9px rgba(120,150,255,.9),0 0 22px rgba(120,150,255,.62)}
+#screen-tower .milestone-strip span:nth-child(3).reached:after,
+#screen-tower .milestone-strip span:nth-child(4).reached:after{border-color:rgba(255,150,240,.95);box-shadow:0 0 9px rgba(255,80,220,.9),0 0 22px rgba(255,65,210,.62)}
+@media(max-width:390px){#screen-tower .milestone-strip{margin:12px 0 14px}}
