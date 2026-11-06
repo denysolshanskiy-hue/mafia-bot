@@ -252,7 +252,8 @@
       return '<article class="event-list-card planned-card ' + (isFinal ? "final-card" : "regular-card") + '">' +
         eventArtwork(type) +
         '<div class="event-card-copy">' +
-          '<div class="event-card-title-row"><h3>' + title + '</h3><span class="event-status-pill soon">СКОРО</span></div>' +
+          '<div class="event-card-kicker"><span class="event-kicker-dot"></span><span>CHRONOS / SEASON 01</span><span class="event-status-pill soon">СКОРО</span></div>' +
+          '<h3 class="planned-event-title">' + title + '</h3>' +
           '<p class="event-card-kind">' + (isFinal ? (type === "main_final" ? "ГОЛОВНИЙ ФІНАЛ СЕЗОНУ" : "ПРОМІЖНИЙ ФІНАЛ") : "СЕЗОННИЙ ВЕЧІР") + '</p>' +
           '<span class="event-card-code">' + code + '</span>' +
         '</div></article>';

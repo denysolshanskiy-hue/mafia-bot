@@ -396,3 +396,70 @@
   margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;
   white-space:nowrap!important;border:0!important;
 }
+
+
+/* CHRONOS season calendar — neon planned-event cards */
+#screen-events .event-card-list{gap:12px}
+#screen-events .event-list-card.planned-card{
+  isolation:isolate; position:relative; display:flex; align-items:stretch; gap:12px;
+  min-height:132px; padding:8px; border:1px solid transparent; border-radius:15px;
+  opacity:1; overflow:hidden;
+  background:
+    linear-gradient(112deg,rgba(8,18,32,.98),rgba(13,13,30,.98) 62%,rgba(22,10,32,.98)) padding-box,
+    linear-gradient(108deg,rgba(0,238,255,.95),rgba(44,124,255,.55) 48%,rgba(255,35,214,.95)) border-box;
+  box-shadow:0 0 0 1px rgba(0,226,255,.08),0 8px 24px rgba(0,0,0,.28),0 0 20px rgba(0,220,255,.09),0 0 22px rgba(255,28,207,.07);
+}
+#screen-events .event-list-card.planned-card:before{
+  content:""; position:absolute; z-index:0; inset:1px; pointer-events:none; border-radius:14px;
+  background:
+    radial-gradient(ellipse at 100% 100%,rgba(255,31,211,.16),transparent 42%),
+    radial-gradient(ellipse at 0 0,rgba(0,229,255,.13),transparent 43%),
+    linear-gradient(115deg,transparent 52%,rgba(255,255,255,.025) 52.2%,transparent 52.7%);
+}
+#screen-events .event-list-card.planned-card:after{
+  content:""; position:absolute; z-index:0; inset:5px; pointer-events:none; border:1px solid rgba(119,194,231,.12);
+  border-radius:11px; clip-path:polygon(0 0,92% 0,96% 7%,100% 7%,100% 93%,96% 93%,92% 100%,0 100%);
+}
+#screen-events .planned-card .event-art{
+  position:relative; z-index:1; flex:0 0 36%; width:36%; min-height:114px; border-radius:9px;
+  background:linear-gradient(145deg,#071b2c,#15112c); box-shadow:inset 0 0 0 1px rgba(0,235,255,.22),0 0 14px rgba(0,213,255,.12);
+}
+#screen-events .planned-card .event-art:after{border:1px solid rgba(0,232,255,.42);border-radius:9px}
+#screen-events .planned-card .event-art-room img{
+  min-height:114px; height:100%; object-fit:cover; object-position:center 55%;
+  filter:hue-rotate(252deg) saturate(1.8) contrast(1.16) brightness(1.05);
+}
+#screen-events .planned-card .event-card-copy{
+  z-index:1; justify-content:center; gap:7px; min-width:0; padding:3px 5px 3px 0;
+}
+#screen-events .planned-card .event-card-kicker{
+  display:flex; align-items:center; gap:6px; min-width:0; color:#c3c8e6;
+  font:6px var(--mono); letter-spacing:.16em; white-space:nowrap;
+}
+#screen-events .planned-card .event-kicker-dot{
+  flex:0 0 6px; width:6px; height:6px; border-radius:50%; background:#35f5f2;
+  box-shadow:0 0 8px #35f5f2,0 0 15px rgba(53,245,242,.65);
+}
+#screen-events .planned-card .event-card-kicker .event-status-pill{margin-left:auto;flex:0 0 auto}
+#screen-events .planned-card .event-card-title-row{display:none}
+#screen-events .planned-card .planned-event-title{
+  margin:0; color:#f5f7ff; font-size:clamp(16px,4.6vw,20px); font-weight:850;
+  line-height:1.05; letter-spacing:-.035em; text-shadow:0 0 13px rgba(79,202,255,.18);
+}
+#screen-events .planned-card .event-card-kind{
+  color:#d0d6e8; font:8px var(--mono); letter-spacing:.2em; line-height:1.3;
+}
+#screen-events .planned-card .event-card-code{
+  color:#8f9fcb; font:7px var(--mono); letter-spacing:.2em;
+}
+#screen-events .planned-card.final-card{
+  background:linear-gradient(112deg,rgba(17,16,34,.98),rgba(22,13,35,.98)) padding-box,
+    linear-gradient(108deg,rgba(168,143,255,.9),rgba(0,220,255,.5),rgba(255,35,214,.85)) border-box;
+}
+@media (max-width:360px){
+  #screen-events .event-list-card.planned-card{min-height:120px;gap:9px;padding:7px}
+  #screen-events .planned-card .event-art,#screen-events .planned-card .event-art-room img{min-height:104px}
+  #screen-events .planned-card .event-card-kicker{font-size:5.5px;letter-spacing:.11em}
+  #screen-events .planned-card .event-card-kicker .event-status-pill{padding:4px 5px;font-size:5px}
+  #screen-events .planned-card .planned-event-title{font-size:16px}
+}
