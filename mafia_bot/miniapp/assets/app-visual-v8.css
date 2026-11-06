@@ -1,0 +1,21 @@
+/* CHRONOS — Asian avatar portraits */
+#screen-profile .avatar-person.asian_male,
+#screen-profile .avatar-person.asian_female{display:block;width:126px;height:126px;border-radius:50%;overflow:hidden;background-repeat:no-repeat;background-size:cover;background-position:center;border:1px solid rgba(0,229,239,.62);box-shadow:0 0 24px rgba(0,220,245,.24),0 0 48px rgba(255,55,164,.1),inset 0 0 14px rgba(0,0,0,.24)}
+#screen-profile .avatar-person.asian_male{background-image:url("chronos-v3/avatars/asian_male.webp")}
+#screen-profile .avatar-person.asian_female{background-image:url("chronos-v3/avatars/asian_female.webp")}
+#screen-profile .avatar-person.asian_male:before,
+#screen-profile .avatar-person.asian_female:before,
+#screen-profile .avatar-person.asian_male span,
+#screen-profile .avatar-person.asian_female span,
+#screen-profile .avatar-person.asian_male i,
+#screen-profile .avatar-person.asian_female i{display:none}
+#screen-profile .profile-avatar:has(.avatar-person.asian_male) .avatar-scan,
+#screen-profile .profile-avatar:has(.avatar-person.asian_female) .avatar-scan{display:none}
+#screen-profile .mini-avatar.asian{width:43px;height:43px;aspect-ratio:1;border-radius:50%;background-repeat:no-repeat;background-size:cover;background-position:center;border:1px solid rgba(0,220,239,.48);box-shadow:0 0 12px rgba(0,210,240,.16)}
+#screen-profile .mini-avatar.asian:not(.female){background-image:url("chronos-v3/avatars/asian_male.webp")}
+#screen-profile .mini-avatar.asian.female{background-image:url("chronos-v3/avatars/asian_female.webp")}
+#screen-profile .mini-avatar.asian:before,#screen-profile .mini-avatar.asian:after{display:none}
+#screen-profile .avatar-choice[data-avatar="asian_male"],
+#screen-profile .avatar-choice[data-avatar="asian_female"]{border-color:rgba(0,220,239,.34);background:linear-gradient(145deg,rgba(7,32,44,.9),rgba(10,17,30,.96))}
+#screen-profile .avatar-choice[data-avatar="asian_male"].selected,
+#screen-profile .avatar-choice[data-avatar="asian_female"].selected{border-color:#00e5e9;box-shadow:0 0 16px rgba(0,225,239,.2),inset 0 0 12px rgba(0,225,239,.1)}
