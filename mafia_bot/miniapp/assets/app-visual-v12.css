@@ -9,3 +9,10 @@
 #screen-room .room-hero-banner img{width:100%;height:auto;aspect-ratio:640/372;object-fit:cover;object-position:center}
 #screen-room .room-hero-banner.fallback{background:linear-gradient(135deg,#061c32,#10132b 52%,#210d31)}
 #screen-room .room-hero-banner.fallback img{width:100%;aspect-ratio:1/1;object-fit:cover;opacity:.72}
+
+#screen-room .room-hero-banner{margin:0 0 14px;border-radius:0 0 16px 16px;overflow:hidden}
+#screen-room .room-hero-banner img{display:block;width:100%;height:auto;aspect-ratio:709/420;object-fit:cover}
+#screen-room .hall-scene{margin:0 0 14px;position:relative;overflow:hidden;border:1px solid rgba(0,225,239,.35);border-radius:18px;background:#071321}
+#screen-room .hall-scene img{display:block;width:100%;height:auto}
+#screen-room .hall-scene-overlay{position:absolute;inset:auto 0 0;display:flex;align-items:center;gap:8px;padding:12px 14px;background:linear-gradient(0deg,rgba(5,11,17,.92),transparent);color:#c6dcdf;font:8px var(--mono);letter-spacing:.13em}
+#screen-room .hall-scene-overlay b{margin-left:auto;color:#e4d36c;font-weight:500}
