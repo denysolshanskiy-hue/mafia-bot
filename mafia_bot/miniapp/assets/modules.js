@@ -289,7 +289,7 @@
   async function startGame(code) {
     try {
       const session = await api("/games/" + code, { method: "POST" });
-      S.game = { id: session.session_id, code: code, state: session.state, feedback: [], attemptsLeft: 6 };
+      S.game = { id: session.session_id, code: code, state: session.state, feedback: [], attemptsLeft: 10 };
       renderGameSession();
       if (S.gameTimer) clearInterval(S.gameTimer);
       S.gameTimer = setInterval(() => {
@@ -308,13 +308,13 @@
     if (!target || !S.game) return;
     target.hidden = false;
     const game = S.game;
-    const seconds = game.state ? Number(game.state.seconds_left || 0) : 90;
+    const seconds = game.state ? Number(game.state.seconds_left || 0) : (game.code === "CODE_BREAKER" ? 180 : 150);
     if (game.code === "CODE_BREAKER") {
       const guesses = (game.feedback || []).map((g, i) =>
         '<div class="guess-row"><span>' + (i + 1) + '. ' + esc(g.guess) + '</span><span>● ' + g.exact + ' &nbsp; ◇ ' + g.misplaced + '</span></div>'
       ).join("");
       target.innerHTML = '<div class="panel-top"><span class="panel-code">CODE BREAKER · SESSION</span><span class="game-timer" id="game-seconds">' + seconds + 's</span></div>' +
-        '<h3>ЗЛАМАТИ КОД</h3><p class="modal-copy">4 різні цифри. ● — цифра та позиція правильні, ◇ — цифра є, позиція інша. 6 спроб.</p>' +
+        '<h3>ЗЛАМАТИ КОД</h3><p class="modal-copy">4 різні цифри. ● — цифра та позиція правильні, ◇ — цифра є, позиція інша. 10 спроб за 3 хвилини.</p>' +
         '<form class="code-guess-form" id="code-guess-form"><input id="code-guess-input" type="text" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="off" placeholder="••••" required><button class="primary-button" type="submit">ПЕРЕВІРИТИ</button></form>' +
         '<div class="guess-list">' + guesses + '</div><div class="row-actions"><button class="secondary-button" data-close-game>ЗАКРИТИ</button></div>';
       const input = $("#code-guess-input");
@@ -322,7 +322,7 @@
     } else {
       const cells = game.state && game.state.cells ? game.state.cells : [];
       target.innerHTML = '<div class="panel-top"><span class="panel-code">MEMORY · SESSION</span><span class="game-timer" id="game-seconds">' + seconds + 's</span></div>' +
-        '<h3>ЗНАЙТИ 6 ПАР</h3><p class="modal-copy">Знайди всі пари за 90 секунд. Ходи: ' + Number(game.state.moves || 0) + ' · Пари: ' + Number(game.state.pairs_found || 0) + ' / 6.</p>' +
+        '<h3>ЗНАЙТИ 6 ПАР</h3><p class="modal-copy">Знайди всі пари за 2 хв 30 с. Ходи: ' + Number(game.state.moves || 0) + ' · Пари: ' + Number(game.state.pairs_found || 0) + ' / 6.</p>' +'<div class="memory-symbol-guide"><span>МОЖЛИВІ КАРТКИ</span><div class="memory-symbol-list">' + ["ATOM","NOVA","PULSE","FLUX","ECHO","CORE"].map((name) => '<span>' + name + '</span>').join("") + '</div></div>' +
         '<div class="memory-board">' + cells.map((cell) =>
           '<button class="memory-card ' + (cell.matched ? "matched" : cell.flipped ? "revealed" : "") + '" data-memory-card="' + cell.index + '"' +
           (cell.matched || cell.flipped || game.state.pending_hide ? " disabled" : "") + '>' + (cell.value ? esc(cell.value) : "⌁") + '</button>'
