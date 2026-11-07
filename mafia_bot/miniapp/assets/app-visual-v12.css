@@ -16,3 +16,8 @@
 #screen-room .hall-scene img{display:block;width:100%;height:auto}
 #screen-room .hall-scene-overlay{position:absolute;inset:auto 0 0;display:flex;align-items:center;gap:8px;padding:12px 14px;background:linear-gradient(0deg,rgba(5,11,17,.92),transparent);color:#c6dcdf;font:8px var(--mono);letter-spacing:.13em}
 #screen-room .hall-scene-overlay b{margin-left:auto;color:#e4d36c;font-weight:500}
+
+/* Use the exact user-supplied Game Hall header image; keep the table below as a separate asset. */
+#screen-room .room-hero-banner{display:block!important;width:100%;margin:0 0 14px;overflow:hidden;aspect-ratio:1179/705;min-height:0;border-radius:0 0 18px 18px;background:#050d16}
+#screen-room .room-hero-banner img{display:block!important;width:100%;height:100%;aspect-ratio:1179/705;object-fit:cover;object-position:center}
+#screen-room .hall-scene{display:block!important;position:relative;margin:0 0 14px}
