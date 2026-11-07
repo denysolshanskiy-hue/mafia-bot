@@ -328,10 +328,12 @@
         : ["ATOM","NOVA","PULSE","FLUX","ECHO","CORE"]);
       target.innerHTML = '<div class="panel-top"><span class="panel-code">MEMORY · LEVEL ' + level + ' / 2</span><span class="game-timer" id="game-seconds">' + seconds + 's</span></div>' +
         '<h3>' + (level === 2 ? "ЗНАЙТИ 10 ПАР" : "ЗНАЙТИ 6 ПАР") + '</h3><p class="modal-copy">' + (level === 2 ? "Другий рівень: 20 карток і 10 пар. Знайди їх за 2 хв 30 с." : "Перший рівень: 12 карток і 6 пар. Знайди всі пари, щоб відкрити наступний рівень.") + ' Ходи: ' + Number(game.state.moves || 0) + ' · Пари: ' + Number(game.state.pairs_found || 0) + ' / ' + pairsTotal + '.</p>' +
-        '<div class="memory-symbol-guide"><span>МОЖЛИВІ КАРТКИ · РІВЕНЬ ' + level + '</span><div class="memory-symbol-list">' + symbols.map((name) => '<span>' + esc(name) + '</span>').join("") + '</div></div>' +
+        '<div class="memory-symbol-guide"><span>МОЖЛИВІ КАРТКИ · РІВЕНЬ ' + level + '</span><div class="memory-symbol-list">' + symbols.map((name) => '<span><img src="assets/chronos-v3/memory/' + name.toLowerCase() + '.svg" alt=""><b>' + esc(name) + '</b></span>').join("") + '</div></div>' +
         '<div class="memory-board memory-board-level-' + level + '">' + cells.map((cell) =>
           '<button class="memory-card ' + (cell.matched ? "matched" : cell.flipped ? "revealed" : "") + '" data-memory-card="' + cell.index + '"' +
-          (cell.matched || cell.flipped || game.state.pending_hide ? " disabled" : "") + '>' + (cell.value ? esc(cell.value) : "⌁") + '</button>'
+          (cell.matched || cell.flipped || game.state.pending_hide ? " disabled" : "") + '>' +
+          (cell.value ? '<span class="memory-symbol-face"><img src="assets/chronos-v3/memory/' + cell.value.toLowerCase() + '.svg" alt="' + esc(cell.value) + '"><small>' + esc(cell.value) + '</small></span>' : '<span class="memory-card-back">⌁</span>') +
+          '</button>'
         ).join("") + '</div>' +
         (game.state.pending_hide ? '<p class="muted-note">Не збіглося — картки закриються автоматично.</p>' : "") +
         '<div class="row-actions"><button class="secondary-button" data-close-game>ЗАКРИТИ</button></div>';
