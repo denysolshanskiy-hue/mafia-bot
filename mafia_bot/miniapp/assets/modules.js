@@ -120,6 +120,15 @@
     });
   }
 
+  function applyAvatarBase(code) {
+    const allowed = new Set(["european_male","european_female","asian_male","asian_female","dark_male","dark_female","android_male","android_female"]);
+    const base = allowed.has(code) ? code : "european_male";
+    const profileAvatar = $(".avatar-person");
+    if (profileAvatar) profileAvatar.className = "avatar-person " + base;
+    const homeAvatar = $("#home-player-avatar");
+    if (homeAvatar) homeAvatar.dataset.avatarBase = base;
+  }
+
   async function loadIdentity() {
     try {
       S.identity = await api("/identity");
@@ -136,10 +145,7 @@
       if ($("#profile-role")) $("#profile-role").textContent = p.role === "admin" ? "ADMIN" : "INITIATE";
       if ($("#profile-title")) $("#profile-title").textContent = p.active_title ? String(p.active_title).toUpperCase() : "TELEGRAM · KMC";
       if ($("#admin-shortcut")) $("#admin-shortcut").hidden = p.role !== "admin";
-      const avatar = $(".avatar-person");
-      if (avatar) {
-        avatar.className = "avatar-person " + (p.avatar_base || "european_male");
-      }
+      applyAvatarBase(p.avatar_base || "european_male");
       $$(".avatar-choice").forEach((el) => el.classList.toggle("selected", el.dataset.avatar === p.avatar_base));
       return p;
     } catch (error) {
@@ -154,8 +160,7 @@
     try {
       await api("/identity/avatar", { method: "POST", body: { avatar_base: code } });
       if (S.identity) S.identity.avatar_base = code;
-      const avatar = $(".avatar-person");
-      if (avatar) avatar.className = "avatar-person " + code;
+      applyAvatarBase(code);
       $$(".avatar-choice").forEach((el) => el.classList.toggle("selected", el.dataset.avatar === code));
       toast("Основа аватара збережена.");
     } catch (error) { toast(error.message); }
