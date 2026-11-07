@@ -274,7 +274,10 @@
       return;
     }
     if (screen) screen.classList.remove("simulation-inactive");
-    target.innerHTML = S.games.games.map((game) => {
+    const adminNotice = S.games.admin_preview
+      ? '<div class="notice-card"><span class="notice-mark">i</span><div><b>ADMIN TEST MODE</b><p>Доступ відкрито лише адміністратору до активації сезону. Тестові проходження не нараховують XP та не впливають на сезонний прогрес.</p></div></div>'
+      : "";
+    target.innerHTML = adminNotice + S.games.games.map((game) => {
       const attempts = Number(game.attempts_today || 0);
       return '<article class="game-card"><span class="game-symbol">' + (game.game_code === "MEMORY" ? "▦" : "⌘") + '</span>' +
         '<h3>' + esc(game.title) + '</h3><p>' + esc(game.description) + '</p>' +
