@@ -657,3 +657,6 @@ button.event-list-card:active { transform:scale(.987); }
 .event-list-card.real-event-card { border-color:rgba(222,187,116,.46); box-shadow:0 8px 22px rgba(0,0,0,.16),inset 0 0 22px rgba(221,184,109,.045); }
 .event-list-card.planned-card { border-color:rgba(141,129,180,.2); }
 .event-group-heading .eyebrow { color:#9b8cc7; }
+
+/* CHRONOS achievement artwork */
+.achievement-logo{width:35px;height:35px;flex:0 0 35px;object-fit:cover;border:1px solid rgba(99,229,214,.25);border-radius:9px;background:rgba(7,16,23,.9);box-shadow:0 0 12px rgba(99,229,214,.08)}.achievement-card.earned .achievement-logo{border-color:rgba(233,199,123,.45);box-shadow:0 0 12px rgba(233,199,123,.12)}
