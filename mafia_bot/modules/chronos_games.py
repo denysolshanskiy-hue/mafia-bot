@@ -8,7 +8,7 @@ from datetime import timedelta
 import asyncpg
 from aiohttp import web
 
-from modules.chronos_common import active_season_id, award_ledger, check_player_achievements, json_response, json_value, notify_user
+from modules.chronos_common import active_season_id, award_ledger, check_player_achievements, json_response, json_value, notify_user, require_admin
 
 
 def _public_state(game_code, state, session):
@@ -88,16 +88,23 @@ async def start_game(request):
     conn = await get_connection()
     try:
         async with conn.transaction():
+            admin_access = await require_admin(request, conn)
+            is_admin_test = admin_access is None
             season_id = await active_season_id(conn)
+            if not season_id and is_admin_test:
+                # Admin preview uses the latest configured season record without activating it.
+                season_id = await conn.fetchval(
+                    "SELECT season_id FROM chronos.seasons ORDER BY season_id DESC LIMIT 1"
+                )
             if not season_id:
-                return json_response({"error":"season_not_active"},409)
+                return json_response({"error":"season_not_configured"},409)
             season_row=await conn.fetchrow(
                 "SELECT platform_settings FROM chronos.seasons WHERE season_id=$1",
                 season_id,
             )
             platform=json_value(season_row["platform_settings"],{}) if season_row else {}
             economy=(platform or {}).get("economy",{})
-            if economy.get("status")!="approved":
+            if not is_admin_test and economy.get("status")!="approved":
                 return json_response({"error":"economy_not_approved"},409)
             # Lock the player row so parallel starts cannot exceed the daily cap.
             user = await conn.fetchrow(
@@ -124,12 +131,12 @@ async def start_game(request):
             session_id = uuid.uuid4()
             rng = random.SystemRandom()
             if game_code == "CODE_BREAKER":
-                state = {"secret":"".join(rng.sample("0123456789",4)),"guesses":[]}
+                state = {"secret":"".join(rng.sample("0123456789",4)),"guesses":[],"admin_test":is_admin_test}
             else:
                 symbols = ["ATOM","NOVA","PULSE","FLUX","ECHO","CORE"]
                 cards = symbols * 2
                 rng.shuffle(cards)
-                state = {"cards":cards,"matched":[],"flipped":[],"moves":0,"pending_hide":False}
+                state = {"cards":cards,"matched":[],"flipped":[],"moves":0,"pending_hide":False,"admin_test":is_admin_test}
 
             row = await conn.fetchrow(
                 """
@@ -217,7 +224,7 @@ async def game_action(request):
                     session_id,json.dumps(state),status,exact*100+max(0,6-len(state["guesses"]))*10 if status=="completed" else 0,
                 )
                 xp=0
-                if status=="completed":
+                if status=="completed" and not state.get("admin_test"):
                     xp=await _award_minigame_xp(conn,session["season_id"],user_id,game_code,session_id)
                     await conn.execute("UPDATE chronos.minigame_sessions SET xp_awarded=$2 WHERE session_id=$1",session_id,xp)
                     await check_player_achievements(conn,session["season_id"],user_id)
@@ -266,7 +273,7 @@ async def game_action(request):
                 session_id,json.dumps(state),status,max(0,1000-state["moves"]*10) if status=="completed" else 0,
             )
             xp=0
-            if status=="completed":
+            if status=="completed" and not state.get("admin_test"):
                 xp=await _award_minigame_xp(conn,session["season_id"],user_id,game_code,session_id)
                 await conn.execute("UPDATE chronos.minigame_sessions SET xp_awarded=$2 WHERE session_id=$1",session_id,xp)
                 await check_player_achievements(conn,session["season_id"],user_id)
@@ -287,9 +294,15 @@ async def games_status(request):
     from database import get_chronos_connection as get_connection
     conn = await get_connection()
     try:
+        admin_access = await require_admin(request, conn)
+        is_admin = admin_access is None
         season_id = await active_season_id(conn)
+        if not season_id and is_admin:
+            season_id = await conn.fetchval(
+                "SELECT season_id FROM chronos.seasons ORDER BY season_id DESC LIMIT 1"
+            )
         if not season_id:
-            return json_response({"season_active":False,"games":[]})
+            return json_response({"season_active":False,"admin_preview":False,"games":[]})
         rows = await conn.fetch(
             """
             SELECT game_code,COUNT(*) FILTER (
@@ -305,8 +318,10 @@ async def games_status(request):
             user_id,season_id,
         )
         stats={r["game_code"]:dict(r) for r in rows}
+        active = await active_season_id(conn)
         return json_response({
-            "season_active":True,
+            "season_active":bool(active) or is_admin,
+            "admin_preview":bool(is_admin and not active),
             "daily_limit":3,
             "games":[
                 {"game_code":code,"title":title,"description":desc,"attempts_today":int(stats.get(code,{}).get("attempts_today",0)),
