@@ -266,7 +266,7 @@ async def check_player_achievements(conn, season_id, user_id):
         SELECT COALESCE(SUM(LEAST(
             GREATEST(EXTRACT(EPOCH FROM (completed_at-started_at)),0),
             GREATEST(EXTRACT(EPOCH FROM (expires_at-started_at)),0),
-            180
+            300
         )),0)
         FROM chronos.minigame_sessions
         WHERE user_id=$1 AND actions_count>0
