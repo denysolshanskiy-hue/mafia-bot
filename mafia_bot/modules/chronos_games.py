@@ -356,7 +356,7 @@ async def games_status(request):
                  "completed":int(stats.get(code,{}).get("completed",0)),"xp_total":int(stats.get(code,{}).get("xp_total",0))}
                 for code,title,desc in (
                     ("CODE_BREAKER","CODE BREAKER","Знайди 4 унікальні цифри за 6 спроб. 90 секунд."),
-                    ("MEMORY","MEMORY","Знайди 6 пар серед 12 карток. 90 секунд.")
+                    ("MEMORY","MEMORY","2 рівні: 6 пар, потім 10 пар. По 2 хв 30 с на кожен рівень.")
                 )
             ],
         })
