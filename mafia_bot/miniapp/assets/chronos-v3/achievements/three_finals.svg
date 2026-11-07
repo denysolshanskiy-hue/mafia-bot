@@ -1,1 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="64" height="64" viewBox="0 0 64 64"><image width="64" height="64" xlink:href="data:image/webp;base64,UklGRo4BAABXRUJQVlA4IIIBAAAwCQCdASpAAEAAPtVgqE2oJaQiKhzK6QAaiUAZjzbRABUaHAuCcIbWsSVgNz3lVK06Qs//JxZyJpUTom6pHkZtm89owPY5peMJI3UkVjT8ACaAAP71t5fRcVoCBMX0ZjCeiKxFPnYQcGMnIBaUVy4yqKcGMvRif5kOUYrg0cEQM9J23r8uBvQuJSv/5Z+AeJvtBfWMrmps6Pvbr+TU9QmW135c4KfHlG/XMO9iTOeg7g9wO2Odvl9RFcEcZZvajskOD3UjztS46FAV4m4uGrdD4iFZRJKdbW3sQ3bGcpP26tdOqi+1PJraPScgWkouBAumGsJYnFKH9WtHuxOzbd2YW1tPxdTxBM8SH/lLWHct1E7T0iLZ+GMkVwvl7SSL0nC0nwXF7k9gqNDaXvYos1Jr3+e8LUV2eB2hSRNFRFJisJk96r4/JNZZvFH8TJnq/oJfk7aXRD6zCugjr3WE6JK31iFR0lPLE5sB0KWYVGFZoVvP1tdT4lgzihcmvwP/YAAAAA"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+<defs>
+ <linearGradient id="a" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#55f6e6"/><stop offset="1" stop-color="#168caa"/></linearGradient>
+ <linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff72d2"/><stop offset="1" stop-color="#8a4dce"/></linearGradient>
+ <filter id="g"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect x="18" y="18" width="220" height="220" rx="28" fill="#07131b" stroke="#24414b" stroke-width="3"/>
+<path d="M40 206H216" stroke="#3ce7dc" stroke-opacity=".65" stroke-width="3"/>
+<g filter="url(#g)">
+ <path d="M48 204V146H100V204Z" fill="#0e5360" stroke="url(#a)" stroke-width="5"/>
+ <path d="M100 204V112H156V204Z" fill="#174b5d" stroke="url(#b)" stroke-width="5"/>
+ <path d="M156 204V158H208V204Z" fill="#0e5360" stroke="url(#a)" stroke-width="5"/>
+ <path d="M74 132V94M128 98V66M182 144V108" stroke="#6df7ed" stroke-width="5" stroke-linecap="round"/>
+ <circle cx="74" cy="84" r="12" fill="none" stroke="#5ef5e6" stroke-width="5"/>
+ <path d="M128 47l5 11 12 2-9 8 2 12-10-6-11 6 2-12-9-8 12-2z" fill="#ff75d5" stroke="#ffc0ef" stroke-width="2"/>
+ <circle cx="182" cy="98" r="12" fill="none" stroke="#ff75d5" stroke-width="5"/>
+</g>
+<text x="128" y="229" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="3" fill="#9beee8">3 FINALS</text>
+</svg>
