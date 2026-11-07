@@ -271,6 +271,7 @@ async def check_player_achievements(conn, season_id, user_id):
         FROM chronos.minigame_sessions
         WHERE user_id=$1 AND actions_count>0
           AND status IN ('completed','failed','expired') AND completed_at IS NOT NULL
+          AND COALESCE(state->>'admin_test','false') <> 'true'
         """,
         user_id,
     )
