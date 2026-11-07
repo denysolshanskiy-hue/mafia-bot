@@ -486,14 +486,23 @@
       const data = await api("/achievements");
       S.achievements = data.achievements || [];
       const achievementArt = {
-        FIRST_SYNC: "first_sync", TEN_GAMES: "ten_games", FIRST_MEMORY: "first_memory",
-        FIRST_CODE: "first_code", SIX_PREDICTIONS: "six_predictions", THREE_FINALS: "three_finals",
-        FIRST_INTERMEDIATE_FINAL: "first_intermediate_final", FIRST_GRAND_FINAL: "first_grand_final",
-        FIRST_AVATAR: "first_avatar", FIRST_PURCHASE: "first_purchase",
-        TOWER_ALL_FLOORS: "tower_all_floors", MINIGAME_FIVE_HOURS: "minigame_five_hours",
-        ALL_SEASON_EVENTS: "all_season_events", ALL_EVENTS_AND_GRAND_FINAL: "all_events_and_grand_final",
-        FIRST_TOP_ONE: "first_top_one", FIRST_TOP_THREE: "first_top_three"
+        FIRST_SYNC: 0, TEN_GAMES: 1, FIRST_MEMORY: 2, FIRST_CODE: 3,
+        SIX_PREDICTIONS: 4, THREE_FINALS: 5, FIRST_INTERMEDIATE_FINAL: 6,
+        FIRST_GRAND_FINAL: 7, FIRST_AVATAR: 8, FIRST_PURCHASE: 9,
+        TOWER_ALL_FLOORS: 10, MINIGAME_FIVE_HOURS: 11,
+        ALL_SEASON_EVENTS: 12, ALL_EVENTS_AND_GRAND_FINAL: 13,
+        FIRST_TOP_ONE: 14, FIRST_TOP_THREE: 15
       };
+      $("#reward-content").innerHTML = S.achievements.map((a) => {
+        const art = achievementArt[a.achievement_code];
+        const col = Number.isInteger(art) ? art % 4 : 0;
+        const row = Number.isInteger(art) ? Math.floor(art / 4) : 0;
+        const pos = (n) => (n * 100 / 3).toFixed(3) + "%";
+        const icon = Number.isInteger(art)
+          ? '<span class="achievement-logo achievement-logo-atlas" role="img" aria-label="' + esc(a.name) + '" style="background-position:' + pos(col) + ' ' + pos(row) + '"></span>'
+          : '<span class="achievement-symbol">' + (a.earned ? "✦" : "◇") + '</span>';
+        return '<div class="achievement-card ' + (a.earned ? "earned" : "") + '">' + icon + '<span><b>' + esc(a.name) + '</b><small>' + esc(a.description) + '</small></span>' + (a.earned ? '<span class="earned-tag">EARNED</span>' : '') + '</div>';
+      }).join("") || '<div class="empty-state"><b>Досягнень ще немає</b></div>';
       $("#reward-content").innerHTML = S.achievements.map((a) => {
         const art = achievementArt[a.achievement_code];
         const icon = art
