@@ -659,4 +659,4 @@ button.event-list-card:active { transform:scale(.987); }
 .event-group-heading .eyebrow { color:#9b8cc7; }
 
 /* CHRONOS achievement artwork */
-.achievement-logo{width:35px;height:35px;flex:0 0 35px;object-fit:cover;border:1px solid rgba(99,229,214,.25);border-radius:9px;background:rgba(7,16,23,.9);box-shadow:0 0 12px rgba(99,229,214,.08)}.achievement-card.earned .achievement-logo{border-color:rgba(233,199,123,.45);box-shadow:0 0 12px rgba(233,199,123,.12)}
+.achievement-logo{width:62px;height:42px;flex:0 0 62px;border:1px solid rgba(99,229,214,.25);border-radius:7px;background-color:rgba(7,16,23,.9);box-shadow:0 0 12px rgba(99,229,214,.08)}.achievement-logo-atlas{display:block;background-image:url('chronos-v3/achievement-atlas.jpg?v=1');background-repeat:no-repeat;background-size:400% 400%}.achievement-card.earned .achievement-logo{border-color:rgba(233,199,123,.45);box-shadow:0 0 12px rgba(233,199,123,.12)}
