@@ -21,3 +21,8 @@
 #screen-room .room-hero-banner{display:block!important;width:100%;margin:0 0 14px;overflow:hidden;aspect-ratio:1179/705;min-height:0;border-radius:0 0 18px 18px;background:#050d16}
 #screen-room .room-hero-banner img{display:block!important;width:100%;height:100%;aspect-ratio:1179/705;object-fit:cover;object-position:center}
 #screen-room .hall-scene{display:block!important;position:relative;margin:0 0 14px}
+
+/* Exact user-supplied Game Hall header, with the table kept as the next section. */
+#screen-room .room-hero-banner{display:block!important;width:100%;margin:0 0 14px;overflow:hidden;aspect-ratio:1179/705;min-height:0;border-radius:0 0 18px 18px;background:#050d16}
+#screen-room .room-hero-banner img{display:block!important;width:100%;height:100%;aspect-ratio:1179/705;object-fit:cover;object-position:center}
+#screen-room .hall-scene{display:block!important;position:relative;margin:0 0 14px}
