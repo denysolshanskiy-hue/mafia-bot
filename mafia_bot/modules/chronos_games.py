@@ -16,7 +16,7 @@ def _public_state(game_code, state, session):
     if game_code == "CODE_BREAKER":
         return {
             "attempts_used": len(state["guesses"]),
-            "attempts_left": max(0, 6 - len(state["guesses"])),
+            "attempts_left": max(0, 10 - len(state["guesses"])),
             "guesses": state["guesses"],
             "seconds_left": remaining,
             "status": session["status"],
@@ -29,6 +29,9 @@ def _public_state(game_code, state, session):
             for index, card in enumerate(state["cards"])
         ],
         "pairs_found": len(state["matched"]) // 2,
+        "pairs_total": len(state["cards"]) // 2,
+        "level": int(state.get("level", 1)),
+        "symbols": state.get("symbols", []),
         "moves": state["moves"],
         "seconds_left": remaining,
         "status": session["status"],
@@ -136,7 +139,7 @@ async def start_game(request):
                 symbols = ["ATOM","NOVA","PULSE","FLUX","ECHO","CORE"]
                 cards = symbols * 2
                 rng.shuffle(cards)
-                state = {"cards":cards,"matched":[],"flipped":[],"moves":0,"pending_hide":False,"admin_test":is_admin_test}
+                state = {"level":1,"symbols":symbols,"cards":cards,"matched":[],"flipped":[],"moves":0,"pending_hide":False,"admin_test":is_admin_test}
 
             row = await conn.fetchrow(
                 """
@@ -245,7 +248,7 @@ async def game_action(request):
                     index=int(value)
                 except (TypeError,ValueError):
                     return json_response({"error":"invalid_card_index"},400)
-                if index<0 or index>=12:
+                if index<0 or index>=len(state["cards"]):
                     return json_response({"error":"invalid_card_index"},400)
                 if state.get("pending_hide"):
                     return json_response({"error":"hide_mismatched_cards_first"},409)
@@ -263,7 +266,26 @@ async def game_action(request):
             else:
                 return json_response({"error":"unknown_action"},400)
 
-            status="completed" if len(state["matched"])==12 else "running"
+            level_advanced = False
+            status = "running"
+            if len(state["matched"]) == len(state["cards"]):
+                if int(state.get("level", 1)) == 1:
+                    # First level cleared: deal 10 new pairs and grant a fresh 150-second window.
+                    symbols = ["ATOM","NOVA","PULSE","FLUX","ECHO","CORE","ORBIT","QUARK","VECTOR","NEBULA"]
+                    cards = symbols * 2
+                    rng = random.SystemRandom()
+                    rng.shuffle(cards)
+                    state.update({
+                        "level":2,"symbols":symbols,"cards":cards,
+                        "matched":[],"flipped":[],"pending_hide":False,
+                    })
+                    level_advanced = True
+                    await conn.execute(
+                        "UPDATE chronos.minigame_sessions SET expires_at=NOW()+INTERVAL '150 seconds' WHERE session_id=$1",
+                        session_id,
+                    )
+                else:
+                    status = "completed"
             await conn.execute(
                 """
                 UPDATE chronos.minigame_sessions
@@ -271,7 +293,7 @@ async def game_action(request):
                     score=$4,completed_at=CASE WHEN $3='running' THEN NULL ELSE NOW() END
                 WHERE session_id=$1
                 """,
-                session_id,json.dumps(state),status,max(0,1000-state["moves"]*10) if status=="completed" else 0,
+                session_id,json.dumps(state),status,max(0,2000-state["moves"]*10) if status=="completed" else 0,
             )
             xp=0
             if status=="completed" and not state.get("admin_test"):
@@ -279,9 +301,14 @@ async def game_action(request):
                 await conn.execute("UPDATE chronos.minigame_sessions SET xp_awarded=$2 WHERE session_id=$1",session_id,xp)
                 await check_player_achievements(conn,session["season_id"],user_id)
                 await notify_user(conn,user_id,"rewards","Симуляцію завершено",f"MEMORY: +{xp} XP.")
+            expiry = await conn.fetchval(
+                "SELECT expires_at FROM chronos.minigame_sessions WHERE session_id=$1",
+                session_id,
+            )
             return json_response({
                 "status":status,
-                "state":_public_state(game_code,state,{"expires_at":session["expires_at"],"now":__import__("datetime").datetime.now(__import__("datetime").timezone.utc),"status":status}),
+                "level_advanced":level_advanced,
+                "state":_public_state(game_code,state,{"expires_at":expiry or session["expires_at"],"now":__import__("datetime").datetime.now(__import__("datetime").timezone.utc),"status":status}),
                 "xp_awarded":xp,
             })
     except asyncpg.UndefinedTableError:
