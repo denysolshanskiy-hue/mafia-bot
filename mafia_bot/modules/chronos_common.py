@@ -254,14 +254,6 @@ async def check_player_achievements(conn, season_id, user_id):
     if any(row["slot_type"] == "main_final" for row in accepted_finals):
         await award_achievement(conn,user_id,"FIRST_GRAND_FINAL",f"first-grand-final:{season_id}:{user_id}")
 
-    profile_avatar = await conn.fetchval(
-        "SELECT avatar_base FROM chronos.profiles WHERE user_id=$1", user_id
-    )
-    if profile_avatar:
-        # This is only reached from an explicit avatar-save action or a rewards refresh;
-        # profiles created with the default avatar are not awarded by this check.
-        pass
-
     first_purchase = await conn.fetchval(
         "SELECT EXISTS(SELECT 1 FROM chronos.ledger WHERE user_id=$1 AND reason_code='store_purchase' AND amount<0)",
         user_id,
@@ -339,7 +331,7 @@ async def check_player_achievements(conn, season_id, user_id):
         SELECT
           COALESCE((SELECT COUNT(*) FROM chronos.game_players gp
             JOIN chronos.games g ON g.game_id=gp.game_id
-            WHERE gp.user_id=$2 AND g.season_id=$1 AND g.status='confirmed' AND g.counts_for_sync=TRUE),0) AS games,
+            WHERE gp.user_id=$2 AND g.season_id=$1 AND g.status='confirmed' AND g.counts_for_sync=TRUE),0) AS sync_units,
           COALESCE((SELECT COUNT(*) FROM chronos.prediction_bets b
             JOIN chronos.prediction_markets m ON m.market_id=b.market_id
             WHERE b.bettor_user_id=$2 AND m.season_id=$1 AND b.status<>'refunded'),0) AS bets,
@@ -351,10 +343,8 @@ async def check_player_achievements(conn, season_id, user_id):
         """,
         season_id,user_id,
     )
-    if (tower_state and int(tower_state["games"] or 0) >= 1
+    if (tower_state and int(tower_state["sync_units"] or 0) >= int(tower_state["target_sync_units"] or 0)
         and int(tower_state["bets"] or 0) >= 6
-        and int(tower_state["finals"] or 0) >= 3
-        and int(tower_state["target_sync_units"] or 0) > 0
-        and int(tower_state["games"] or 0) >= 79):
+        and int(tower_state["finals"] or 0) >= 3):
         await award_achievement(conn,user_id,"TOWER_ALL_FLOORS",f"tower-all-floors:{season_id}:{user_id}")
 
