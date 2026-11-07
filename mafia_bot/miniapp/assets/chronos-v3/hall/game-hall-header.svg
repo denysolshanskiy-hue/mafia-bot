@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 709 420" role="img" aria-label="Ігрова зала CHRONOS">
+<defs>
+ <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#020914"/><stop offset=".55" stop-color="#071a2c"/><stop offset="1" stop-color="#170b27"/></linearGradient>
+ <linearGradient id="neon" x2="1"><stop stop-color="#00eaff"/><stop offset=".55" stop-color="#2589ff"/><stop offset="1" stop-color="#ff35c9"/></linearGradient>
+ <radialGradient id="glow"><stop stop-color="#00eaff" stop-opacity=".42"/><stop offset="1" stop-color="#00eaff" stop-opacity="0"/></radialGradient>
+ <filter id="blur"><feGaussianBlur stdDeviation="13"/></filter>
+ <filter id="shine"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+</defs>
+<rect width="709" height="420" fill="url(#bg)"/>
+<ellipse cx="350" cy="270" rx="340" ry="190" fill="url(#glow)"/>
+<g opacity=".22" stroke="#00c9ed" fill="none"><path d="M0 0H709V420H0zM0 80H709M0 150H709M0 220H709M0 290H709M0 360H709M100 0V420M200 0V420M300 0V420M400 0V420M500 0V420M600 0V420"/></g>
+<g fill="#061323" stroke="url(#neon)" stroke-width="3" filter="url(#shine)">
+ <path d="M32 0h645l-18 40H50z" opacity=".45"/>
+ <path d="M0 265l76-50 26 12-54 82H0zM709 265l-76-50-26 12 54 82h48z" opacity=".7"/>
+ <path d="M126 224l-22-58q-6-18 14-26l24-10q20-8 29 13l23 59z"/>
+ <path d="M570 224l22-58q6-18-14-26l-24-10q-20-8-29 13l-23 59z"/>
+ <path d="M70 280l-37-18q-24-12-18-35l10-29q8-21 31-11l55 28z" opacity=".8"/>
+ <path d="M639 280l37-18q24-12 18-35l-10-29q-8-21-31-11l-55 28z" opacity=".8"/>
+</g>
+<g fill="none" stroke="#00eaff" stroke-width="3" opacity=".8" filter="url(#shine)">
+ <path d="M36 26h210l-30 16H55zM34 55h170M38 68h130M535 30h140M574 50h96M580 66h92"/>
+ <path d="M22 0v150M686 0v150M58 0v170M650 0v170" opacity=".5"/>
+</g>
+<g fill="#0a0f22" stroke="url(#neon)" stroke-width="3" filter="url(#shine)">
+ <path d="M100 240l-9-44q-4-25 20-34l27-10q25-9 37 18l15 47z"/>
+ <path d="M532 217l15-47q12-27 37-18l27 10q24 9 20 34l-9 44z"/>
+ <path d="M270 235v-45q0-28 28-28h25q28 0 28 28v45z"/>
+</g>
+<ellipse cx="354" cy="267" rx="244" ry="72" fill="#050c1b" stroke="url(#neon)" stroke-width="5" filter="url(#shine)"/>
+<ellipse cx="354" cy="263" rx="208" ry="45" fill="none" stroke="#16eafa" stroke-width="2" opacity=".75"/>
+<ellipse cx="354" cy="260" rx="48" ry="14" fill="none" stroke="#00eaff" stroke-width="4" filter="url(#shine)"/>
+<path d="M120 275H588" stroke="#ff36c9" stroke-width="3" opacity=".65"/>
+<g fill="#00eaff" filter="url(#shine)"><circle cx="354" cy="267" r="6"/><circle cx="170" cy="266" r="4"/><circle cx="538" cy="266" r="4"/></g>
+<g fill="#fff" font-family="Arial,sans-serif" font-weight="800" font-style="italic" filter="url(#shine)">
+ <text x="42" y="105" font-size="46" letter-spacing="1">ІГРОВА</text>
+ <text x="130" y="158" font-size="58" fill="#00eaff">ЗАЛА</text>
+</g>
+<g fill="#9efbff" font-family="monospace" font-size="12" letter-spacing="3"><text x="44" y="27">KMC · CHRONOS HALL</text><text x="415" y="27">10 SEATS</text></g>
+<g fill="#d4e5ed" font-family="Arial,sans-serif" font-size="17"><text x="86" y="366">Місце, де зустрічаються гравці KMC.</text><text x="86" y="390">Склад вечора та реєстрації синхронізуються з подіями Telegram-бота.</text></g>
+<path d="M72 346h-18v58h18M638 346h18v58h-18" fill="none" stroke="url(#neon)" stroke-width="2"/>
+</svg>
