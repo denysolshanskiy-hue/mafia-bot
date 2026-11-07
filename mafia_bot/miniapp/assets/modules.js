@@ -487,7 +487,12 @@
       S.achievements = data.achievements || [];
       const achievementArt = {
         FIRST_SYNC: "first_sync", TEN_GAMES: "ten_games", FIRST_MEMORY: "first_memory",
-        FIRST_CODE: "first_code", SIX_PREDICTIONS: "six_predictions", THREE_FINALS: "three_finals"
+        FIRST_CODE: "first_code", SIX_PREDICTIONS: "six_predictions", THREE_FINALS: "three_finals",
+        FIRST_INTERMEDIATE_FINAL: "first_intermediate_final", FIRST_GRAND_FINAL: "first_grand_final",
+        FIRST_AVATAR: "first_avatar", FIRST_PURCHASE: "first_purchase",
+        TOWER_ALL_FLOORS: "tower_all_floors", MINIGAME_FIVE_HOURS: "minigame_five_hours",
+        ALL_SEASON_EVENTS: "all_season_events", ALL_EVENTS_AND_GRAND_FINAL: "all_events_and_grand_final",
+        FIRST_TOP_ONE: "first_top_one", FIRST_TOP_THREE: "first_top_three"
       };
       $("#reward-content").innerHTML = S.achievements.map((a) => {
         const art = achievementArt[a.achievement_code];
