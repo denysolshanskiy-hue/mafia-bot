@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="832" height="1170" viewBox="0 0 832 1170" fill="none">
+<defs>
+ <linearGradient id="bg" x1="42" y1="0" x2="790" y2="1170" gradientUnits="userSpaceOnUse"><stop stop-color="#071923"/><stop offset=".52" stop-color="#07101D"/><stop offset="1" stop-color="#100A20"/></linearGradient>
+ <radialGradient id="cyan"><stop stop-color="#00E9F4" stop-opacity=".34"/><stop offset="1" stop-color="#00E9F4" stop-opacity="0"/></radialGradient>
+ <radialGradient id="pink"><stop stop-color="#F42CB8" stop-opacity=".3"/><stop offset="1" stop-color="#F42CB8" stop-opacity="0"/></radialGradient>
+ <linearGradient id="title" x1="88" y1="130" x2="620" y2="280" gradientUnits="userSpaceOnUse"><stop stop-color="#F4FBFF"/><stop offset=".52" stop-color="#9AFBF2"/><stop offset="1" stop-color="#18D7E8"/></linearGradient>
+ <linearGradient id="line" x1="70" y1="0" x2="770" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#00E9F4"/><stop offset=".53" stop-color="#4266B8"/><stop offset="1" stop-color="#F23BC0"/></linearGradient>
+ <linearGradient id="glass" x1="430" y1="520" x2="750" y2="980" gradientUnits="userSpaceOnUse"><stop stop-color="#00E9F4" stop-opacity=".2"/><stop offset=".5" stop-color="#071C2B" stop-opacity=".12"/><stop offset="1" stop-color="#F02BBE" stop-opacity=".18"/></linearGradient>
+ <filter id="glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="12"/></filter>
+ <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4"/></filter>
+ <pattern id="grid" width="46" height="46" patternUnits="userSpaceOnUse"><path d="M46 0H0V46" stroke="#1A7890" stroke-opacity=".16" stroke-width="1"/></pattern>
+</defs>
+<rect width="832" height="1170" fill="url(#bg)"/>
+<ellipse cx="180" cy="360" rx="310" ry="330" fill="url(#cyan)"/>
+<ellipse cx="760" cy="540" rx="290" ry="420" fill="url(#pink)"/>
+<path d="M0 0H832V1170H0Z" fill="url(#grid)"/>
+<!-- chamber architecture -->
+<path d="M0 0L168 0L270 340L0 470Z" fill="#06111D" stroke="#087D91" stroke-opacity=".42" stroke-width="2"/>
+<path d="M832 0H666L562 340L832 470Z" fill="#100D20" stroke="#A82D91" stroke-opacity=".42" stroke-width="2"/>
+<path d="M0 105L198 0M0 188L226 0M832 105L634 0M832 188L606 0" stroke="url(#line)" stroke-opacity=".48" stroke-width="3"/>
+<path d="M0 440L832 440M0 1020L832 1020" stroke="url(#line)" stroke-opacity=".55"/>
+<path d="M0 870L832 870M0 945L832 945M0 1090L832 1090" stroke="#0C7187" stroke-opacity=".24"/>
+<path d="M0 440L416 580L832 440M0 1170L416 580L832 1170" stroke="#087D91" stroke-opacity=".28"/>
+<path d="M0 1170L416 580L832 1170M0 1000L416 580L832 1000" stroke="#B52B9A" stroke-opacity=".12"/>
+<!-- side panels -->
+<g opacity=".86">
+ <path d="M32 514L188 462L188 728L32 776Z" fill="#061522" stroke="#00DFF0" stroke-opacity=".78" stroke-width="2"/>
+ <path d="M44 530L176 486V704L44 746Z" fill="#092235" stroke="#0B718E" stroke-opacity=".55"/>
+ <path d="M52 550L160 514M52 570L160 534M52 590L160 554M52 610L160 574" stroke="#00DCEB" stroke-opacity=".42"/>
+ <circle cx="110" cy="654" r="43" stroke="#00E9F4" stroke-opacity=".7" stroke-width="2"/>
+ <path d="M80 660C89 627 104 625 113 640C124 618 143 628 144 649C153 666 134 687 119 678C105 695 85 682 80 660Z" stroke="#48EAF2" stroke-width="2" fill="#00DCEB" fill-opacity=".12"/>
+ <path d="M642 514L800 462V776L642 728Z" fill="#100E20" stroke="#F33CC0" stroke-opacity=".72" stroke-width="2"/>
+ <path d="M656 530L786 486V704L656 746Z" fill="#10172B" stroke="#9D3D9F" stroke-opacity=".6"/>
+ <path d="M700 590L738 590L757 620L738 650L700 650L681 620Z" stroke="#00E5F0" stroke-width="2" fill="#00DFF0" fill-opacity=".08"/>
+ <path d="M719 590V650M681 620H757" stroke="#F13DBF" stroke-opacity=".8"/>
+ <path d="M676 678L704 660L730 678L760 658" stroke="#00E9F4" stroke-width="2"/>
+</g>
+<!-- central time chamber -->
+<ellipse cx="550" cy="900" rx="210" ry="40" fill="#00E9F4" fill-opacity=".17" filter="url(#glow)"/>
+<path d="M365 880C390 838 684 838 710 880V916C678 958 397 958 365 916Z" fill="#061521" stroke="url(#line)" stroke-width="3"/>
+<ellipse cx="537" cy="880" rx="173" ry="35" fill="#081E2A" stroke="#00E9F4" stroke-width="3"/>
+<ellipse cx="537" cy="880" rx="133" ry="22" stroke="#1A9EB4" stroke-opacity=".8" stroke-width="2"/>
+<path d="M420 875L537 842L655 875L537 911Z" stroke="#00E9F4" stroke-opacity=".48" stroke-width="2"/>
+<path d="M537 565V824" stroke="#00E9F4" stroke-opacity=".35" stroke-dasharray="5 9"/>
+<path d="M537 596C492 642 492 694 537 738C582 694 582 642 537 596Z" fill="url(#glass)" stroke="#00E8F2" stroke-width="3"/>
+<path d="M503 628C518 651 518 681 503 705L537 738L571 705C556 681 556 651 571 628L537 596Z" stroke="#22E9F2" stroke-width="2"/>
+<path d="M515 628H559M515 705H559" stroke="#F03ABF" stroke-width="3"/>
+<path d="M537 620L553 665L537 711L521 665Z" fill="#00E9F4" fill-opacity=".18" stroke="#00E9F4"/>
+<circle cx="537" cy="665" r="8" fill="#F53CC0" filter="url(#soft)"/>
+<ellipse cx="537" cy="665" rx="120" ry="180" stroke="#00E9F4" stroke-opacity=".3" stroke-width="2"/>
+<ellipse cx="537" cy="665" rx="150" ry="215" stroke="#F03ABF" stroke-opacity=".22" stroke-dasharray="5 10"/>
+<!-- typography -->
+<text x="52" y="82" fill="#71EDE5" font-family="Arial,sans-serif" font-size="17" letter-spacing="6">SIMULATION ROOM  //  TRAINING</text>
+<path d="M52 110H780" stroke="url(#line)" stroke-width="2"/>
+<text x="48" y="218" fill="url(#title)" font-family="Arial,sans-serif" font-size="76" font-weight="800" font-style="italic" letter-spacing="-3">СИМУЛЯЦІЇ</text>
+<path d="M56 244L470 244L438 294H35Z" fill="#00DCEB" fill-opacity=".1" stroke="url(#line)" stroke-width="2"/>
+<text x="76" y="282" fill="#2BE6E9" font-family="Arial,sans-serif" font-size="45" font-weight="800" font-style="italic" letter-spacing="1">МІНІ-ІГРИ</text>
+<text x="54" y="350" fill="#B8C9D2" font-family="Arial,sans-serif" font-size="21">Два серверні випробування. Кожна сесія має 90 секунд;</text>
+<text x="54" y="381" fill="#B8C9D2" font-family="Arial,sans-serif" font-size="21">не більше трьох запусків кожної гри на добу.</text>
+<!-- inactive-season holographic panel -->
+<path d="M48 704L78 676H365L395 706V970L367 998H78L48 970Z" fill="#04111E" fill-opacity=".94" stroke="#00E5EF" stroke-width="2"/>
+<path d="M48 704L78 676H365L395 706V970L367 998H78L48 970Z" stroke="#F43BBF" stroke-opacity=".75" stroke-width="2" filter="url(#soft)"/>
+<path d="M62 718L86 694H354L380 718V958L354 982H86L62 958Z" stroke="#00E5EF" stroke-opacity=".3"/>
+<g transform="translate(222 752)" stroke="#39E9ED" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+ <path d="M-27 -8L-15 -20L-3 -8V8L-15 20L-27 8Z"/><path d="M3 -8L15 -20L27 -8V8L15 20L3 8Z"/><path d="M-15 -20V-31M15 -20V-31M-15 20V31M15 20V31"/>
+ <path d="M-6 -3H6M0 -9V3"/>
+</g>
+<text x="222" y="836" text-anchor="middle" fill="#F3FAFC" font-family="Arial,sans-serif" font-size="31" font-weight="800" font-style="italic">СЕЗОН ЩЕ</text>
+<text x="222" y="875" text-anchor="middle" fill="#31E4E9" font-family="Arial,sans-serif" font-size="31" font-weight="800" font-style="italic">НЕ АКТИВНИЙ</text>
+<text x="222" y="922" text-anchor="middle" fill="#A9C1CB" font-family="Arial,sans-serif" font-size="20">Симуляційна кімната</text>
+<text x="222" y="952" text-anchor="middle" fill="#A9C1CB" font-family="Arial,sans-serif" font-size="20">відкриється разом із сезоном.</text>
+<path d="M292 1001H372L352 1014H272Z" fill="#F13ABF"/>
+<path d="M0 1168H832" stroke="url(#line)" stroke-width="2"/>
+</svg>
