@@ -16,7 +16,8 @@
     currentScreen: "home",
     roomRoster: [],
     roomRosterEventId: null,
-    roomLoadingEventId: null
+    roomLoadingEventId: null,
+    previewSyncBusy: false
   };
 
   const floors = [
@@ -158,6 +159,31 @@
     }
   }
 
+  async function refreshEventPreviews() {
+    if (state.previewSyncBusy || state.busy || !state.profile || !["events", "room"].includes(state.currentScreen)) return;
+    state.previewSyncBusy = true;
+    try {
+      const calendar = await api("/events");
+      state.season = calendar.season;
+      state.events = calendar.events || [];
+      state.planned = calendar.planned_slots || [];
+      renderEvents();
+      if (state.currentScreen === "room") {
+        const live = state.events[0];
+        if (live) {
+          state.roomRoster = (live.roster_preview || []).slice(0, 10);
+          state.roomRosterEventId = Number(live.event_id);
+          renderHallSeats(state.roomRoster);
+        }
+        renderRoom();
+      }
+    } catch (error) {
+      console.warn("CHRONOS event preview sync:", error);
+    } finally {
+      state.previewSyncBusy = false;
+    }
+  }
+
   function renderRoom(forceRoster = false) {
     const title = $("#hall-session-title"), note = $("#hall-session-note");
     if (!title || !note) return;
@@ -226,6 +252,7 @@
     const shell = $("#app-shell");
     if (shell) shell.classList.toggle("detail-open", name === "event-detail");
     if (name === "room") renderRoom();
+    if (name === "events") refreshEventPreviews();
     try {
       if (tg?.HapticFeedback?.selectionChanged) tg.HapticFeedback.selectionChanged();
     } catch (_) {}
@@ -320,7 +347,7 @@
     const statusClass = registered ? "joined" : (state.season && state.season.status === "active" ? "open" : "closed");
     const countText = String(count) + " УЧАСНИКІВ";
     return '<button type="button" class="event-list-card real-event-card ' + (isFinal ? "final-card" : "regular-card") + '" data-event-id="' + Number(event.event_id) + '">' +
-      eventArtwork(type) +
+      eventArtwork(type, event) +
       '<div class="event-card-copy">' +
         '<div class="event-card-title-row"><h3>' + title + '</h3><span class="event-chevron">›</span></div>' +
         '<div class="event-card-meta"><span class="meta-icon">▦</span><span>' + date + '</span></div>' +
@@ -658,6 +685,7 @@
     bottomNav.addEventListener("click", activateBottomNav);
   }
 
+  window.setInterval(refreshEventPreviews, 30000);
   $("#refresh-button").addEventListener("click", refreshData);
   $("#modal-close").addEventListener("click", closeModal);
   $("#modal-backdrop").addEventListener("click", event => {

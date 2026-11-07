@@ -252,7 +252,7 @@ async def list_events(request):
                 LEFT JOIN chronos.equipment eq
                   ON eq.user_id = u.user_id AND eq.equip_slot = 'frame'
                 LEFT JOIN chronos.catalog_items ci ON ci.item_id = eq.item_id
-                WHERE r.event_id = ANY($1::bigint[])
+                WHERE r.event_id = ANY($1::integer[])
                   AND r.status = 'active'
                   AND u.is_active = 1
                 ORDER BY r.event_id, r.created_at, u.display_name
