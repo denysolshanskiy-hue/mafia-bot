@@ -1,6 +1,6 @@
 /* CHRONOS — physical player avatars around the Game Hall table */
 #screen-room .hall-scene{position:relative;isolation:isolate;overflow:hidden}
-#screen-room .hall-player-seats{position:absolute;z-index:3;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:13% 3.5% 10.5%}
+#screen-room .hall-player-seats{position:absolute;z-index:3;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:17% 3.5% 17%}
 #screen-room .hall-seat-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;justify-items:center;width:100%;gap:0}
 #screen-room .hall-seat{min-width:0;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;text-align:center}
 #screen-room .hall-avatar-wrap{position:relative;display:grid;place-items:center;width:clamp(39px,12vw,58px);height:clamp(39px,12vw,58px);flex:0 0 auto}
@@ -16,10 +16,10 @@
 #screen-room .portrait-android_female{background-image:url("chronos-v3/avatars/android_female.webp")}
 #screen-room .hall-avatar-frame{position:absolute;inset:0;border-radius:50%;pointer-events:none}
 #screen-room .default-frame{border:1px solid rgba(0,228,240,.76);box-shadow:0 0 8px rgba(0,225,240,.34),inset 0 0 7px rgba(0,225,240,.16)}
-#screen-room .shop-frame{border:2px solid transparent;background:conic-gradient(from 0deg,#00f0ff,#5e8cff,#ff42cb,#ffb34e,#00f0ff) border-box;mask:linear-gradient(#000 0 0) padding-box,linear-gradient(#000 0 0);mask-composite:exclude;animation:chronos-shop-frame-spin 3.4s linear infinite;filter:drop-shadow(0 0 5px rgba(0,225,255,.65))}
+#screen-room .shop-frame{border:2px solid transparent;background:linear-gradient(transparent,transparent) padding-box,conic-gradient(from 0deg,#00f0ff,#5e8cff,#ff42cb,#ffb34e,#00f0ff) border-box;animation:chronos-shop-frame-spin 3.4s linear infinite;filter:drop-shadow(0 0 5px rgba(0,225,255,.65))}
 #screen-room .shop-frame:after{content:"";position:absolute;inset:-4px;border:1px solid rgba(255,65,202,.45);border-radius:50%;animation:chronos-shop-frame-pulse 2.1s ease-in-out infinite}
-#screen-room .frame-holo_frame{background:conic-gradient(from 0deg,#00f4ff,#4e7dff,#ff39d0,#00f4ff) border-box;filter:drop-shadow(0 0 7px rgba(0,230,255,.8))}
-#screen-room .frame-timekeeper_frame{background:conic-gradient(from 0deg,#ffe39a,#b67b29,#fff0b2,#e49c32,#ffe39a) border-box;filter:drop-shadow(0 0 7px rgba(255,193,84,.85))}
+#screen-room .frame-holo_frame{background:linear-gradient(transparent,transparent) padding-box,conic-gradient(from 0deg,#00f4ff,#4e7dff,#ff39d0,#00f4ff) border-box;filter:drop-shadow(0 0 7px rgba(0,230,255,.8))}
+#screen-room .frame-timekeeper_frame{background:linear-gradient(transparent,transparent) padding-box,conic-gradient(from 0deg,#ffe39a,#b67b29,#fff0b2,#e49c32,#ffe39a) border-box;filter:drop-shadow(0 0 7px rgba(255,193,84,.85))}
 #screen-room .hall-seat-name{display:block;max-width:100%;padding:2px 4px 3px;border:1px solid rgba(0,218,239,.35);border-radius:5px;background:linear-gradient(110deg,rgba(3,14,25,.92),rgba(14,10,29,.92));color:#e8faff;font:600 clamp(7px,2.05vw,10px)/1.15 var(--mono);letter-spacing:.015em;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;text-shadow:0 0 7px rgba(0,220,255,.3)}
 #screen-room .hall-seat.vacant .hall-avatar-wrap{border:1px dashed rgba(99,161,184,.62);border-radius:50%;background:radial-gradient(circle,rgba(8,35,53,.88),rgba(4,12,22,.92));box-shadow:inset 0 0 15px rgba(0,213,239,.08)}
 #screen-room .hall-avatar-empty{color:#7bafc1;font:500 clamp(20px,6vw,29px)/1 var(--mono);text-shadow:0 0 12px rgba(0,218,239,.5)}
@@ -27,4 +27,4 @@
 #screen-room .hall-seat-loading{align-self:center;margin:auto;color:#9ebac7;font:9px var(--mono);letter-spacing:.12em}
 @keyframes chronos-shop-frame-spin{to{transform:rotate(360deg)}}
 @keyframes chronos-shop-frame-pulse{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:1;transform:scale(1.07)}}
-@media(max-width:380px){#screen-room .hall-player-seats{padding-left:2%;padding-right:2%;padding-top:13.5%;padding-bottom:10.5%}#screen-room .hall-avatar-wrap{width:clamp(35px,11vw,46px);height:clamp(35px,11vw,46px)}#screen-room .hall-avatar-portrait{inset:3px}#screen-room .hall-seat-name{font-size:7px;padding:2px 2px}}
+@media(max-width:380px){#screen-room .hall-player-seats{padding-left:2%;padding-right:2%;padding-top:17%;padding-bottom:17%}#screen-room .hall-avatar-wrap{width:clamp(35px,11vw,46px);height:clamp(35px,11vw,46px)}#screen-room .hall-avatar-portrait{inset:3px}#screen-room .hall-seat-name{font-size:7px;padding:2px 2px}}
