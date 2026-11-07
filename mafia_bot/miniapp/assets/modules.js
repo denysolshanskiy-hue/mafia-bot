@@ -267,10 +267,13 @@
   function renderGames() {
     const target = $("#games-list");
     if (!target || !S.games) return;
+    const screen = $("#screen-simulations");
     if (!S.games.season_active) {
-      target.innerHTML = '<div class="empty-state"><span class="empty-symbol">⌘</span><b>Сезон ще не активний</b><small>Симуляційна кімната відкриється разом із сезоном.</small></div>';
+      if (screen) screen.classList.add("simulation-inactive");
+      target.innerHTML = '<img class="simulation-room-art" src="assets/chronos-v3/home/simulation-room.svg?v=01" alt="Симуляції CHRONOS — міні-ігри відкриються разом із сезоном">';
       return;
     }
+    if (screen) screen.classList.remove("simulation-inactive");
     target.innerHTML = S.games.games.map((game) => {
       const attempts = Number(game.attempts_today || 0);
       return '<article class="game-card"><span class="game-symbol">' + (game.game_code === "MEMORY" ? "▦" : "⌘") + '</span>' +
