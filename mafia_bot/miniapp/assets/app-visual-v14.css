@@ -1,0 +1,9 @@
+/* CHRONOS — launch gate poster */
+.soon-screen{background:radial-gradient(ellipse at 50% 48%,rgba(0,218,239,.09),transparent 58%),radial-gradient(ellipse at 50% 70%,rgba(236,44,190,.07),transparent 62%)}
+.soon-screen::before{opacity:.12;background-image:linear-gradient(rgba(0,226,239,.18) 1px,transparent 1px),linear-gradient(90deg,rgba(0,226,239,.18) 1px,transparent 1px)}
+.soon-screen::after{width:min(96vw,500px);border-color:rgba(0,220,239,.25);box-shadow:0 0 100px rgba(0,220,239,.12),inset 0 0 90px rgba(229,43,195,.07)}
+.soon-card{width:min(100%,520px);padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.soon-card::before,.soon-card::after{display:none}
+.soon-poster{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;border:1px solid rgba(0,225,239,.52);border-radius:15px;box-shadow:0 0 24px rgba(0,225,239,.18),0 0 48px rgba(230,43,190,.13),0 18px 60px rgba(0,0,0,.52)}
+.soon-card p{max-width:360px;margin:22px auto 0;color:#b8cbd8;font-size:clamp(13px,3.6vw,15px);line-height:1.7;text-shadow:0 2px 12px #030914}
+@media(max-width:380px){.soon-poster{border-radius:11px}.soon-card p{margin-top:17px}}
