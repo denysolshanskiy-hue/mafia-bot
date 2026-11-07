@@ -1,13 +1,13 @@
-/* CHRONOS — Black avatar portraits */
-#screen-profile .avatar-person.black_male,
-#screen-profile .avatar-person.black_female{display:block;width:126px;height:126px;border-radius:50%;overflow:hidden;background-repeat:no-repeat;background-size:cover;background-position:center;border:1px solid rgba(0,229,239,.62);box-shadow:0 0 24px rgba(0,220,245,.24),0 0 48px rgba(255,55,164,.1),inset 0 0 14px rgba(0,0,0,.24)}
-#screen-profile .avatar-person.black_male{background-image:url("chronos-v3/avatars/black_male.webp")}
-#screen-profile .avatar-person.black_female{background-image:url("chronos-v3/avatars/black_female.webp")}
-#screen-profile .avatar-person.black_male:before,#screen-profile .avatar-person.black_female:before,#screen-profile .avatar-person.black_male span,#screen-profile .avatar-person.black_female span,#screen-profile .avatar-person.black_male i,#screen-profile .avatar-person.black_female i{display:none}
-#screen-profile .profile-avatar:has(.avatar-person.black_male) .avatar-scan,#screen-profile .profile-avatar:has(.avatar-person.black_female) .avatar-scan{display:none}
-#screen-profile .mini-avatar.black{width:43px;height:43px;aspect-ratio:1;border-radius:50%;background-repeat:no-repeat;background-size:cover;background-position:center;border:1px solid rgba(0,220,239,.48);box-shadow:0 0 12px rgba(0,210,240,.16)}
-#screen-profile .mini-avatar.black:not(.female){background-image:url("chronos-v3/avatars/black_male.webp")}
-#screen-profile .mini-avatar.black.female{background-image:url("chronos-v3/avatars/black_female.webp")}
-#screen-profile .mini-avatar.black:before,#screen-profile .mini-avatar.black:after{display:none}
-#screen-profile .avatar-choice[data-avatar="black_male"],#screen-profile .avatar-choice[data-avatar="black_female"]{border-color:rgba(0,220,239,.34);background:linear-gradient(145deg,rgba(7,32,44,.9),rgba(10,17,30,.96))}
-#screen-profile .avatar-choice[data-avatar="black_male"].selected,#screen-profile .avatar-choice[data-avatar="black_female"].selected{border-color:#00e5e9;box-shadow:0 0 16px rgba(0,225,239,.2),inset 0 0 12px rgba(0,225,239,.1)}
+/* CHRONOS — DARK avatars use the former BLACK portrait artwork. */
+#screen-profile .avatar-person.dark_male,
+#screen-profile .avatar-person.dark_female{display:block;width:126px;height:126px;border-radius:50%;overflow:hidden;background-repeat:no-repeat;background-size:cover;background-position:center;border:1px solid rgba(0,229,239,.62);box-shadow:0 0 24px rgba(0,220,245,.24),0 0 48px rgba(255,55,164,.1),inset 0 0 14px rgba(0,0,0,.24)}
+#screen-profile .avatar-person.dark_male{background-image:url("chronos-v3/avatars/dark_male.webp")}
+#screen-profile .avatar-person.dark_female{background-image:url("chronos-v3/avatars/dark_female.webp")}
+#screen-profile .avatar-person.dark_male:before,#screen-profile .avatar-person.dark_female:before,#screen-profile .avatar-person.dark_male span,#screen-profile .avatar-person.dark_female span,#screen-profile .avatar-person.dark_male i,#screen-profile .avatar-person.dark_female i{display:none}
+#screen-profile .profile-avatar:has(.avatar-person.dark_male) .avatar-scan,#screen-profile .profile-avatar:has(.avatar-person.dark_female) .avatar-scan{display:none}
+#screen-profile .mini-avatar.dark{width:43px;height:43px;aspect-ratio:1;border-radius:50%;background-repeat:no-repeat;background-size:cover;background-position:center;border:1px solid rgba(0,220,239,.48);box-shadow:0 0 12px rgba(0,210,240,.16)}
+#screen-profile .mini-avatar.dark:not(.female){background-image:url("chronos-v3/avatars/dark_male.webp")}
+#screen-profile .mini-avatar.dark.female{background-image:url("chronos-v3/avatars/dark_female.webp")}
+#screen-profile .mini-avatar.dark:before,#screen-profile .mini-avatar.dark:after{display:none}
+#screen-profile .avatar-choice[data-avatar="dark_male"],#screen-profile .avatar-choice[data-avatar="dark_female"]{border-color:rgba(0,220,239,.34);background:linear-gradient(145deg,rgba(7,32,44,.9),rgba(10,17,30,.96))}
+#screen-profile .avatar-choice[data-avatar="dark_male"].selected,#screen-profile .avatar-choice[data-avatar="dark_female"].selected{border-color:#00e5e9;box-shadow:0 0 16px rgba(0,225,239,.2),inset 0 0 12px rgba(0,225,239,.1)}
