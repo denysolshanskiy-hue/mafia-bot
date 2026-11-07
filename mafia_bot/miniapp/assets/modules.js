@@ -485,9 +485,17 @@
     if (S.rewardTab === "achievements") {
       const data = await api("/achievements");
       S.achievements = data.achievements || [];
-      $("#reward-content").innerHTML = S.achievements.map((a) =>
-        '<div class="achievement-card ' + (a.earned ? "earned" : "") + '"><span class="achievement-symbol">' + (a.earned ? "✦" : "◇") + '</span><span><b>' + esc(a.name) + '</b><small>' + esc(a.description) + '</small></span>' + (a.earned ? '<span class="earned-tag">EARNED</span>' : '') + '</div>'
-      ).join("") || '<div class="empty-state"><b>Досягнень ще немає</b></div>';
+      const achievementArt = {
+        FIRST_SYNC: "first_sync", TEN_GAMES: "ten_games", FIRST_MEMORY: "first_memory",
+        FIRST_CODE: "first_code", SIX_PREDICTIONS: "six_predictions", THREE_FINALS: "three_finals"
+      };
+      $("#reward-content").innerHTML = S.achievements.map((a) => {
+        const art = achievementArt[a.achievement_code];
+        const icon = art
+          ? '<img class="achievement-logo" src="assets/chronos-v3/achievements/' + art + '.svg?v=1" alt="" loading="lazy">'
+          : '<span class="achievement-symbol">' + (a.earned ? "✦" : "◇") + '</span>';
+        return '<div class="achievement-card ' + (a.earned ? "earned" : "") + '">' + icon + '<span><b>' + esc(a.name) + '</b><small>' + esc(a.description) + '</small></span>' + (a.earned ? '<span class="earned-tag">EARNED</span>' : '') + '</div>';
+      }).join("") || '<div class="empty-state"><b>Досягнень ще немає</b></div>';
     } else if (S.rewardTab === "collection") {
       const data = await api("/collection");
       S.collection = data.items || [];
