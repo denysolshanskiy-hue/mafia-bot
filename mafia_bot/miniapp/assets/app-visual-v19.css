@@ -1,0 +1,34 @@
+/* CHRONOS MEMORY — compact reference list for all possible symbols. */
+#screen-simulations .memory-symbol-guide{
+  margin:14px 0 16px;
+  padding:12px 13px;
+  border:1px solid rgba(0,218,238,.28);
+  border-radius:12px;
+  background:linear-gradient(110deg,rgba(0,211,232,.07),rgba(14,17,37,.5) 65%,rgba(240,48,185,.06));
+}
+#screen-simulations .memory-symbol-guide>span{
+  display:block;
+  margin-bottom:9px;
+  color:#77dfe4;
+  font:600 10px/1.3 var(--mono,monospace);
+  letter-spacing:2px;
+}
+#screen-simulations .memory-symbol-list{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+}
+#screen-simulations .memory-symbol-list>span{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:56px;
+  padding:6px 9px;
+  border:1px solid rgba(0,224,240,.38);
+  border-radius:6px;
+  background:rgba(0,20,34,.86);
+  color:#e3fbff;
+  font:700 11px/1.2 var(--mono,monospace);
+  letter-spacing:1px;
+  box-shadow:inset 0 0 12px rgba(0,211,232,.06);
+}
