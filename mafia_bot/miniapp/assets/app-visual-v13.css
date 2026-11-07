@@ -1,0 +1,30 @@
+/* CHRONOS — event cards reuse the live Game Hall table and its player roster */
+.event-art-room{isolation:isolate;background:#071321}
+.event-art-room>img{position:absolute;inset:0;width:100%;height:100%;min-height:0!important;object-fit:cover;object-position:center;filter:none!important}
+.event-art-room .event-art-seats{position:absolute;z-index:2;inset:0;display:flex;flex-direction:column;justify-content:space-between;padding:15% 2.5% 14%;pointer-events:none}
+.event-art-room .hall-seat-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;justify-items:center;width:100%;gap:0}
+.event-art-room .hall-seat{min-width:0;width:100%;display:flex;flex-direction:column;align-items:center;gap:1px;text-align:center}
+.event-art-room .hall-avatar-wrap{position:relative;display:grid;place-items:center;width:clamp(13px,4.2vw,20px);height:clamp(13px,4.2vw,20px);flex:0 0 auto}
+.event-art-room .hall-avatar-portrait{position:absolute;inset:2px;border-radius:50%;overflow:hidden;background-repeat:no-repeat;background-position:center;background-size:cover;border:1px solid rgba(0,226,242,.9);box-shadow:0 0 4px rgba(0,218,255,.55);background-color:#071727}
+.event-art-room .portrait-european_male,.event-art-room .portrait-european_female{background-image:url("chronos-v3/avatars/european-pair.webp");background-size:200% 100%}
+.event-art-room .portrait-european_male{background-position:left center}
+.event-art-room .portrait-european_female{background-position:right center}
+.event-art-room .portrait-dark_male{background-image:url("chronos-v3/avatars/dark_male.webp")}
+.event-art-room .portrait-dark_female{background-image:url("chronos-v3/avatars/dark_female.webp")}
+.event-art-room .portrait-asian_male{background-image:url("chronos-v3/avatars/asian_male.webp")}
+.event-art-room .portrait-asian_female{background-image:url("chronos-v3/avatars/asian_female.webp")}
+.event-art-room .portrait-android_male{background-image:url("chronos-v3/avatars/android_male.webp")}
+.event-art-room .portrait-android_female{background-image:url("chronos-v3/avatars/android_female.webp")}
+.event-art-room .hall-avatar-frame{position:absolute;inset:0;border-radius:50%;pointer-events:none}
+.event-art-room .default-frame{border:1px solid rgba(0,228,240,.9);box-shadow:0 0 4px rgba(0,225,240,.5)}
+.event-art-room .shop-frame{border:1px solid transparent;background:linear-gradient(transparent,transparent) padding-box,conic-gradient(from 0deg,#00f0ff,#5e8cff,#ff42cb,#ffb34e,#00f0ff) border-box;animation:chronos-preview-frame-spin 3.4s linear infinite;filter:drop-shadow(0 0 3px rgba(0,225,255,.75))}
+.event-art-room .shop-frame:after{content:"";position:absolute;inset:-2px;border:1px solid rgba(255,65,202,.6);border-radius:50%;animation:chronos-preview-frame-pulse 2.1s ease-in-out infinite}
+.event-art-room .frame-holo_frame{background:linear-gradient(transparent,transparent) padding-box,conic-gradient(from 0deg,#00f4ff,#4e7dff,#ff39d0,#00f4ff) border-box}
+.event-art-room .frame-timekeeper_frame{background:linear-gradient(transparent,transparent) padding-box,conic-gradient(from 0deg,#ffe39a,#b67b29,#fff0b2,#e49c32,#ffe39a) border-box}
+.event-art-room .hall-seat-name{display:block;max-width:100%;padding:1px 2px;border:1px solid rgba(0,218,239,.32);border-radius:2px;background:rgba(3,14,25,.92);color:#e8faff;font:600 clamp(3px,1.12vw,5px)/1.1 var(--mono);letter-spacing:0;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;text-shadow:0 0 4px rgba(0,220,255,.35)}
+.event-art-room .hall-seat.vacant .hall-avatar-wrap{border:1px dashed rgba(99,161,184,.75);border-radius:50%;background:rgba(4,12,22,.86)}
+.event-art-room .hall-avatar-empty{color:#9cc7d4;font:500 clamp(8px,2.8vw,12px)/1 var(--mono);text-shadow:0 0 5px rgba(0,218,239,.5)}
+.event-art-room .hall-seat.vacant .hall-seat-name{color:#8ba6b3;border-color:rgba(102,150,173,.2);background:rgba(5,13,23,.82)}
+@keyframes chronos-preview-frame-spin{to{transform:rotate(360deg)}}
+@keyframes chronos-preview-frame-pulse{0%,100%{opacity:.45;transform:scale(1)}50%{opacity:1;transform:scale(1.09)}}
+@media(max-width:380px){.event-art-room .event-art-seats{padding-top:15%;padding-bottom:14%}.event-art-room .hall-seat-name{font-size:3px;padding:1px}}

@@ -235,6 +235,39 @@ async def list_events(request):
             tg_user["id"],
         )
 
+        roster_preview_by_event = {}
+        event_ids = [row["event_id"] for row in events]
+        if event_ids:
+            roster_preview_rows = await conn.fetch(
+                """
+                SELECT
+                    r.event_id,
+                    u.display_name,
+                    COALESCE(p.avatar_base, 'european_male') AS avatar_base,
+                    ci.visual_key AS frame_visual_key,
+                    r.created_at
+                FROM public.registrations r
+                JOIN public.users u ON u.user_id = r.user_id
+                LEFT JOIN chronos.profiles p ON p.user_id = u.user_id
+                LEFT JOIN chronos.equipment eq
+                  ON eq.user_id = u.user_id AND eq.equip_slot = 'frame'
+                LEFT JOIN chronos.catalog_items ci ON ci.item_id = eq.item_id
+                WHERE r.event_id = ANY($1::bigint[])
+                  AND r.status = 'active'
+                  AND u.is_active = 1
+                ORDER BY r.event_id, r.created_at, u.display_name
+                """,
+                event_ids,
+            )
+            for player in roster_preview_rows:
+                event_roster = roster_preview_by_event.setdefault(player["event_id"], [])
+                if len(event_roster) < 10:
+                    event_roster.append({
+                        "display_name": player["display_name"],
+                        "avatar_base": player["avatar_base"],
+                        "frame_visual_key": player["frame_visual_key"],
+                    })
+
         planned_slots = await conn.fetch(
             """
             SELECT slot_id, slot_code, sequence_no, slot_type, title, planned_date
@@ -267,6 +300,7 @@ async def list_events(request):
                     "slot_type": row["slot_type"],
                     "active_count": row["active_count"],
                     "is_registered": row["is_registered"],
+                    "roster_preview": roster_preview_by_event.get(row["event_id"], []),
                 }
                 for row in events
             ],

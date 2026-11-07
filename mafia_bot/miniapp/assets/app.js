@@ -118,16 +118,18 @@
       '<span class="hall-seat-name">ВІЛЬНО</span></div>';
   }
 
-  function renderHallSeats(roster) {
-    const target = $("#hall-player-seats");
-    if (!target) return;
+  function hallSeatRowsMarkup(roster) {
     const players = (roster || []).slice(0, 10);
     const slots = Array.from({ length: 10 }, (_, index) =>
       players[index] ? hallPortraitMarkup(players[index], index + 1) : hallEmptySeatMarkup(index + 1)
     );
-    target.innerHTML =
-      '<div class="hall-seat-row hall-seat-row-top">' + slots.slice(0, 5).join("") + '</div>' +
+    return '<div class="hall-seat-row hall-seat-row-top">' + slots.slice(0, 5).join("") + '</div>' +
       '<div class="hall-seat-row hall-seat-row-bottom">' + slots.slice(5, 10).join("") + '</div>';
+  }
+
+  function renderHallSeats(roster) {
+    const target = $("#hall-player-seats");
+    if (target) target.innerHTML = hallSeatRowsMarkup(roster);
   }
 
   async function loadRoomRoster(eventId) {
@@ -280,9 +282,9 @@
     return title;
   }
 
-  function eventArtwork(type) {
+  function eventArtwork(type, event) {
     if (type === "regular") {
-      return '<div class="event-art event-art-room"><img src="assets/chronos-hall.svg" alt="" loading="lazy"></div>';
+      return '<div class="event-art event-art-room"><img src="assets/chronos-hall-seat-grid.svg" alt="" loading="lazy"><div class="event-art-seats" aria-hidden="true">' + hallSeatRowsMarkup(event?.roster_preview || []) + '</div></div>';
     }
     const main = type === "main_final";
     const color = main ? "#e9c77b" : "#b49aff";
@@ -303,7 +305,7 @@
     const code = escapeHtml(event.slot_code || (event.event_id ? "EVENT " + event.event_id : ""));
     if (planned) {
       return '<article class="event-list-card planned-card ' + (isFinal ? "final-card" : "regular-card") + '">' +
-        eventArtwork(type) +
+        eventArtwork(type, event) +
         '<div class="event-card-copy">' +
           '<div class="event-card-kicker"><span class="event-kicker-dot"></span><span>CHRONOS / SEASON 01</span><span class="event-status-pill soon">СКОРО</span></div>' +
           '<h3 class="planned-event-title">' + title + '</h3>' +
