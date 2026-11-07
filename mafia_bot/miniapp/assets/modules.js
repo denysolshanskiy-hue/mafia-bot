@@ -321,9 +321,15 @@
       if (input) input.focus();
     } else {
       const cells = game.state && game.state.cells ? game.state.cells : [];
-      target.innerHTML = '<div class="panel-top"><span class="panel-code">MEMORY · SESSION</span><span class="game-timer" id="game-seconds">' + seconds + 's</span></div>' +
-        '<h3>ЗНАЙТИ 6 ПАР</h3><p class="modal-copy">Знайди всі пари за 2 хв 30 с. Ходи: ' + Number(game.state.moves || 0) + ' · Пари: ' + Number(game.state.pairs_found || 0) + ' / 6.</p>' +'<div class="memory-symbol-guide"><span>МОЖЛИВІ КАРТКИ</span><div class="memory-symbol-list">' + ["ATOM","NOVA","PULSE","FLUX","ECHO","CORE"].map((name) => '<span>' + name + '</span>').join("") + '</div></div>' +
-        '<div class="memory-board">' + cells.map((cell) =>
+      const level = Number(game.state.level || 1);
+      const pairsTotal = Number(game.state.pairs_total || (level === 2 ? 10 : 6));
+      const symbols = game.state.symbols || (level === 2
+        ? ["ATOM","NOVA","PULSE","FLUX","ECHO","CORE","ORBIT","QUARK","VECTOR","NEBULA"]
+        : ["ATOM","NOVA","PULSE","FLUX","ECHO","CORE"]);
+      target.innerHTML = '<div class="panel-top"><span class="panel-code">MEMORY · LEVEL ' + level + ' / 2</span><span class="game-timer" id="game-seconds">' + seconds + 's</span></div>' +
+        '<h3>' + (level === 2 ? "ЗНАЙТИ 10 ПАР" : "ЗНАЙТИ 6 ПАР") + '</h3><p class="modal-copy">' + (level === 2 ? "Другий рівень: 20 карток і 10 пар. Знайди їх за 2 хв 30 с." : "Перший рівень: 12 карток і 6 пар. Знайди всі пари, щоб відкрити наступний рівень.") + ' Ходи: ' + Number(game.state.moves || 0) + ' · Пари: ' + Number(game.state.pairs_found || 0) + ' / ' + pairsTotal + '.</p>' +
+        '<div class="memory-symbol-guide"><span>МОЖЛИВІ КАРТКИ · РІВЕНЬ ' + level + '</span><div class="memory-symbol-list">' + symbols.map((name) => '<span>' + esc(name) + '</span>').join("") + '</div></div>' +
+        '<div class="memory-board memory-board-level-' + level + '">' + cells.map((cell) =>
           '<button class="memory-card ' + (cell.matched ? "matched" : cell.flipped ? "revealed" : "") + '" data-memory-card="' + cell.index + '"' +
           (cell.matched || cell.flipped || game.state.pending_hide ? " disabled" : "") + '>' + (cell.value ? esc(cell.value) : "⌁") + '</button>'
         ).join("") + '</div>' +
@@ -355,6 +361,10 @@
         }
       } else {
         S.game.state = result.state;
+        if (result.level_advanced) {
+          if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred("success");
+          toast("Рівень 1 пройдено! Рівень 2: 10 пар.");
+        }
         if (result.status !== "running") {
           if (S.gameTimer) clearInterval(S.gameTimer);
           showGameResult(result.status, result.xp_awarded || 0);
