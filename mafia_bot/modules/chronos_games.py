@@ -142,20 +142,21 @@ async def start_game(request):
                 """
                 INSERT INTO chronos.minigame_sessions
                   (session_id,season_id,user_id,game_code,state,expires_at)
-                VALUES($1,$2,$3,$4,$5::jsonb,NOW()+INTERVAL '90 seconds')
+                VALUES($1,$2,$3,$4,$5::jsonb,NOW()+($6 * INTERVAL '1 second'))
                 RETURNING session_id,expires_at,status
                 """,
                 session_id,season_id,user_id,game_code,json.dumps(state),
+                180 if game_code == "CODE_BREAKER" else 150,
             )
         return json_response({
             "session_id":str(session_id),
             "game_code":game_code,
             "instructions":(
-                {"attempts":6,"digits":4,"unique_digits":True,"seconds":90}
+                {"attempts":10,"digits":4,"unique_digits":True,"seconds":180}
                 if game_code=="CODE_BREAKER"
-                else {"cards":12,"pairs":6,"seconds":90}
+                else {"cards":12,"pairs":6,"symbols":["ATOM","NOVA","PULSE","FLUX","ECHO","CORE"],"seconds":150}
             ),
-            "state":_public_state(game_code,state,{"expires_at":row["expires_at"],"now":row["expires_at"]-timedelta(seconds=90),"status":"running"}),
+            "state":_public_state(game_code,state,{"expires_at":row["expires_at"],"now":row["expires_at"]-timedelta(seconds=(180 if game_code=="CODE_BREAKER" else 150)),"status":"running"}),
         },201)
     except asyncpg.UndefinedTableError:
         return json_response({"error":"database_not_ready"},503)
@@ -212,7 +213,7 @@ async def game_action(request):
                 status = "running"
                 if exact==4:
                     status="completed"
-                elif len(state["guesses"])>=6:
+                elif len(state["guesses"])>=10:
                     status="failed"
                 await conn.execute(
                     """
@@ -221,7 +222,7 @@ async def game_action(request):
                         score=$4,completed_at=CASE WHEN $3='running' THEN NULL ELSE NOW() END
                     WHERE session_id=$1
                     """,
-                    session_id,json.dumps(state),status,exact*100+max(0,6-len(state["guesses"]))*10 if status=="completed" else 0,
+                    session_id,json.dumps(state),status,exact*100+max(0,10-len(state["guesses"]))*10 if status=="completed" else 0,
                 )
                 xp=0
                 if status=="completed" and not state.get("admin_test"):
@@ -231,7 +232,7 @@ async def game_action(request):
                     await notify_user(conn,user_id,"rewards","Симуляцію завершено",f"CODE BREAKER: +{xp} XP.")
                 return json_response({
                     "status":status,"feedback":state["guesses"][-1],
-                    "attempts_left":6-len(state["guesses"]),"xp_awarded":xp,
+                    "attempts_left":10-len(state["guesses"]),"xp_awarded":xp,
                 })
 
             if action == "hide":
