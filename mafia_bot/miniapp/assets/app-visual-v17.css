@@ -1,0 +1,149 @@
+/* CHRONOS Home — render the same 10-seat table preview used by the Events calendar. */
+#screen-home #home-event.home-next-card{
+  position:relative;
+  display:grid;
+  grid-template-columns:42% minmax(0,1fr);
+  align-items:stretch;
+  min-height:136px;
+  overflow:hidden;
+}
+#screen-home #home-event.home-next-card>.event-art-room{
+  position:relative!important;
+  display:block!important;
+  grid-column:1;
+  grid-row:1;
+  align-self:stretch;
+  width:100%;
+  height:100%;
+  min-width:0;
+  min-height:136px;
+  margin:0;
+  overflow:hidden;
+  border-right:1px solid rgba(0,211,255,.28);
+  border-radius:0;
+  background:#071321;
+}
+#screen-home #home-event.home-next-card>.event-art-room>img{
+  position:absolute;
+  inset:0;
+  display:block;
+  width:100%;
+  height:100%;
+  min-height:0!important;
+  object-fit:cover;
+  object-position:center;
+}
+#screen-home #home-event.home-next-card>.event-art-room .event-art-seats{
+  position:absolute;
+  z-index:2;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  padding:15% 2.5% 14%;
+  pointer-events:none;
+}
+#screen-home #home-event.home-next-card>.event-art-room .hall-seat-row{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  align-items:center;
+  justify-items:center;
+  width:100%;
+  gap:0;
+}
+#screen-home #home-event.home-next-card>.event-art-room .hall-seat{
+  min-width:0;
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:1px;
+  text-align:center;
+}
+#screen-home #home-event.home-next-card>.event-art-room .hall-avatar-wrap{
+  position:relative;
+  display:grid;
+  place-items:center;
+  width:clamp(13px,4.2vw,20px);
+  height:clamp(13px,4.2vw,20px);
+  flex:0 0 auto;
+}
+#screen-home #home-event.home-next-card>.event-art-room .hall-avatar-portrait{
+  position:absolute;
+  inset:2px;
+  border-radius:50%;
+  overflow:hidden;
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:cover;
+  border:1px solid rgba(0,226,242,.9);
+  box-shadow:0 0 4px rgba(0,218,255,.55);
+  background-color:#071727;
+}
+#screen-home #home-event.home-next-card>.event-art-room .portrait-european_male,
+#screen-home #home-event.home-next-card>.event-art-room .portrait-european_female{
+  background-image:url("chronos-v3/avatars/european-pair.webp");
+  background-size:200% 100%;
+}
+#screen-home #home-event.home-next-card>.event-art-room .portrait-european_male{background-position:left center}
+#screen-home #home-event.home-next-card>.event-art-room .portrait-european_female{background-position:right center}
+#screen-home #home-event.home-next-card>.event-art-room .portrait-dark_male{background-image:url("chronos-v3/avatars/dark_male.webp")}
+#screen-home #home-event.home-next-card>.event-art-room .portrait-dark_female{background-image:url("chronos-v3/avatars/dark_female.webp")}
+#screen-home #home-event.home-next-card>.event-art-room .portrait-asian_male{background-image:url("chronos-v3/avatars/asian_male.webp")}
+#screen-home #home-event.home-next-card>.event-art-room .portrait-asian_female{background-image:url("chronos-v3/avatars/asian_female.webp")}
+#screen-home #home-event.home-next-card>.event-art-room .portrait-android_male{background-image:url("chronos-v3/avatars/android_male.webp")}
+#screen-home #home-event.home-next-card>.event-art-room .portrait-android_female{background-image:url("chronos-v3/avatars/android_female.webp")}
+#screen-home #home-event.home-next-card>.event-art-room .hall-avatar-frame{
+  position:absolute;inset:0;border-radius:50%;pointer-events:none;
+}
+#screen-home #home-event.home-next-card>.event-art-room .default-frame{
+  border:1px solid rgba(0,228,240,.9);
+  box-shadow:0 0 4px rgba(0,225,240,.5);
+}
+#screen-home #home-event.home-next-card>.event-art-room .shop-frame{
+  border:1px solid transparent;
+  background:linear-gradient(transparent,transparent) padding-box,conic-gradient(from 0deg,#00f0ff,#5e8cff,#ff42cb,#ffb34e,#00f0ff) border-box;
+}
+#screen-home #home-event.home-next-card>.event-art-room .hall-seat-name{
+  display:block;
+  max-width:100%;
+  padding:1px 2px;
+  border:1px solid rgba(0,218,239,.32);
+  border-radius:2px;
+  background:rgba(3,14,25,.92);
+  color:#e8faff;
+  font:600 clamp(3px,1.12vw,5px)/1.1 var(--mono);
+  letter-spacing:0;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  overflow:hidden;
+}
+#screen-home #home-event.home-next-card>.event-art-room .hall-seat.vacant .hall-avatar-wrap{
+  border:1px dashed rgba(99,161,184,.75);
+  border-radius:50%;
+  background:rgba(4,12,22,.86);
+}
+#screen-home #home-event.home-next-card>.event-art-room .hall-avatar-empty{
+  color:#9cc7d4;
+  font:500 clamp(8px,2.8vw,12px)/1 var(--mono);
+}
+#screen-home #home-event.home-next-card>.event-art-room .hall-seat.vacant .hall-seat-name{
+  color:#8ba6b3;
+  border-color:rgba(102,150,173,.2);
+  background:rgba(5,13,23,.82);
+}
+#screen-home #home-event.home-next-card>.home-next-info{
+  grid-column:2;
+  grid-row:1;
+  min-width:0;
+  align-self:center;
+  padding:12px 26px 11px 11px;
+}
+#screen-home #home-event.home-next-card>.home-next-arrow{z-index:4}
+@media(max-width:380px){
+  #screen-home #home-event.home-next-card{grid-template-columns:40% minmax(0,1fr);min-height:128px}
+  #screen-home #home-event.home-next-card>.event-art-room{min-height:128px}
+  #screen-home #home-event.home-next-card>.event-art-room .event-art-seats{padding-top:15%;padding-bottom:14%}
+  #screen-home #home-event.home-next-card>.event-art-room .hall-seat-name{font-size:3px;padding:1px}
+  #screen-home #home-event.home-next-card>.home-next-info{padding-left:8px;padding-right:24px}
+}
