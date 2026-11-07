@@ -236,3 +236,125 @@ async def check_player_achievements(conn, season_id, user_id):
     )
     if finals >= 3:
         await award_achievement(conn,user_id,"THREE_FINALS",f"three-finals:{season_id}:{user_id}")
+    # CHRONOS season milestones (all checks are idempotent through award_achievement).
+    accepted_finals = await conn.fetch(
+        """
+        SELECT s.slot_id,s.slot_type
+        FROM chronos.final_invitations fi
+        JOIN chronos.event_slots s ON s.slot_id=fi.slot_id
+        WHERE fi.user_id=$1 AND s.season_id=$2
+          AND s.slot_type IN ('intermediate_final','main_final')
+          AND fi.status='accepted'
+        ORDER BY fi.responded_at NULLS LAST,fi.invitation_id
+        """,
+        user_id,season_id,
+    )
+    if any(row["slot_type"] == "intermediate_final" for row in accepted_finals):
+        await award_achievement(conn,user_id,"FIRST_INTERMEDIATE_FINAL",f"first-intermediate-final:{season_id}:{user_id}")
+    if any(row["slot_type"] == "main_final" for row in accepted_finals):
+        await award_achievement(conn,user_id,"FIRST_GRAND_FINAL",f"first-grand-final:{season_id}:{user_id}")
+
+    profile_avatar = await conn.fetchval(
+        "SELECT avatar_base FROM chronos.profiles WHERE user_id=$1", user_id
+    )
+    if profile_avatar:
+        # This is only reached from an explicit avatar-save action or a rewards refresh;
+        # profiles created with the default avatar are not awarded by this check.
+        pass
+
+    first_purchase = await conn.fetchval(
+        "SELECT EXISTS(SELECT 1 FROM chronos.ledger WHERE user_id=$1 AND reason_code='store_purchase' AND amount<0)",
+        user_id,
+    )
+    if first_purchase:
+        await award_achievement(conn,user_id,"FIRST_PURCHASE",f"first-purchase:{user_id}")
+
+    minigame_seconds = await conn.fetchval(
+        """
+        SELECT COALESCE(SUM(LEAST(
+            GREATEST(EXTRACT(EPOCH FROM (completed_at-started_at)),0),
+            GREATEST(EXTRACT(EPOCH FROM (expires_at-started_at)),0),
+            180
+        )),0)
+        FROM chronos.minigame_sessions
+        WHERE user_id=$1 AND actions_count>0
+          AND status IN ('completed','failed','expired') AND completed_at IS NOT NULL
+        """,
+        user_id,
+    )
+    if float(minigame_seconds or 0) > 18000:
+        await award_achievement(conn,user_id,"MINIGAME_FIVE_HOURS",f"minigame-five-hours:{user_id}")
+
+    # A slot counts only with an active registration (regular event) or an accepted
+    # invitation (intermediate/Grand Final). Opened cards and declined invitations do not count.
+    registered_slots = await conn.fetchval(
+        """
+        SELECT COUNT(DISTINCT s.slot_id)
+        FROM chronos.event_slots s
+        WHERE s.season_id=$1 AND (
+          (s.slot_type='regular' AND EXISTS(
+            SELECT 1 FROM public.registrations r
+            WHERE r.event_id=s.bot_event_id AND r.user_id=$2 AND r.status='active'
+          ))
+          OR EXISTS(
+            SELECT 1 FROM chronos.final_invitations fi
+            WHERE fi.slot_id=s.slot_id AND fi.user_id=$2 AND fi.status='accepted'
+          )
+        )
+        """,
+        season_id,user_id,
+    )
+    season_slots = await conn.fetchval(
+        "SELECT COUNT(*) FROM chronos.event_slots WHERE season_id=$1 AND slot_type IN ('regular','intermediate_final')",
+        season_id,
+    )
+    grand_final_slots = await conn.fetchval(
+        "SELECT COUNT(*) FROM chronos.event_slots WHERE season_id=$1 AND slot_type='main_final'",
+        season_id,
+    )
+    if int(season_slots or 0) == 12 and int(registered_slots or 0) >= 12:
+        await award_achievement(conn,user_id,"ALL_SEASON_EVENTS",f"all-season-events:{season_id}:{user_id}")
+    if int(season_slots or 0) == 12 and int(grand_final_slots or 0) == 1 and int(registered_slots or 0) >= 13:
+        await award_achievement(conn,user_id,"ALL_EVENTS_AND_GRAND_FINAL",f"all-events-grand-final:{season_id}:{user_id}")
+
+    top_rank = await conn.fetchval(
+        """
+        SELECT MIN(rp.rank_position)
+        FROM chronos.ranking_players rp
+        JOIN chronos.ranking_snapshots rs ON rs.snapshot_id=rp.snapshot_id
+        WHERE rs.season_id=$1 AND rp.user_id=$2
+        """,
+        season_id,user_id,
+    )
+    if top_rank is not None and int(top_rank) <= 3:
+        await award_achievement(conn,user_id,"FIRST_TOP_THREE",f"first-top-three:{season_id}:{user_id}")
+    if top_rank is not None and int(top_rank) = 1:
+        await award_achievement(conn,user_id,"FIRST_TOP_ONE",f"first-top-one:{season_id}:{user_id}")
+
+    # Tower completion uses the existing ten-floor progression gates:
+    # participation, profile/collection, simulations, prediction access,
+    # three intermediate finals and the season's full sync target.
+    tower_state = await conn.fetchrow(
+        """
+        SELECT
+          COALESCE((SELECT COUNT(*) FROM chronos.game_players gp
+            JOIN chronos.games g ON g.game_id=gp.game_id
+            WHERE gp.user_id=$2 AND g.season_id=$1 AND g.status='confirmed' AND g.counts_for_sync=TRUE),0) AS games,
+          COALESCE((SELECT COUNT(*) FROM chronos.prediction_bets b
+            JOIN chronos.prediction_markets m ON m.market_id=b.market_id
+            WHERE b.bettor_user_id=$2 AND m.season_id=$1 AND b.status<>'refunded'),0) AS bets,
+          COALESCE((SELECT COUNT(DISTINCT s.slot_id) FROM chronos.event_slots s
+            JOIN chronos.games g ON g.bot_event_id=s.bot_event_id AND g.status='confirmed'
+            JOIN chronos.game_players gp ON gp.game_id=g.game_id AND gp.user_id=$2
+            WHERE s.season_id=$1 AND s.slot_type='intermediate_final'),0) AS finals,
+          (SELECT target_sync_units FROM chronos.seasons WHERE season_id=$1) AS target_sync_units
+        """,
+        season_id,user_id,
+    )
+    if (tower_state and int(tower_state["games"] or 0) >= 1
+        and int(tower_state["bets"] or 0) >= 6
+        and int(tower_state["finals"] or 0) >= 3
+        and int(tower_state["target_sync_units"] or 0) > 0
+        and int(tower_state["games"] or 0) >= int(tower_state["target_sync_units"] or 0)):
+        await award_achievement(conn,user_id,"TOWER_ALL_FLOORS",f"tower-all-floors:{season_id}:{user_id}")
+
