@@ -13,7 +13,10 @@
     filter: "all",
     busy: false,
     currentEventId: null,
-    currentScreen: "home"
+    currentScreen: "home",
+    roomRoster: [],
+    roomRosterEventId: null,
+    roomLoadingEventId: null
   };
 
   const floors = [
@@ -98,7 +101,62 @@
     ];
   }
 
-  function renderRoom() {
+  function hallPortraitMarkup(player, index) {
+    const base = String(player?.avatar_base || "european_male").replace(/[^a-z0-9_-]/gi, "");
+    const frame = String(player?.frame_visual_key || "").replace(/[^a-z0-9_-]/gi, "");
+    const name = String(player?.display_name || "Гравець");
+    return '<div class="hall-seat occupied" data-seat="' + index + '">' +
+      '<span class="hall-avatar-wrap">' +
+        '<span class="hall-avatar-portrait portrait-' + base + '" aria-hidden="true"></span>' +
+        (frame ? '<i class="hall-avatar-frame shop-frame frame-' + frame + '" aria-hidden="true"></i>' : '<i class="hall-avatar-frame default-frame" aria-hidden="true"></i>') +
+      '</span><span class="hall-seat-name" title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</span></div>';
+  }
+
+  function hallEmptySeatMarkup(index) {
+    return '<div class="hall-seat vacant" data-seat="' + index + '">' +
+      '<span class="hall-avatar-wrap"><span class="hall-avatar-empty">?</span></span>' +
+      '<span class="hall-seat-name">ВІЛЬНО</span></div>';
+  }
+
+  function renderHallSeats(roster) {
+    const target = $("#hall-player-seats");
+    if (!target) return;
+    const players = (roster || []).slice(0, 10);
+    const slots = Array.from({ length: 10 }, (_, index) =>
+      players[index] ? hallPortraitMarkup(players[index], index + 1) : hallEmptySeatMarkup(index + 1)
+    );
+    target.innerHTML =
+      '<div class="hall-seat-row hall-seat-row-top">' + slots.slice(0, 5).join("") + '</div>' +
+      '<div class="hall-seat-row hall-seat-row-bottom">' + slots.slice(5, 10).join("") + '</div>';
+  }
+
+  async function loadRoomRoster(eventId) {
+    const id = Number(eventId);
+    if (!id || state.roomLoadingEventId === id) return;
+    state.roomLoadingEventId = id;
+    try {
+      const data = await api("/events/" + encodeURIComponent(id));
+      if (Number(state.events[0]?.event_id) !== id) return;
+      state.roomRoster = (data.roster || []).slice(0, 10);
+      state.roomRosterEventId = id;
+      renderHallSeats(state.roomRoster);
+      const count = Number(data.event?.active_count ?? data.roster?.length ?? 0);
+      const note = $("#hall-session-note");
+      if (note) {
+        const live = state.events[0];
+        const date = live ? formatDate(live.event_date, live.event_time) : "";
+        note.textContent = date + " · " + count + " зареєстровано · на схемі показано перші 10";
+      }
+    } catch (error) {
+      const target = $("#hall-player-seats");
+      if (target) target.innerHTML = '<div class="hall-seat-loading">НЕ ВДАЛОСЯ СИНХРОНІЗУВАТИ СКЛАД</div>';
+      console.warn("CHRONOS hall roster:", error);
+    } finally {
+      if (state.roomLoadingEventId === id) state.roomLoadingEventId = null;
+    }
+  }
+
+  function renderRoom(forceRoster = false) {
     const title = $("#hall-session-title"), note = $("#hall-session-note");
     if (!title || !note) return;
     const live = state.events[0], planned = state.planned[0];
@@ -106,12 +164,16 @@
     if (live) {
       title.textContent = live.title || "Поточний вечір KMC";
       note.textContent = date + " · " + (Number(live.active_count) || 0) + " учасників у реєстрації";
-    } else if (planned) {
-      title.textContent = planned.title || "Наступний вечір";
-      note.textContent = planned.planned_date ? "Заплановано на " + date + ". Реєстрація відкривається через Telegram-бот." : "Подію заплановано. Дату та реєстрацію організатор повідомить у Telegram.";
+      if (forceRoster || state.roomRosterEventId !== Number(live.event_id)) loadRoomRoster(live.event_id);
+      else renderHallSeats(state.roomRoster);
     } else {
-      title.textContent = "Зала очікує на вечір";
-      note.textContent = "Коли організатор відкриє подію, тут з'явиться її актуальний стан.";
+      title.textContent = planned ? (planned.title || "Наступний вечір") : "Зала очікує на вечір";
+      note.textContent = planned
+        ? (planned.planned_date ? "Заплановано на " + date + ". Реєстрація відкривається через Telegram-бот." : "Подію заплановано. Дату та реєстрацію організатор повідомить у Telegram.")
+        : "Коли організатор відкриє подію, тут з'явиться її актуальний стан.";
+      state.roomRoster = [];
+      state.roomRosterEventId = null;
+      renderHallSeats([]);
     }
     ["#hall-register-action", "#hall-roster-action"].forEach(selector => {
       const button = $(selector); if (!button) return;
@@ -505,7 +567,7 @@
       state.planned = calendar.planned_slots || [];
       renderProfile();
       renderHomeEvent();
-      renderRoom();
+      renderRoom(true);
       renderEvents();
       $("#season-state").textContent = state.season?.status === "active"
         ? "SEASON ACTIVE"
