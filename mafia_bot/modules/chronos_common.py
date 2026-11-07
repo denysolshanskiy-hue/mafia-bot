@@ -328,7 +328,7 @@ async def check_player_achievements(conn, season_id, user_id):
     )
     if top_rank is not None and int(top_rank) <= 3:
         await award_achievement(conn,user_id,"FIRST_TOP_THREE",f"first-top-three:{season_id}:{user_id}")
-    if top_rank is not None and int(top_rank) = 1:
+    if top_rank is not None and int(top_rank) == 1:
         await award_achievement(conn,user_id,"FIRST_TOP_ONE",f"first-top-one:{season_id}:{user_id}")
 
     # Tower completion uses the existing ten-floor progression gates:
@@ -355,6 +355,6 @@ async def check_player_achievements(conn, season_id, user_id):
         and int(tower_state["bets"] or 0) >= 6
         and int(tower_state["finals"] or 0) >= 3
         and int(tower_state["target_sync_units"] or 0) > 0
-        and int(tower_state["games"] or 0) >= int(tower_state["target_sync_units"] or 0)):
+        and int(tower_state["games"] or 0) >= 79):
         await award_achievement(conn,user_id,"TOWER_ALL_FLOORS",f"tower-all-floors:{season_id}:{user_id}")
 
