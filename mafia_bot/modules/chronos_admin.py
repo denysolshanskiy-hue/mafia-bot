@@ -10,7 +10,7 @@ import asyncpg
 from aiohttp import web
 
 from modules.chronos_common import (
-    audit, award_game_and_evening_rewards, check_player_achievements, json_response, json_value, ledger_balance, notify_user, require_admin, award_ledger
+    audit, award_game_and_evening_rewards, check_player_achievements, json_response, json_value, ledger_balance, notify_user, require_admin, award_ledger, award_achievement
 )
 from modules.chronos_economy import allocate_activity_bonus, calculate_activity_score, qualification_games_required, season_prize_budget, simulate_economy
 
@@ -840,6 +840,12 @@ async def respond_invitation(request):
                 invitation["slot_id"],user_id,"pending" if response=="accepted" else "declined",
             )
             await notify_user(conn,user_id,"finals","Відповідь збережено",("Участь підтверджено." if response=="accepted" else "Ти відмовився від запрошення."))
+            if response=="accepted":
+                if invitation["slot_type"] == "intermediate_final":
+                    await award_achievement(conn,user_id,"FIRST_INTERMEDIATE_FINAL",f"first-intermediate-final:{invitation['season_id']}:{user_id}")
+                elif invitation["slot_type"] == "main_final":
+                    await award_achievement(conn,user_id,"FIRST_GRAND_FINAL",f"first-grand-final:{invitation['season_id']}:{user_id}")
+                await check_player_achievements(conn,invitation["season_id"],user_id)
             if response=="declined":
                 await _invite_next_rank(conn,invitation["slot_id"],invitation["season_id"])
         return json_response({"saved":True,"status":response})
