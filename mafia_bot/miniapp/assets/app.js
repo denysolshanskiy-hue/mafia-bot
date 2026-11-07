@@ -278,12 +278,14 @@
     const live = state.events[0], planned = state.planned[0], container = $("#home-event");
     if (!container) return;
     const item = live || planned;
-    const title = item ? (item.title || "Вечір KMC") : "Хронологія очікує";
+    const title = item ? eventTitle(item, !live) : "Хронологія очікує";
     const date = live ? formatDate(live.event_date, live.event_time) : planned && planned.planned_date ? formatDate(planned.planned_date) : "ДАТУ ЩЕ НЕ ВИЗНАЧЕНО";
     const kicker = live ? "LIVE OPERATION" : planned ? "NEXT IN CHRONOLOGY" : "CHRONOS / SEASON";
     const note = live ? "Поточна подія сезону" : planned ? "Наступний запланований вечір" : "Нова подія з'явиться тут після публікації організатором";
+    const type = eventSlotType(item || {});
+    const artwork = item ? eventArtwork(type, item) : '<div class="event-art event-art-room"><img src="assets/chronos-hall-seat-grid.svg" alt=""><div class="event-art-seats" aria-hidden="true">' + hallSeatRowsMarkup([]) + '</div></div>';
     const action = live ? '<button class="home-next-arrow" type="button" data-event-id="' + escapeHtml(live.event_id) + '" aria-label="Відкрити подію">↗</button>' : '<button class="home-next-arrow" type="button" data-nav="events" aria-label="Відкрити календар">↗</button>';
-    container.innerHTML = '<img class="home-next-art" src="assets/chronos-hall.svg" alt="Футуристична ігрова зала KMC">' +
+    container.innerHTML = artwork +
       '<div class="home-next-info"><span class="home-next-kicker">' + kicker + '</span><h3>' + escapeHtml(title) + '</h3><p>' + escapeHtml(note) + '</p><span class="home-next-date">' + escapeHtml(date) + '</span></div>' + action;
   }
 
