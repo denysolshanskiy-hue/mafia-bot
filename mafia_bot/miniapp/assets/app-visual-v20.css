@@ -1,0 +1,25 @@
+/* CHRONOS MEMORY LEVEL 2 — fit twenty cards while preserving touch targets. */
+#screen-simulations .memory-board-level-2{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:6px;
+}
+#screen-simulations .memory-board-level-2 .memory-card{
+  aspect-ratio:1.12;
+  min-width:0;
+  padding:3px 1px;
+  border-radius:7px;
+  font-size:clamp(7px,2.1vw,10px);
+  letter-spacing:-.02em;
+}
+#screen-simulations .memory-board-level-1 .memory-card{
+  font-size:clamp(8px,2.5vw,11px);
+}
+#screen-simulations .memory-symbol-guide>span{
+  letter-spacing:1.4px;
+}
+#screen-simulations .memory-symbol-list>span{
+  min-width:0;
+  flex:1 0 17%;
+  padding:6px 5px;
+  font-size:10px;
+}
