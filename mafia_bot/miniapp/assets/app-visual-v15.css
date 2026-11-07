@@ -1,7 +1,7 @@
-/* Fix launch gate poster sizing and prevent horizontal overflow in Telegram iOS */
-#soon-screen{box-sizing:border-box;width:100%;max-width:100vw;min-height:100vh;min-height:100svh;padding:20px 18px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+/* Telegram iOS: keep the supplied CHRONOS launch poster fully inside the viewport */
+#soon-screen{box-sizing:border-box;width:100%;max-width:100vw;min-height:100vh;min-height:100svh;padding:20px 16px;display:flex;align-items:center;justify-content:center;overflow:hidden}
 #soon-screen .soon-card{box-sizing:border-box;width:min(100%,520px);max-width:520px;min-width:0;margin:0 auto;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible}
 #soon-screen .soon-poster{box-sizing:border-box;display:block;width:100%;max-width:100%;height:auto;aspect-ratio:16/9;object-fit:cover;object-position:center;border:1px solid rgba(0,225,239,.58);border-radius:15px}
-#soon-screen .soon-card p{box-sizing:border-box;width:100%;max-width:390px;margin:20px auto 0;padding:0 8px;text-align:center;color:#b8cbd8;font-size:clamp(13px,3.6vw,15px);line-height:1.65}
+#soon-screen .soon-card p{box-sizing:border-box;width:100%;max-width:390px;margin:18px auto 0;padding:0 8px;text-align:center;color:#b8cbd8;font-size:clamp(13px,3.6vw,15px);line-height:1.65}
 #soon-screen .soon-card::before,#soon-screen .soon-card::after{display:none}
-@media(max-width:380px){#soon-screen{padding-inline:14px}#soon-screen .soon-poster{border-radius:11px}#soon-screen .soon-card p{margin-top:16px}}
+@media(max-width:380px){#soon-screen{padding-inline:14px}#soon-screen .soon-poster{border-radius:11px}#soon-screen .soon-card p{margin-top:15px}}
