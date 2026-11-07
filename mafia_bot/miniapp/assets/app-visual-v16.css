@@ -1,0 +1,25 @@
+/* CHRONOS Home PLAYER ID — reuse the exact avatar base selected in Identity Center. */
+#screen-home #home-player-avatar[data-avatar-base]{
+  background-color:#091827;
+  background-repeat:no-repeat;
+  background-position:center;
+  background-size:cover;
+  border:1px solid rgba(0,229,239,.68);
+  box-shadow:0 0 14px rgba(0,211,255,.2),0 0 22px rgba(255,63,164,.08);
+}
+#screen-home #home-player-avatar[data-avatar-base="european_male"],
+#screen-home #home-player-avatar[data-avatar-base="european_female"]{
+  background-image:url("chronos-v3/avatars/european-pair.webp");
+  background-size:200% 100%;
+}
+#screen-home #home-player-avatar[data-avatar-base="european_male"]{background-position:left center}
+#screen-home #home-player-avatar[data-avatar-base="european_female"]{background-position:right center}
+#screen-home #home-player-avatar[data-avatar-base="asian_male"]{background-image:url("chronos-v3/avatars/asian_male.webp")}
+#screen-home #home-player-avatar[data-avatar-base="asian_female"]{background-image:url("chronos-v3/avatars/asian_female.webp")}
+#screen-home #home-player-avatar[data-avatar-base="dark_male"]{background-image:url("chronos-v3/avatars/dark_male.webp")}
+#screen-home #home-player-avatar[data-avatar-base="dark_female"]{background-image:url("chronos-v3/avatars/dark_female.webp")}
+#screen-home #home-player-avatar[data-avatar-base="android_male"]{background-image:url("chronos-v3/avatars/android_male.webp")}
+#screen-home #home-player-avatar[data-avatar-base="android_female"]{background-image:url("chronos-v3/avatars/android_female.webp")}
+#screen-home #home-player-avatar[data-avatar-base]:before,
+#screen-home #home-player-avatar[data-avatar-base]:after{content:none!important;display:none!important}
+#screen-home #home-player-avatar[data-avatar-base] b{display:none!important}
