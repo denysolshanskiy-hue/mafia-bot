@@ -7,7 +7,7 @@ import asyncpg
 from aiohttp import web
 
 from modules.chronos_common import (
-    active_season_id, audit, json_response, json_value, ledger_balance, require_admin, check_player_achievements
+    active_season_id, audit, json_response, json_value, ledger_balance, require_admin, check_player_achievements, award_achievement
 )
 from modules.chronos_logic import AVATAR_BASES, level_for_xp
 from modules.chronos_economy import calculate_activity_score, qualification_games_required
@@ -78,14 +78,16 @@ async def update_avatar(request):
     from database import get_chronos_connection as get_connection
     conn = await get_connection()
     try:
-        await conn.execute(
-            """
-            INSERT INTO chronos.profiles(user_id,avatar_base)
-            VALUES($1,$2)
-            ON CONFLICT(user_id) DO UPDATE SET avatar_base=EXCLUDED.avatar_base,updated_at=NOW()
-            """,
-            user_id, avatar,
-        )
+        async with conn.transaction():
+            await conn.execute(
+                """
+                INSERT INTO chronos.profiles(user_id,avatar_base)
+                VALUES($1,$2)
+                ON CONFLICT(user_id) DO UPDATE SET avatar_base=EXCLUDED.avatar_base,updated_at=NOW()
+                """,
+                user_id, avatar,
+            )
+            await award_achievement(conn,user_id,"FIRST_AVATAR",f"first-avatar:{user_id}")
         return json_response({"avatar_base": avatar, "updated": True})
     finally:
         await conn.close()
@@ -205,6 +207,7 @@ async def buy_item(request):
                 """,
                 user_id,f"Предмет {item['name']} додано до колекції.",
             )
+            await award_achievement(conn,user_id,"FIRST_PURCHASE",f"first-purchase:{user_id}")
         return json_response({"purchased":True,"item_code":item["item_code"]},201)
     except asyncpg.UndefinedTableError:
         return json_response({"error":"database_not_ready"},503)
@@ -379,6 +382,11 @@ async def achievements(request):
     from database import get_chronos_connection as get_connection
     conn = await get_connection()
     try:
+        season_id = await conn.fetchval(
+            "SELECT season_id FROM chronos.seasons WHERE status IN ('active','paused','draft') ORDER BY CASE status WHEN 'active' THEN 0 WHEN 'paused' THEN 1 ELSE 2 END,season_id DESC LIMIT 1"
+        )
+        if season_id:
+            await check_player_achievements(conn,season_id,user_id)
         rows = await conn.fetch(
             """
             SELECT a.achievement_code,a.name,a.description,a.tier,
