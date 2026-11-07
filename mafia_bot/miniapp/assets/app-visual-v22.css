@@ -1,0 +1,6 @@
+/* CHRONOS rewards section hero */
+#screen-rewards .rewards-intro{position:relative;display:flex;flex-direction:column;gap:0;padding-top:0!important;overflow:hidden}
+#screen-rewards .rewards-intro>.eyebrow,#screen-rewards .rewards-intro>h1{display:none!important}
+#screen-rewards .rewards-intro:before{content:"";display:block;width:100%;aspect-ratio:360/154;background-image:url("chronos-v3/rewards-hero.svg?v=1");background-size:100% 100%;background-repeat:no-repeat;background-position:center;border:1px solid rgba(83,229,218,.22);border-radius:16px;box-shadow:0 12px 34px rgba(0,0,0,.24),0 0 22px rgba(51,214,203,.08)}
+#screen-rewards .rewards-intro>p{margin:16px 0 0;position:relative;z-index:1}
+@media(min-width:700px){#screen-rewards .rewards-intro:before{max-height:365px;aspect-ratio:852/365;background-size:cover}}
