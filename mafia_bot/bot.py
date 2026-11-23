@@ -11,7 +11,7 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
     KeyboardButton,
     WebAppInfo,
-    MenuButtonDefault,
+    MenuButtonWebApp,
 )
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
@@ -1509,8 +1509,17 @@ async def handle(request):
 
 async def start_all():
     await init_db()
-    # Remove the persistent global CHRONOS menu button; keep the reply-keyboard button.
-    await bot.set_chat_menu_button(menu_button=MenuButtonDefault())
+    # Keep CHRONOS available from Telegram's persistent menu button.
+    chronos_url = os.getenv("CHRONOS_WEBAPP_URL", "").strip()
+    from urllib.parse import urlparse
+    parsed_chronos_url = urlparse(chronos_url)
+    if parsed_chronos_url.scheme == "https" and parsed_chronos_url.netloc:
+        await bot.set_chat_menu_button(
+            menu_button=MenuButtonWebApp(
+                text="⏳ CHRONOS",
+                web_app=WebAppInfo(url=chronos_url),
+            )
+        )
     app = web.Application(middlewares=[telegram_auth_middleware], client_max_size=9 * 1024 * 1024)
     register_chronos_routes(app)
     app.router.add_get('/', handle)
